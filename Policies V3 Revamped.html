@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FARECODE · Policies (Deposit &amp; Cancellation) v3</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:#F1F5F9;color:#0F172A}
+#root{height:100vh;overflow:hidden}
+button,input,select,textarea{font-family:inherit}
+a{text-decoration:none;color:#0E7490}a:hover{color:#0369A1}
+.pscroll::-webkit-scrollbar{width:5px}.pscroll::-webkit-scrollbar-track{background:transparent}.pscroll::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+.hscroll::-webkit-scrollbar{height:4px}.hscroll::-webkit-scrollbar-track{background:transparent}.hscroll::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+.fi:focus{outline:none;border-color:#1B2434 !important;box-shadow:0 0 0 3px rgba(27,36,52,.1)}
+.price-input:focus{outline:none;border-color:#1B2434 !important}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="dc-shell.jsx?v=10"></script>
+<script type="text/babel" src="ui-list.jsx?v=10"></script>
+<script type="text/babel" src="dc-group-panel.jsx?v=10"></script>
+<script type="text/babel" src="dc-parent-panel.jsx?v=10"></script>
+<script type="text/babel" src="dc-farecode.jsx?v=10"></script>
+<script type="text/babel" src="dc-booking.jsx?v=10"></script>
+<script type="text/babel" src="pol-data.jsx?v=10"></script>
+<script type="text/babel" src="pol-forms.jsx?v=10"></script>
+<script type="text/babel" src="pol-chrome.jsx?v=11"></script>
+<script type="text/babel" src="pol-rows.jsx?v=10"></script>
+<script type="text/babel" src="pol-drawer.jsx?v=10"></script>
+<script type="text/babel" src="pol-detail.jsx?v=10"></script>
+<script type="text/babel" src="pol-list.jsx?v=11"></script>
+<script type="text/babel" src="fc-farecode.jsx?v=12"></script>
+<script type="text/babel" src="ft-faretype.jsx?v=10"></script>
+<script type="text/babel" src="sp-supplements.jsx?v=10"></script>
+<script type="text/babel">
+const { useState: useSApp } = React;
+
+function App() {
+  const [screen, setScreen] = useSApp('policies');
+  const [policies, setPolicies] = useSApp(POLICIES_INIT);
+  const depGroups = toLegacy(policies, 'deposit');
+  const canGroups = toLegacy(policies, 'cancel');
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'220px 1fr', gridTemplateRows:'52px 1fr', height:'100vh', background:T.bg, color:T.ink }}>
+      <PolSidebar screen={screen} onNav={setScreen}/>
+      <TopBar/>
+      {screen === 'policies' && <PoliciesList policies={policies} setPolicies={setPolicies} onNav={setScreen}/>}
+      {screen === 'faretypes' && <FaretypeListScreen policies={policies}/>}
+      {screen === 'farecodes' && <FarecodeListScreen policies={policies}/>}
+      {screen === 'supplements' && <SupplementListScreen/>}
+      {screen === 'farecode' && <DCFarecodeScreen depGroups={depGroups} canGroups={canGroups}/>}
+      {screen === 'flows' && <DCBookingFlows depGroups={depGroups} canGroups={canGroups}/>}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

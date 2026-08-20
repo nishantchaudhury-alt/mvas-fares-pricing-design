@@ -1,0 +1,233 @@
+// ui-list.jsx — the shared list-view kit.
+//
+// Single source of truth for every flat list screen in the product (Farecodes, Faretypes, and
+// any module added later). Extracted from the Farecode list, which was the reference design.
+//
+// Owns: the toolbar (tabs + search + filter pills), the table (header, density, selection,
+// sorting, row actions, empty state) and the pager. Modules supply data and cell renderers only,
+// so row height and chrome can no longer drift between screens.
+//
+// Loaded after dc-shell.jsx (needs T, IcSearch, IcChevron, RowMenu) and before the modules.
+// Module files are IIFE-wrapped and shadow `T` locally, but every chrome token used here is
+// identical across those scopes, so rendering is stable wherever it's used.
+
+const { useState: useSL, useRef: useRL, useEffect: useEL } = React;
+
+/* ── Table metrics — the numbers that define "our table" ── */
+const LIST_TH = {
+  padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: T.inkLabel,
+  textTransform: 'uppercase', letterSpacing: '.6px', whiteSpace: 'nowrap',
+  background: '#F7F9FC', borderBottom: `1px solid ${T.line}`, userSelect: 'none',
+};
+const LIST_TD = { padding: '11px 14px', verticalAlign: 'middle' };
+const LIST_SEL_BG = '#EFF6FF';
+/* Row actions are capped at 20px so a kebab can never out-measure a status badge and
+   inflate row height — the bug that made Faretype rows 8px taller than Farecode's. */
+const LIST_ACTION_SIZE = 20;
+
+/* ── Dropdown open/close-on-outside-click ── */
+function useListDropdown() {
+  const [open, setOpen] = useSL(false);
+  const ref = useRL();
+  useEL(() => {
+    if (!open) return;
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  return [open, setOpen, ref];
+}
+
+/* ── Toolbar atoms ── */
+function ListTabs({ tabs, active, onChange }) {
+  return (
+    <div style={{ display:'flex', gap:0, marginBottom:14, borderBottom:`1px solid ${T.line}` }}>
+      {tabs.map(t => (
+        <button key={t.key} onClick={() => onChange(t.key)}
+          style={{ background:'none', border:'none', padding:'0 20px 10px 0', fontSize:13.5, fontWeight:active===t.key?600:500, color:active===t.key?T.ink:T.inkFaint, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:7, borderBottom:active===t.key?`2px solid ${T.primary}`:'2px solid transparent', marginBottom:-1, transition:'color .12s' }}>
+          {t.label}
+          <span style={{ fontSize:12, fontWeight:600, padding:'1px 7px', borderRadius:999, background:active===t.key?T.primaryBg:'transparent', color:active===t.key?T.primary:T.inkFaint }}>{t.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ListSearch({ value, onChange, placeholder }) {
+  return (
+    <div style={{ flex:'1 1 220px', display:'flex', alignItems:'center', gap:8, padding:'7px 12px', border:`1px solid ${T.line}`, borderRadius:8, background:T.panel }}>
+      <span style={{ color:T.inkFaint, flexShrink:0, display:'flex' }}><IcSearch/></span>
+      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{ border:'none', outline:'none', background:'transparent', fontSize:13, color:T.ink, width:'100%' }}/>
+      {value && (
+        <button onClick={() => onChange('')} style={{ background:'none', border:'none', cursor:'pointer', color:T.inkFaint, display:'flex', padding:0, flexShrink:0 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FilterPill({ label, active, open, onClick }) {
+  return (
+    <button onClick={onClick} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 11px', border:`1px solid ${active?T.primary:T.line}`, borderRadius:8, background:active?T.primaryBg:T.panel, fontSize:12.5, color:active?T.primary:T.ink, cursor:'pointer', whiteSpace:'nowrap', fontWeight:active?600:400, transition:'all .15s' }}>
+      <span>{label}</span><IcChevron up={open}/>
+    </button>
+  );
+}
+
+const listPopover = { position:'absolute', top:'calc(100% + 4px)', right:0, background:T.panel, border:`1px solid ${T.line}`, borderRadius:9, boxShadow:'0 8px 28px rgba(15,23,42,.1)', zIndex:500, minWidth:190, overflow:'hidden' };
+
+function listOptRow(selected) {
+  return { padding:'9px 14px', fontSize:12.5, color:selected?T.primary:T.ink, fontWeight:selected?600:400, background:selected?T.primaryBg:'transparent', cursor:'pointer' };
+}
+
+/* Single-select filter. options[0] is treated as the "all" / cleared value. */
+function SelectFilter({ value, onChange, options }) {
+  const [open, setOpen, ref] = useListDropdown();
+  return (
+    <div ref={ref} style={{ position:'relative', flexShrink:0 }}>
+      <FilterPill label={value} active={value !== options[0]} open={open} onClick={() => setOpen(p => !p)}/>
+      {open && (
+        <div style={listPopover}>
+          {options.map(o => (
+            <div key={o} onClick={() => { onChange(o); setOpen(false); }} style={listOptRow(value === o)}
+              onMouseEnter={e => { if (value !== o) e.currentTarget.style.background = T.fill; }}
+              onMouseLeave={e => { if (value !== o) e.currentTarget.style.background = 'transparent'; }}>{o}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClearFilters({ onClick }) {
+  return <button onClick={onClick} style={{ background:'none', border:'none', color:T.primary, fontSize:12.5, cursor:'pointer', padding:'7px 4px', fontWeight:500, whiteSpace:'nowrap', flexShrink:0 }}>Clear all</button>;
+}
+
+function ResultCount({ children }) {
+  return <span style={{ fontSize:11, color:T.inkFaint, marginLeft:'auto', whiteSpace:'nowrap', flexShrink:0 }}>{children}</span>;
+}
+
+/* The grey toolbar band above the table. */
+function ListToolbar({ children }) {
+  return <div style={{ padding:'16px 20px 12px', borderBottom:`1px solid ${T.line}`, background:T.fill }}>{children}</div>;
+}
+function FilterRow({ children }) {
+  return <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>{children}</div>;
+}
+
+/* The white rounded card that wraps toolbar + table + pager. */
+function ListCard({ children }) {
+  return <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, overflow:'hidden', boxShadow:'0 1px 3px rgba(15,23,42,.04)' }}>{children}</div>;
+}
+
+/* ── The table ──
+   cols:  [{ key, label, sort, width }]
+   cell:  (row, key) => node — module-owned cell content
+   rowActions: (row) => RowMenu items[] | null  */
+function DataTable({
+  cols, rows, rowKey = r => r.id, cell,
+  selected, onToggleRow, onToggleAll,
+  sortCol, sortDir, onSort, onRowClick, rowActions,
+  emptyTitle = 'No results', emptySub = 'Try adjusting your search or filters.',
+  minWidth = 900,
+}) {
+  const selectable = !!selected;
+  const hasActions = !!rowActions;
+  const allChk = selectable && rows.length > 0 && rows.every(r => selected.has(rowKey(r)));
+  const someChk = selectable && rows.some(r => selected.has(rowKey(r)));
+  const span = cols.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0);
+
+  return (
+    <div className="hscroll" style={{ overflowX:'auto' }}>
+      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13, minWidth }}>
+        <thead>
+          <tr>
+            {selectable && (
+              <th style={{ ...LIST_TH, width:44, textAlign:'center', padding:'10px 0' }}>
+                <input type="checkbox" checked={allChk}
+                  ref={el => { if (el) el.indeterminate = someChk && !allChk; }}
+                  onChange={() => onToggleAll(rows)}
+                  style={{ width:14, height:14, accentColor:T.primary, cursor:'pointer' }}/>
+              </th>
+            )}
+            {cols.map(col => (
+              <th key={col.key} style={{ ...LIST_TH, width:col.width, cursor:col.sort?'pointer':'default' }}
+                onClick={col.sort ? () => onSort(col.key) : undefined}>
+                {col.label}
+                {col.sort && <span style={{ marginLeft:3, opacity:sortCol===col.key?1:.28, fontSize:10 }}>{sortCol===col.key?(sortDir==='asc'?'↑':'↓'):'↕'}</span>}
+              </th>
+            ))}
+            {hasActions && <th style={{ ...LIST_TH, width:44 }}></th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr><td colSpan={span} style={{ padding:'72px 20px', textAlign:'center' }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="1.4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <div style={{ fontSize:15, fontWeight:600, color:T.inkSoft }}>{emptyTitle}</div>
+                <div style={{ fontSize:13, color:T.inkFaint }}>{emptySub}</div>
+              </div>
+            </td></tr>
+          ) : rows.map(row => {
+            const k = rowKey(row);
+            const sel = selectable && selected.has(k);
+            return (
+              <tr key={k}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                style={{ background:sel?LIST_SEL_BG:T.panel, borderBottom:`1px solid ${T.lineSoft}`, cursor:onRowClick?'pointer':'default', transition:'background .08s' }}
+                onMouseEnter={e => { if (!sel) e.currentTarget.style.background = T.fill; }}
+                onMouseLeave={e => { e.currentTarget.style.background = sel?LIST_SEL_BG:T.panel; }}>
+                {selectable && (
+                  <td style={{ ...LIST_TD, width:44, textAlign:'center' }} onClick={e => e.stopPropagation()}>
+                    <input type="checkbox" checked={sel} onChange={() => onToggleRow(k)} style={{ width:14, height:14, accentColor:T.primary, cursor:'pointer' }}/>
+                  </td>
+                )}
+                {cols.map(col => <td key={col.key} style={LIST_TD}>{cell(row, col.key)}</td>)}
+                {hasActions && (
+                  <td style={{ ...LIST_TD, width:44 }} onClick={e => e.stopPropagation()}>
+                    <RowMenu size={LIST_ACTION_SIZE} items={rowActions(row)}/>
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ── Pager ── */
+function ListPager({ page, setPage, total, pageSize, noun = 'results' }) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const btn = extra => ({ width:32, height:32, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', border:`1px solid ${T.line}`, background:T.panel, fontSize:13, ...extra });
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 16px', borderTop:`1px solid ${T.line}`, background:T.fill }}>
+      <span style={{ fontSize:12.5, color:T.inkSoft }}>
+        {total === 0 ? 'No results' : `Showing ${(page-1)*pageSize+1}–${Math.min(page*pageSize, total)} of ${total} ${noun}`}
+      </span>
+      {totalPages > 1 && (
+        <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+          <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
+            style={btn({ color:page===1?T.inkFaint:T.ink, cursor:page===1?'default':'pointer' })}>‹</button>
+          {Array.from({ length:totalPages }, (_,i) => i+1).map(p => (
+            <button key={p} onClick={() => setPage(p)}
+              style={btn({ border:`1px solid ${p===page?T.primary:T.line}`, background:p===page?T.primary:T.panel, color:p===page?'#fff':T.ink, cursor:'pointer', fontWeight:p===page?700:400, transition:'all .12s' })}>{p}</button>
+          ))}
+          <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}
+            style={btn({ color:page===totalPages?T.inkFaint:T.ink, cursor:page===totalPages?'default':'pointer' })}>›</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, {
+  LIST_TH, LIST_TD, LIST_SEL_BG, LIST_ACTION_SIZE,
+  useListDropdown, ListTabs, ListSearch, FilterPill, listPopover, listOptRow,
+  SelectFilter, ClearFilters, ResultCount, ListToolbar, FilterRow, ListCard,
+  DataTable, ListPager,
+});
