@@ -24,7 +24,7 @@ function DetailShell({ badge, code, title, sub, tabs, tab, setTab, actions, onCl
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
             <div style={{ minWidth:180, flex:1 }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5, minWidth:0 }}>
-                {badge}<span style={{ fontFamily:MONO, fontSize:11, fontWeight:700, color:T.tealDark, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{code}</span>
+                {badge}<span style={{ fontFamily:MONO, fontSize:11, fontWeight:700, color:T.primary, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{code}</span>
               </div>
               <h2 style={{ fontSize:17.5, fontWeight:700, color:T.ink }}>{title}</h2>
               <div style={{ fontSize:12.5, color:T.inkSoft, marginTop:3 }}>{sub}</div>
@@ -91,7 +91,7 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
         return (
           <div key={x.id} onClick={() => { onOpenParent(x); setTab('overview'); }} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderTop:i ? `1px solid ${T.lineSoft}` : 'none', cursor:'pointer', flexWrap:'wrap' }}
             onMouseEnter={e => e.currentTarget.style.background = T.fill} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-            <span style={{ fontFamily:MONO, fontSize:11.5, fontWeight:700, color:T.tealDark }}>{x.code}</span>
+            <span style={{ fontFamily:MONO, fontSize:11.5, fontWeight:700, color:T.primary }}>{x.code}</span>
             <div style={{ flex:1 }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:600 }}>{x.name}{x.isDefault && <Pill>Default</Pill>}</div>
               <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3, display:'flex', gap:10 }}>

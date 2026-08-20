@@ -128,7 +128,7 @@ const TREE = { caret:[12, 48], pad:[4, 40, 62] };
    shading, and CodeChip's own per-level style already say which tier a row is at. */
 function CodeChip({ level, children }) {
   const s = level === 'group' ? { background:'#EDF1F6', color:T.ink, fontSize:11.5, padding:'3px 8px', border:'1px solid transparent' }
-    : level === 'policy' ? { background:'#fff', color:T.tealDark, fontSize:11, padding:'2px 7px', border:`1px solid ${T.line}` }
+    : level === 'policy' ? { background:'#fff', color:T.primary, fontSize:11, padding:'2px 7px', border:`1px solid ${T.line}` }
     : { background:'transparent', color:T.inkFaint, fontSize:11, padding:'2px 0', border:'1px solid transparent' };
   return <span style={{ ...s, fontFamily:MONO, fontWeight:700, borderRadius:5, whiteSpace:'nowrap', letterSpacing:'-.2px' }}>{children}</span>;
 }

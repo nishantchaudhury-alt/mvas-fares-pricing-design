@@ -182,7 +182,7 @@ function DCGroupPanel({ kind, group, allGroups, onClose, onSave, onOpenParent, o
                       onMouseEnter={e => e.currentTarget.style.background = T.fill} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <div style={{ minWidth:0 }}>
                         <div style={{ fontWeight:600, color:T.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{p.name}</div>
-                        <div style={{ fontFamily:MONO, fontSize:11.5, color:T.tealDark, fontWeight:700, marginTop:2 }}>{p.code}</div>
+                        <div style={{ fontFamily:MONO, fontSize:11.5, color:T.primary, fontWeight:700, marginTop:2 }}>{p.code}</div>
                       </div>
                       <span style={{ color:T.inkSoft }}>{childCount(p)}</span>
                       <CoverPill ok={cov.issues.length === 0} label={cov.issues.length === 0 ? 'All windows covered' : `${cov.issues.length} issue${cov.issues.length===1?'':'s'}`}/>

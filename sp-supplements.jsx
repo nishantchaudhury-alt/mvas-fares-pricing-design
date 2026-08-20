@@ -623,7 +623,7 @@ function SupplementListScreen() {
   const saveChanges = (form) => setData((p) => p.map((r) => r.id === panel.row.id ? { ...r, ...form, mod: TODAY } : r));
 
   const cell = (row, key) => {
-    if (key === 'code') return <span style={{ fontFamily: MONO, fontSize: 12.5, fontWeight: 700, color: T.tealDark }}>{row.code}</span>;
+    if (key === 'code') return <span style={{ fontFamily: MONO, fontSize: 12.5, fontWeight: 700, color: T.primary }}>{row.code}</span>;
     if (key === 'name') return <span style={{ color: T.ink, fontWeight: 500 }}>{row.name}</span>;
     if (key === 'type') return <TypeBadge type={row.type} />;
     if (key === 'price') return <span style={{ fontFamily: MONO, fontSize: 12.5, color: T.ink, fontWeight: 600 }}>{fmtMoney(row.price)}</span>;

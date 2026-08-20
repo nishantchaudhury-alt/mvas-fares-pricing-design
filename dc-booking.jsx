@@ -248,7 +248,7 @@ function FlowRestore() {
           const blocked = r.status === 'Cancelled' && r.charge > 0;
           return (
             <div key={r.ref} style={{ display:'grid', gridTemplateColumns:'110px 1fr 110px 130px 1fr 110px', gap:8, padding:'12px 16px', borderTop:`1px solid ${T.lineSoft}`, fontSize:12.5, alignItems:'center' }}>
-              <span style={{ fontFamily:MONO, fontWeight:700, color:T.tealDark }}>{r.ref}</span>
+              <span style={{ fontFamily:MONO, fontWeight:700, color:T.primary }}>{r.ref}</span>
               <span style={{ color:T.inkSoft }}>{r.sailing}</span>
               <StatusBadge status={r.status}/>
               <span style={{ fontWeight: r.charge ? 700 : 400, color: r.charge ? T.ink : T.inkFaint }}>{r.charge ? money(r.charge) : 'None'}</span>

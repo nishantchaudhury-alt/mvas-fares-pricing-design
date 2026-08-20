@@ -1127,7 +1127,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
                     <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:13.5, fontWeight:800, color:T.ink }}>{viewRow?.code}</span>
                     <StatusBadge status={viewRow?.status||'Draft'}/>
                     <span style={{ fontSize:12, color:T.inkFaint }}>·</span>
-                    <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:600, color:T.tealDark, cursor:'pointer' }}>{form.faretype}</span>
+                    <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:600, color:T.primary, cursor:'pointer' }}>{form.faretype}</span>
                     {selFT && <span style={{ fontSize:11.5, color:T.inkFaint }}>· {selFT.basis}</span>}
                   </div>
                 )}
@@ -1420,12 +1420,12 @@ function FarecodeListScreen({ policies }) {
   const COLS=[{ key:'code',label:'Farecode ID',sort:true },{ key:'ship',label:'Ship',sort:false },{ key:'sailing',label:'Sailing',sort:true },{ key:'start',label:'Start Date',sort:true,width:'125px' },{ key:'end',label:'End Date',sort:true,width:'125px' },{ key:'cabins',label:'Cabin Categories',sort:false },{ key:'faretype',label:'Linked Faretype',sort:true },{ key:'status',label:'Status',sort:false },{ key:'mod',label:'Last Modified',sort:true }];
   const mono = "'SF Mono',Menlo,monospace";
   const cell = (row, key) => {
-    if (key==='code') return <span style={{ fontFamily:mono, fontSize:12.5, fontWeight:700, color:T.tealDark }}>{row.code}</span>;
+    if (key==='code') return <span style={{ fontFamily:mono, fontSize:12.5, fontWeight:700, color:T.primary }}>{row.code}</span>;
     if (key==='ship') return <span style={{ color:T.ink, fontWeight:450 }}>{row.ship}</span>;
     if (key==='sailing') return <span style={{ fontFamily:mono, fontSize:12, color:T.inkSoft }}>{row.sailing}</span>;
     if (key==='start'||key==='end') return <span style={{ color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{row[key]}</span>;
     if (key==='cabins') return <CabinsCell cabins={row.cabins}/>;
-    if (key==='faretype') return <span style={{ fontFamily:mono, fontSize:12.5, fontWeight:600, color:T.tealDark }}>{row.faretype}</span>;
+    if (key==='faretype') return <span style={{ fontFamily:mono, fontSize:12.5, fontWeight:600, color:T.primary }}>{row.faretype}</span>;
     if (key==='status') return <StatusBadge status={row.status}/>;
     if (key==='mod') return <span style={{ color:T.inkSoft, fontSize:12.5 }}>{row.mod}</span>;
     return null;

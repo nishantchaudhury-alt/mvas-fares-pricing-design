@@ -182,7 +182,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
      content allows — this replaced a flat 14px/11px/9px scheme that ran 66/58/37px per row. */
   const TH = { padding:'9px 14px', textAlign:'left', fontSize:10.5, fontWeight:600, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px', whiteSpace:'nowrap', background:'#F7F9FC', borderBottom:`1px solid ${T.line}` };
   const TD = { padding:'8px 14px', verticalAlign:'middle', fontSize:13 };
-  const codeStyle = { fontFamily:MONO, fontSize:11.5, fontWeight:700, color:T.tealDark, whiteSpace:'nowrap' };
+  const codeStyle = { fontFamily:MONO, fontSize:11.5, fontWeight:700, color:T.primary, whiteSpace:'nowrap' };
   const metaLine = { fontSize:11.5, lineHeight:1.3, color:T.inkFaint, marginTop:1, display:'flex', alignItems:'center', gap:7, flexWrap:'wrap' };
   const editorCell = editor => <span style={{ fontSize:12.5, color:T.inkSoft, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block', maxWidth:'100%' }}>{editor}</span>;
   const cbx = (id, on) => <input type="checkbox" checked={on} onChange={e => { e.stopPropagation(); setSel(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }} style={{ accentColor:T.primary, width:13, height:13, cursor:'pointer' }}/>;

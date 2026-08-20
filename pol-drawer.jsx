@@ -141,7 +141,7 @@ function PolEditDrawer({ edit, group, parent, setEdit, activatable, onCancel, on
             <div style={{ minWidth:0, flex:1 }}>
               <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5, minWidth:0 }}>
                 <TypeBadge type={g.type}/>
-                <span style={{ fontFamily:MONO, fontSize:10.5, fontWeight:700, color:T.tealDark, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{isGroup ? g.code : `${g.code} › ${p.code}`}</span>
+                <span style={{ fontFamily:MONO, fontSize:10.5, fontWeight:700, color:T.primary, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{isGroup ? g.code : `${g.code} › ${p.code}`}</span>
                 <PolStatusBadge status={isGroup ? g.status : p.status}/>
               </div>
               <h2 style={{ fontSize:17, fontWeight:700, color:T.ink }}>{isGroup ? 'Edit group' : 'Edit policy'}</h2>

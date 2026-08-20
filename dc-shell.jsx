@@ -333,7 +333,7 @@ function UsedInTables({ row }) {
         <SCard title="Faretypes Using This Policy">
           <div style={{ border:`1px solid ${T.lineSoft}`, borderRadius:8, overflow:'hidden' }}>
             <div style={head}><span>Code</span><span>Name</span><span>Status</span><span>Modified</span></div>
-            {fts.map((f,i) => (<div key={i} style={rs}><span style={{ fontFamily:MONO, fontWeight:700, color:T.tealDark }}>{f.code}</span><span>{f.name}</span><StatusBadge status={f.status}/><span style={{ color:T.inkSoft }}>{f.mod}</span></div>))}
+            {fts.map((f,i) => (<div key={i} style={rs}><span style={{ fontFamily:MONO, fontWeight:700, color:T.primary }}>{f.code}</span><span>{f.name}</span><StatusBadge status={f.status}/><span style={{ color:T.inkSoft }}>{f.mod}</span></div>))}
           </div>
         </SCard>
       )}
@@ -341,7 +341,7 @@ function UsedInTables({ row }) {
         <SCard title="Farecodes Using This Policy">
           <div style={{ border:`1px solid ${T.lineSoft}`, borderRadius:8, overflow:'hidden' }}>
             <div style={head}><span>Code</span><span>Ship / Sailing</span><span>Status</span><span>Modified</span></div>
-            {fcs.map((f,i) => (<div key={i} style={rs}><span style={{ fontFamily:MONO, fontWeight:700, color:T.tealDark }}>{f.code}</span><span>{f.ship}</span><StatusBadge status={f.status}/><span style={{ color:T.inkSoft }}>{f.mod}</span></div>))}
+            {fcs.map((f,i) => (<div key={i} style={rs}><span style={{ fontFamily:MONO, fontWeight:700, color:T.primary }}>{f.code}</span><span>{f.ship}</span><StatusBadge status={f.status}/><span style={{ color:T.inkSoft }}>{f.mod}</span></div>))}
           </div>
         </SCard>
       )}

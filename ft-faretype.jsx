@@ -1150,7 +1150,7 @@ const COLS = [
    columns and cell content; all table chrome, density and selection is the shared kit's. */
 function FaretypeTable({ rows, selected, onToggleRow, onToggleAll, sortCol, sortDir, onSort, onViewDetail }) {
   const cell = (row, key) => {
-    if (key === 'code') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 700, color: T.tealDark }}>{row.code}</span>;
+    if (key === 'code') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 700, color: T.primary }}>{row.code}</span>;
     if (key === 'basis') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12, color: T.inkSoft }}>{row.basis}</span>;
     if (key === 'group') return <GroupBadge group={row.group} />;
     if (key === 'source') return <span style={{ color: T.inkSoft }}>{row.source}</span>;
