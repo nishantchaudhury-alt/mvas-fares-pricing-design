@@ -6,7 +6,7 @@ const T = {
   ink:'#0F172A', inkSoft:'#475569', inkFaint:'#94A3B8', inkLabel:'#64748B',
   bg:'#F1F5F9', panel:'#FFFFFF', fill:'#F8FAFC',
   line:'#E2E8F0', lineSoft:'#EEF2F6',
-  primary:'#1B2434', primaryBg:'#EEF2F6',
+  primary:'#1B2434', primaryBg:'#EFF6FF', primaryLine:'#DBEAFE',
   teal:'#0D9488', tealDark:'#0F766E', tealLight:'#ECFDF5',
   amber:'#F59E0B', amberDark:'#D97706', amberLight:'#FFFBEB', amberBorder:'#FCD34D',
   red:'#DC2626', redLight:'#FEF2F2', green:'#059669', greenLight:'#F0FDF4',

@@ -5,8 +5,8 @@
    everything else (tables, panels, modals) stays on the neutral palette. */
 const SB = {
   bg: T.primary,        // '#1B2434' — same navy already used for buttons/badges elsewhere
-  active: '#C1502F',    // brand terracotta for the active nav pill — approximate; no brand kit hex supplied
-  accent: '#E2724F',    // lighter warm accent for active sub-item text/tick, for contrast on navy
+  active: '#C1502F',    // retain the existing red/terracotta active navigation treatment
+  accent: '#E2724F',    // retain the existing lighter red/terracotta sub-item treatment
   text: '#98A6BC',       // inactive item label/icon
   textDim: '#66738C',    // placeholder sub-items not yet wired to a screen
   hover: 'rgba(255,255,255,.06)',
