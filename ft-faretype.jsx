@@ -799,7 +799,7 @@ function sErr(n, errors) {
   if (n === 2) return !!(errors.cancellationPolicy || errors.depositPolicy);
   return false;
 }
-function calcCompletion(form, visited) {
+function calcCompletion(form, visited, mode) {
   let done = 0;
   if (form.faretypeCode && form.faretypeGroup && form.source) done++;
   if (form.cancellationPolicy && form.depositPolicy) done++;
@@ -807,17 +807,18 @@ function calcCompletion(form, visited) {
   if (visited.has(4)) done++;
   if (visited.has(5)) done++;
   if (visited.has(6)) done++;
-  if (visited.has(7)) done++;
-  return Math.round(done / 7 * 100);
+  if (mode === 'edit' && visited.has(7)) done++;
+  const total = mode === 'edit' ? 7 : 6;
+  return Math.round(done / total * 100);
 }
 
 /* ── Panel Left Nav (new) ───────────────────── */
-function PanelNav({ active, onNav, form, errors, visited, pct }) {
+function PanelNav({ active, onNav, form, errors, visited, pct, sections }) {
   return (
     <div style={{ width: 248, flexShrink: 0, background: T.navFill, borderRight: `1px solid ${T.line}`, display: 'flex', flexDirection: 'column' }}>
       {/* Nav items */}
       <div style={{ flex: 1, padding: '20px 0 0', overflowY: 'auto' }}>
-        {SECTIONS.map(({ n, l }) => {
+        {sections.map(({ n, l }) => {
           const isActive = active === n;
           const isDone = !isActive && sComplete(n, form) && (visited.has(n) || n <= 2);
           const hasErr = sErr(n, errors);
@@ -891,6 +892,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const [fcOpen, setFcOpen] = useState(false);
   const [checkedFc, setCheckedFc] = useState(new Set(['FC-00201', 'FC-00202', 'FC-00203', 'FC-00204', 'FC-00205']));
   const [mounted, setMounted] = useState(false);
+  const sections = mode === 'edit' ? SECTIONS : SECTIONS.filter((s) => s.n !== 7);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -941,14 +943,15 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const handleNext = () => {
     if (active === 1 && !validateS1()) return;
     if (active === 2 && !validateS2()) return;
-    if (active < 7) navTo(active + 1);else
+    const lastStep = mode === 'edit' ? 7 : 6;
+    if (active < lastStep) navTo(active + 1);else
     {if (validateAll()) onActivate(form);}
   };
 
   const handleBack = () => {if (active > 1) navTo(active - 1);};
 
-  const pct = calcCompletion(form, visited);
-  const isLast = active === 7;
+  const pct = calcCompletion(form, visited, mode);
+  const isLast = active === (mode === 'edit' ? 7 : 6);
   const allReq = !!(form.faretypeCode && form.faretypeGroup && form.source && form.cancellationPolicy && form.depositPolicy);
 
   const renderSection = () => {
@@ -983,7 +986,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
 
         {/* Body */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          <PanelNav active={active} onNav={navTo} form={form} errors={errors} visited={visited} pct={pct} />
+          <PanelNav active={active} onNav={navTo} form={form} errors={errors} visited={visited} pct={pct} sections={sections} />
 
           {/* Content */}
           <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: '32px 36px', background: '#fff' }}>
