@@ -389,7 +389,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
 
       {flow && (
         <PolFlowDrawer flow={flow} setFlow={setFlow} activatable={parentActivatable(flow.type, flow.pForm, flow.rows)}
-          onCancel={askCancelFlow} onDraft={() => commitFlow('Draft')} onActivate={tryActivateFlow}/>
+          onCancel={askCancelFlow} onActivate={tryActivateFlow}/>
       )}
 
       <PolDialogs dlg={dlg} setDlg={setDlg} onDiscardFlow={() => { setFlow(null); setDlg(null); }} onDiscardEdit={() => { setEdit(null); setDlg(null); }}

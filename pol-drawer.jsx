@@ -35,7 +35,7 @@ function Recap({ items }) {
   );
 }
 
-function PolFlowDrawer({ flow, setFlow, activatable, onCancel, onDraft, onActivate }) {
+function PolFlowDrawer({ flow, setFlow, activatable, onCancel, onActivate }) {
   const f = flow, meta = POL_META[f.type];
   const setG = patch => setFlow(x => ({ ...x, gForm:{ ...x.gForm, ...patch } }));
   const setP = patch => setFlow(x => ({ ...x, pForm:{ ...x.pForm, ...patch } }));
@@ -94,7 +94,6 @@ function PolFlowDrawer({ flow, setFlow, activatable, onCancel, onDraft, onActiva
     return (<>
       <button style={polGhost} onClick={() => goto(2)}>← Back</button>
       <button style={polGhost} onClick={onCancel}>Cancel</button>
-      <button style={polGhost} onClick={onDraft}>Save as Draft</button>
       <button style={polDark} onClick={onActivate}>Activate</button>
     </>);
   };
@@ -110,7 +109,7 @@ function PolFlowDrawer({ flow, setFlow, activatable, onCancel, onDraft, onActiva
                 <span style={{ fontFamily:MONO, fontSize:10.5, fontWeight:700, color:T.inkFaint, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.groupCode} · {f.parentCode}</span>
               </div>
               <h2 style={{ fontSize:17, fontWeight:700, color:T.ink }}>{title}</h2>
-              <div style={{ fontSize:12, color:T.inkSoft, marginTop:3 }}>Nothing is saved until you choose Save as Draft or Activate on the last step.</div>
+              <div style={{ fontSize:12, color:T.inkSoft, marginTop:3 }}>Nothing is saved until you choose Activate on the last step.</div>
             </div>
             <button onClick={onCancel} style={{ width:30, height:30, borderRadius:7, border:`1px solid ${T.line}`, background:'#fff', cursor:'pointer', color:T.inkSoft, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><IcX size={13}/></button>
           </div>
