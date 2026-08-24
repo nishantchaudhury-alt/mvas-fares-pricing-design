@@ -62,7 +62,7 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
                   style={{ marginLeft:'auto', width:24, height:24, borderRadius:6, border:'none', background:'none', cursor:rows.length <= 1 ? 'not-allowed' : 'pointer', color:rows.length <= 1 ? T.inkFaint : T.red, display:'flex', alignItems:'center', justifyContent:'center' }}><IcX size={11}/></button>
               )}
             </div>
-            <div style={{ padding:'11px 12px', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(116px, 1fr))', gap:11 }}>
+            <div style={{ padding:'11px 12px', display:'grid', gridTemplateColumns:isDep ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))', gap:11 }}>
               {isDep && (
                 <RCField span label="Marketing name" err={cellErr[`${i}:marketingName`]}>
                   {editing ? rcIn(r.marketingName, v => upd(i, 'marketingName', v), cellErr[`${i}:marketingName`], 'e.g. Full Deposit') : rcVal(r.marketingName || '—')}
@@ -82,7 +82,7 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
                   {editing ? rcIn(r.amount, v => upd(i, 'amount', v.replace(/[^0-9.]/g, '')), cellErr[`${i}:amount`], '', r.depositType === 'PCT' ? '%' : '$') : rcVal(depAmountLabel(r))}
                 </RCField>
               </>) : (<>
-                <RCField span label="Penalty type">
+                <RCField label="Penalty type">
                   {editing ? <Sel compact value={r.penaltyType} onChange={v => upd(i, 'penaltyType', v)} opts={PEN_TYPES}/> : rcVal(r.penaltyType)}
                 </RCField>
                 <RCField label="Penalty value" err={cellErr[`${i}:penaltyValue`]}>
@@ -95,7 +95,7 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
                     : rcVal(penAmountLabel(r))}
                 </RCField>
               </>)}
-              <RCField span label="Stateroom types" err={cellErr[`${i}:cats`]}>
+              <RCField span={isDep} label="Stateroom types" err={cellErr[`${i}:cats`]}>
                 {editing ? <CatSelect value={r.cats} onChange={v => upd(i, 'cats', v)} err={cellErr[`${i}:cats`]}/> : rcVal(catSentence(r.cats || []))}
               </RCField>
               {isDep && (
