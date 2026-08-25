@@ -1,20 +1,200 @@
 // pol-detail.jsx — read-only detail drawer for a Group or a Parent policy (view-through from the list).
 const { useState: useSDt } = React;
 
-/* Definition-list row: fixed-width label, flexible value — reads cleanly at any drawer width
-   without the auto-fit-grid wrapping problem. */
-function ConfigRow({ label, first, children }) {
+function PolDetailCard({ number, title, description, aside, children, pad = '14px 16px 16px' }) {
+  const uid = React.useId().replace(/:/g, '');
+  const titleId = `policy-detail-card-${uid}`;
   return (
-    <div style={{ display:'flex', alignItems:'flex-start', gap:16, padding:'11px 0', borderTop:first ? 'none' : `1px solid ${T.lineSoft}` }}>
-      <span style={{ width:112, flexShrink:0, fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', paddingTop:2 }}>{label}</span>
-      <div style={{ flex:1, fontSize:13, color:T.ink, lineHeight:1.5, minWidth:0, overflowWrap:'anywhere' }}>{children}</div>
+    <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, overflow:'hidden', boxShadow:'0 1px 2px rgba(15,23,42,.05)' }}>
+      <div style={{ padding:'11px 14px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, minWidth:0 }}>
+          {number && <span aria-hidden="true" style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>{String(number).padStart(2, '0')}</span>}
+          <div style={{ minWidth:0 }}>
+            <h3 id={titleId} style={{ fontSize:14.5, fontWeight:700, color:T.ink, margin:0 }}>{title}</h3>
+            {description && <p style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, margin:'3px 0 0' }}>{description}</p>}
+          </div>
+        </div>
+        {aside && <div style={{ flexShrink:0 }}>{aside}</div>}
+      </div>
+      <div style={{ padding:pad, display:'flex', flexDirection:'column', gap:14 }}>{children}</div>
+    </section>
+  );
+}
+
+function PolValueField({ label, value, mono }) {
+  return (
+    <div style={{ minWidth:0 }}>
+      <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px', marginBottom:5 }}>{label}</div>
+      <div style={{ minHeight:38, padding:'9px 11px', border:`1px solid ${T.lineSoft}`, borderRadius:7, background:T.fill, color:T.ink, fontSize:13, fontWeight:600, display:'flex', alignItems:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontFamily:mono ? MONO : undefined }}>{value}</div>
     </div>
   );
 }
-function ConfigName({ children }) {
-  return <span style={{ fontSize:14.5, fontWeight:650, letterSpacing:'-.1px' }}>{children}</span>;
+
+function PolStateTile({ label, helper, full, children }) {
+  return (
+    <div style={{ gridColumn:full ? '1 / -1' : undefined, minWidth:0, padding:'11px 12px', border:`1px solid ${T.line}`, borderRadius:8, background:'#fff' }}>
+      <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}</div>
+      <div style={{ minHeight:25, display:'flex', alignItems:'center', marginTop:7 }}>{children}</div>
+      {helper && <div style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.4, marginTop:4 }}>{helper}</div>}
+    </div>
+  );
 }
-const flagRow = { display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' };
+
+function PolMetricTile({ label, value, helper, full, mono }) {
+  return (
+    <div style={{ gridColumn:full ? '1 / -1' : undefined, minWidth:0, padding:'10px 12px', borderRadius:8, background:T.fill, border:`1px solid ${T.lineSoft}` }}>
+      <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}</div>
+      <div style={{ fontSize:15, fontWeight:700, color:T.ink, marginTop:5, overflowWrap:'anywhere', fontFamily:mono ? MONO : undefined }}>{value}</div>
+      {helper && <div style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.4, marginTop:2 }}>{helper}</div>}
+    </div>
+  );
+}
+
+const POL_RULE_REFERENCE = {
+  deposit: [
+    { code:'FP', title:'Fixed amount per guest', detail:'Charge the same flat amount for each guest.' },
+    { code:'FC', title:'Fixed amount per cabin', detail:'Charge one flat amount per cabin, regardless of occupancy.' },
+    { code:'PCT', title:'Percentage of amount due', detail:'Charge a percentage of the total booking amount due at this milestone.' },
+  ],
+  cancel: [
+    { code:'NONE', title:'No charge', detail:'Apply no cancellation charge and refund all amounts paid.' },
+    { code:'FIXED', title:'Fixed amount', detail:'Charge a fixed currency amount, independent of the cabin fare.' },
+    { code:'PCT_CABIN_FARE', title:'Cabin-fare percentage', detail:'Charge a percentage of the gross or net cabin fare.' },
+    { code:'FULL_DEPOSIT', title:'Deposit forfeiture', detail:'Forfeit the full deposit, including after subsequent modifications, with no additional charge.' },
+  ],
+};
+
+function PolRuleReference({ type }) {
+  const entries = POL_RULE_REFERENCE[type];
+  const isCancel = type === 'cancel';
+  const uid = React.useId().replace(/:/g, '');
+  const titleId = `policy-rule-reference-${uid}`;
+  return (
+    <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, overflow:'hidden', boxShadow:'0 1px 2px rgba(15,23,42,.05)' }}>
+      <div style={{ padding:'11px 14px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, minWidth:0 }}>
+          <span aria-hidden="true" style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>03</span>
+          <div>
+            <h3 id={titleId} style={{ margin:0, color:T.ink, fontSize:13.5, fontWeight:700 }}>{isCancel ? 'Penalty type reference' : 'Deposit type reference'}</h3>
+            <p style={{ margin:'3px 0 0', color:T.inkSoft, fontSize:11.5, lineHeight:1.45 }}>How each configured value determines the amount charged.</p>
+          </div>
+        </div>
+        <span style={{ flexShrink:0, padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{entries.length} options</span>
+      </div>
+      <div>
+        {entries.map((entry, index) => (
+          <div key={entry.code} style={{ display:'grid', gridTemplateColumns:'128px minmax(0,1fr)', gap:14, alignItems:'start', padding:'11px 14px', borderBottom:index < entries.length - 1 ? `1px solid ${T.lineSoft}` : 'none' }}>
+            <span style={{ width:'fit-content', maxWidth:'100%', padding:'4px 7px', borderRadius:6, border:`1px solid ${T.line}`, background:T.fill, color:T.ink, fontFamily:MONO, fontSize:10.5, fontWeight:700, lineHeight:1.35, overflowWrap:'anywhere' }}>{entry.code}</span>
+            <div style={{ minWidth:0 }}>
+              <div style={{ color:T.ink, fontSize:12.5, fontWeight:650, lineHeight:1.35 }}>{entry.title}</div>
+              <div style={{ marginTop:2, color:T.inkSoft, fontSize:11.5, lineHeight:1.5 }}>{entry.detail}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {isCancel && (
+        <div style={{ display:'flex', gap:9, alignItems:'flex-start', padding:'10px 14px', background:T.primaryBg, borderTop:`1px solid ${T.primaryLine}` }}>
+          <span aria-hidden="true" style={{ width:18, height:18, flexShrink:0, borderRadius:'50%', display:'inline-flex', alignItems:'center', justifyContent:'center', background:'#fff', border:`1px solid ${T.primaryLine}`, color:T.primary, fontSize:11, fontWeight:800 }}>i</span>
+          <div style={{ color:T.inkSoft, fontSize:11.5, lineHeight:1.5 }}><strong style={{ color:T.ink }}>Calculation precedence:</strong> when PCT_CABIN_FARE and FULL_DEPOSIT overlap in the same DTS window, charge whichever amount is greater.</div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PolResolvedSchedule({ type, parentCode, rows, complete }) {
+  const isDep = type === 'deposit';
+  const title = isDep ? 'Resolved deposit schedule' : 'Resolved penalty schedule';
+  const description = isDep
+    ? 'Effective deposit amount and cabin coverage across each days-to-sailing window.'
+    : 'Effective cancellation charge and cabin coverage across each days-to-sailing window.';
+  const itemWord = isDep ? 'line' : 'band';
+  const aside = (
+    <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
+      <span style={{ padding:'2px 7px', borderRadius:999, background:'#fff', border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{rows.length} {rows.length === 1 ? itemWord : `${itemWord}s`}</span>
+      <CoverPill ok={complete} label={rows.length === 0 ? 'Not configured' : complete ? 'Coverage complete' : 'Coverage gaps'}/>
+    </div>
+  );
+  return (
+    <PolDetailCard number="02" title={title} description={description} aside={aside} pad="0">
+      {rows.length === 0 ? (
+        <div style={{ padding:'32px 20px', textAlign:'center' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:T.ink }}>No {isDep ? 'milestone lines' : 'cancellation bands'} configured</div>
+          <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:4 }}>Use Edit policy to define the first DTS window.</div>
+        </div>
+      ) : rows.map((r, i) => {
+        const primary = isDep ? (r.marketingName || 'Untitled deposit line') : penAmountLabel(r);
+        const secondary = isDep ? depLabel(r) : null;
+        const method = isDep ? r.depositType : r.penaltyType;
+        return (
+          <div key={i} style={{ display:'grid', gridTemplateColumns:'32px minmax(0,1fr)', gap:10, padding:'12px 14px', borderBottom:i < rows.length - 1 ? `1px solid ${T.lineSoft}` : 'none' }}>
+            <div aria-hidden="true" style={{ position:'relative', display:'flex', justifyContent:'center' }}>
+              {i < rows.length - 1 && <span style={{ position:'absolute', top:24, bottom:-20, width:1, background:T.line }}/>}
+              <span style={{ width:24, height:24, borderRadius:'50%', zIndex:1, display:'flex', alignItems:'center', justifyContent:'center', background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary, fontSize:10.5, fontWeight:800 }}>{i + 1}</span>
+            </div>
+            <div style={{ minWidth:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                <span style={{ fontFamily:MONO, fontSize:10.5, fontWeight:800, color:T.inkSoft }}>{childCode(parentCode, i)}</span>
+                <span style={{ padding:'3px 7px', borderRadius:999, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>DTS {dtsLabel(r)}</span>
+                <span style={{ padding:'3px 7px', borderRadius:5, background:T.fill, border:`1px solid ${T.lineSoft}`, color:T.inkSoft, fontFamily:MONO, fontSize:9.5, fontWeight:700 }}>{method}</span>
+              </div>
+              <div style={{ display:'flex', alignItems:'flex-start', gap:16, flexWrap:'wrap', marginTop:8 }}>
+                <div style={{ flex:'1 1 190px', minWidth:0 }}>
+                  <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px' }}>{isDep ? 'Deposit' : 'Resolved charge'}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:T.ink, lineHeight:1.35, marginTop:3 }}>{primary}</div>
+                  {secondary && <div style={{ fontSize:11, color:T.inkSoft, marginTop:2 }}>{secondary}</div>}
+                </div>
+                <div style={{ flex:'1 1 150px', minWidth:0 }}>
+                  <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px' }}>Stateroom coverage</div>
+                  <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>{catSentence(r.cats || [])}</div>
+                  {isDep && r.cancelApplies && <span style={{ display:'inline-flex', marginTop:5, padding:'2px 6px', borderRadius:5, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.inkSoft, fontSize:9.5, fontWeight:700 }}>Cancellation floor applies</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </PolDetailCard>
+  );
+}
+
+function PolActivityHistory({ status, label }) {
+  const log = AUDIT(label, status);
+  const uid = React.useId().replace(/:/g, '');
+  const titleId = `policy-history-${uid}`;
+  return (
+    <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ padding:'10px 13px', background:T.fill, borderBottom:`1px solid ${T.line}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <h3 id={titleId} style={{ fontSize:13, fontWeight:700, color:T.ink, margin:0 }}>Activity History</h3>
+          <span style={{ padding:'2px 7px', borderRadius:999, background:'#fff', border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{log.length}</span>
+        </div>
+        <span style={{ fontSize:10.5, color:T.inkFaint }}>Newest first</span>
+      </div>
+      <div style={{ padding:'2px 0' }}>
+        {log.map((e, i) => {
+          const positive = /activated|created/i.test(e.event);
+          return (
+            <div key={i} style={{ display:'grid', gridTemplateColumns:'34px minmax(0,1fr) auto', gap:10, padding:'12px 14px', position:'relative', borderBottom:i < log.length - 1 ? `1px solid ${T.lineSoft}` : 'none' }}>
+              <div aria-hidden="true" style={{ position:'relative', display:'flex', justifyContent:'center' }}>
+                {i < log.length - 1 && <span style={{ position:'absolute', top:24, bottom:-18, width:1, background:T.line }}/>}
+                <span style={{ width:24, height:24, borderRadius:'50%', zIndex:1, display:'flex', alignItems:'center', justifyContent:'center', background:positive ? T.greenLight : T.primaryBg, border:`1px solid ${positive ? '#A7F3D0' : T.primaryLine}`, color:positive ? T.green : T.primary, fontSize:11, fontWeight:800 }}>{positive ? '✓' : '•'}</span>
+              </div>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:T.ink, lineHeight:1.3 }}>{e.event}</div>
+                <span style={{ display:'inline-flex', marginTop:6, padding:'4px 7px', borderRadius:5, background:T.fill, border:`1px solid ${T.lineSoft}`, color:T.inkSoft, fontSize:11.5, lineHeight:1.2 }}>{e.detail}</span>
+              </div>
+              <div style={{ textAlign:'right', paddingTop:1, minWidth:138 }}>
+                <div style={{ fontSize:11, color:T.inkSoft, whiteSpace:'nowrap' }}>{e.ts}</div>
+                <span style={{ display:'inline-flex', marginTop:6, padding:'2px 6px', borderRadius:5, background:T.fill, color:T.inkFaint, fontSize:10.5 }}>{e.editor}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 function DetailShell({ badge, code, title, sub, tabs, tab, setTab, actions, onClose, children }) {
   return (
@@ -31,7 +211,7 @@ function DetailShell({ badge, code, title, sub, tabs, tab, setTab, actions, onCl
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0, flexWrap:'wrap', justifyContent:'flex-end' }}>
               {actions}
-              <button onClick={onClose} style={{ width:30, height:30, borderRadius:7, border:`1px solid ${T.line}`, background:'#fff', cursor:'pointer', color:T.inkSoft, display:'flex', alignItems:'center', justifyContent:'center' }}><IcX size={13}/></button>
+              <button type="button" aria-label="Close policy details" onClick={onClose} style={{ width:30, height:30, borderRadius:7, border:`1px solid ${T.line}`, background:'#fff', cursor:'pointer', color:T.inkSoft, display:'flex', alignItems:'center', justifyContent:'center' }}><IcX size={13}/></button>
             </div>
           </div>
           <div className="hscroll" style={{ marginTop:14, overflowX:'auto' }}><div style={{ minWidth:'max-content' }}><Tabs active={tab} onChange={setTab} tabs={tabs}/></div></div>
@@ -55,6 +235,10 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
   const v = p ? validateRows(kids) : null;
   const refundIssues = p && g.type === 'cancel' ? refundabilityIssues(kids, p.isRefundable !== false) : [];
   const editBtn = { ...polBtn, background:T.primary, color:'#fff', display:'inline-flex', alignItems:'center', gap:6 };
+  const isDraftTarget = g.status === 'Draft' || (p && p.status === 'Draft');
+  const finishAction = isDraftTarget
+    ? <button style={{ ...polGhost, whiteSpace:'nowrap' }} onClick={() => onFinish(g, p)}>Finish setup</button>
+    : null;
 
   const tabs = isGroup
     ? [{ k:'overview', l:'Overview' }, { k:'children', l:'Policies', count:g.parents.length }, { k:'audit', l:'History' }]
@@ -62,22 +246,44 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
 
   const groupOverview = (
     <>
-      <SCard title="Group Configuration" pad="0 16px"><div style={{ display:'flex', flexDirection:'column' }}>
-        <ConfigRow label="Name" first><ConfigName>{g.name}</ConfigName></ConfigRow>
-        <ConfigRow label="Code"><span style={{ fontFamily:MONO, fontWeight:700, fontSize:12.5 }}>{g.code}</span></ConfigRow>
-        <ConfigRow label="Flags">
-          <div style={flagRow}>
-            <TypeBadge type={g.type}/><PolStatusBadge status={g.status}/>
-            {g.isDefault && <Pill>Default</Pill>}
-            {g.type === 'cancel' && <Pill bg={g.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={g.isRefundable === false ? '#991B1B' : '#065F46'}>{g.isRefundable === false ? 'Non-Refundable' : 'Refundable'}</Pill>}
+      <PolDetailCard number="01" title="Group configuration" description={`Identity, assignment state, and downstream usage for this ${meta.label.toLowerCase()} policy group.`}>
+        <div>
+          <div style={{ marginBottom:9 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Identity</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Stable identifiers used in assignment, reporting, and audit records.</div>
           </div>
-        </ConfigRow>
-        <ConfigRow label="Policies">{g.parents.length} inside · {g.parents.filter(x => x.status === 'Active').length} active</ConfigRow>
-        <ConfigRow label="Referenced by">{usedInGroup(g)} Faretype / Farecode records</ConfigRow>
-        <ConfigRow label="Modified"><span style={{ color:T.inkSoft }}>{g.mod} · {g.editor}</span></ConfigRow>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <PolValueField label="Group name" value={g.name}/>
+            <PolValueField label="Group code" value={g.code} mono/>
+          </div>
         </div>
-      </SCard>
-      {g.status === 'Draft' && <Banner level="warn" title="Draft chain">This group was saved before its policy was finished. Use Finish setup to complete the remaining steps.</Banner>}
+
+        <div style={{ paddingTop:13, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:9 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Assignment state</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Current lifecycle and default-selection behavior.</div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <PolStateTile label="Policy type" helper={`${meta.label} policy group`}><TypeBadge type={g.type}/></PolStateTile>
+            <PolStateTile label="Lifecycle" helper={g.status === 'Active' ? 'Available for policy assignment' : 'Unavailable for new assignments'}><PolStatusBadge status={g.status}/></PolStateTile>
+            <PolStateTile label="Default selection" helper="Used when this policy type is left unset"><Pill bg={g.isDefault ? T.primaryBg : T.fill} color={g.isDefault ? T.primary : T.inkSoft}>{g.isDefault ? 'Default group' : 'Not default'}</Pill></PolStateTile>
+            {g.type === 'cancel' && <PolStateTile label="Refundability" helper="Applies to policies within this group"><Pill bg={g.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={g.isRefundable === false ? '#991B1B' : '#065F46'}>{g.isRefundable === false ? 'Non-Refundable' : 'Refundable'}</Pill></PolStateTile>}
+          </div>
+        </div>
+
+        <div style={{ paddingTop:13, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:9 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Usage & ownership</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Policy inventory, downstream references, and record ownership.</div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <PolMetricTile label="Policies" value={String(g.parents.length)} helper={`${g.parents.filter(x => x.status === 'Active').length} active inside this group`}/>
+            <PolMetricTile label="Referenced by" value={String(usedInGroup(g))} helper="Faretype / Farecode records"/>
+            <PolMetricTile full label="Last modified" value={g.mod} helper={g.editor}/>
+          </div>
+        </div>
+      </PolDetailCard>
+      {g.status === 'Draft' && <Banner level="warn" title="Draft chain" action={finishAction}>This group was saved before its policy was finished. Complete the remaining steps before activation.</Banner>}
       {g.status !== 'Active' && g.status !== 'Draft' && !g.parents.some(x => x.status === 'Active') && (
         <Banner level="info" title="Cannot be activated yet">A group needs at least one active policy inside it.</Banner>
       )}
@@ -85,63 +291,90 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
   );
 
   const groupChildren = (
-    <SCard title={`Policies in ${g.name}`} pad="0">
-      {g.parents.length === 0 ? <div style={{ padding:'40px 20px', textAlign:'center', fontSize:13, color:T.inkSoft }}>No policies in this group yet.</div> : g.parents.map((x, i) => {
+    <PolDetailCard number="02" title={`Policies in ${g.name}`} description={`Parent policies available for assignment inside this ${meta.label.toLowerCase()} group.`}
+      aside={<span style={{ padding:'2px 7px', borderRadius:999, background:'#fff', border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{g.parents.length}</span>} pad="10px">
+      {g.parents.length === 0 ? <div style={{ padding:'34px 20px', textAlign:'center', fontSize:13, color:T.inkSoft }}>No policies in this group yet.</div> : g.parents.map((x) => {
         const k = kidsOf(x), ok = k.length > 0 && validateRows(k).issues.length === 0;
+        const configLabel = g.type === 'cancel'
+          ? `${k.length} cancellation ${k.length === 1 ? 'band' : 'bands'}`
+          : `${k.length} milestone ${k.length === 1 ? 'line' : 'lines'}`;
         return (
-          <div key={x.id} onClick={() => { onOpenParent(x); setTab('overview'); }} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderTop:i ? `1px solid ${T.lineSoft}` : 'none', cursor:'pointer', flexWrap:'wrap' }}
-            onMouseEnter={e => e.currentTarget.style.background = T.fill} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-            <span style={{ fontFamily:MONO, fontSize:11.5, fontWeight:700, color:T.primary }}>{x.code}</span>
-            <div style={{ flex:1 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:600 }}>{x.name}{x.isDefault && <Pill>Default</Pill>}</div>
-              <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3, display:'flex', gap:10 }}>
-                <span>{k.length} {k.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}</span>
-                <CoverPill ok={ok} label={k.length === 0 ? 'No lines yet' : ok ? 'Coverage complete' : 'Window/coverage gaps'}/>
+          <button key={x.id} type="button" aria-label={`Open ${x.code}, ${x.name}`} onClick={() => { onOpenParent(x); setTab('overview'); }}
+            style={{ width:'100%', padding:0, border:`1px solid ${T.line}`, borderRadius:9, background:'#fff', overflow:'hidden', cursor:'pointer', textAlign:'left', fontFamily:'inherit', boxShadow:'0 1px 2px rgba(15,23,42,.04)', transition:'border-color .15s, box-shadow .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = T.primaryLine; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = T.line; e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,23,42,.04)'; }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, padding:'9px 12px', background:T.fill, borderBottom:`1px solid ${T.lineSoft}` }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
+                <span style={{ fontFamily:MONO, fontSize:11.5, fontWeight:800, color:T.primary }}>{x.code}</span>
+                {x.isDefault && <Pill>Default</Pill>}
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}><PolStatusBadge status={x.status}/><span aria-hidden="true" style={{ color:T.primary, fontSize:14, fontWeight:700 }}>→</span></div>
+            </div>
+            <div style={{ padding:'12px' }}>
+              <div style={{ fontSize:13.5, fontWeight:700, color:T.ink, lineHeight:1.35 }}>{x.name}</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginTop:11, paddingTop:10, borderTop:`1px solid ${T.lineSoft}` }}>
+                <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px' }}>Configuration</div><div style={{ fontSize:11.5, color:T.inkSoft, marginTop:4 }}>{configLabel}</div></div>
+                <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px' }}>Coverage</div><div style={{ marginTop:4 }}><CoverPill ok={ok} label={k.length === 0 ? 'Not configured' : ok ? 'Complete' : 'Needs attention'}/></div></div>
+                <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px' }}>Referenced by</div><div style={{ fontSize:11.5, color:T.inkSoft, marginTop:4 }}>{x.usedIn > 0 ? `${x.usedIn} records` : 'No records'}</div></div>
               </div>
             </div>
-            <span style={{ fontSize:12, color:T.inkSoft }}>{x.usedIn > 0 ? `Used in ${x.usedIn} records` : '0 references'}</span>
-            <PolStatusBadge status={x.status}/>
-            <span style={{ color:T.inkFaint, fontSize:14 }}>›</span>
-          </div>
+          </button>
         );
       })}
-    </SCard>
+    </PolDetailCard>
   );
 
   const parentOverview = !p ? null : (
     <>
-      <SCard title="Policy Configuration" pad="0 16px"><div style={{ display:'flex', flexDirection:'column' }}>
-        <ConfigRow label="Name" first><ConfigName>{p.name}</ConfigName></ConfigRow>
-        <ConfigRow label="Code"><span style={{ fontFamily:MONO, fontWeight:700, fontSize:12.5 }}>{p.code}</span></ConfigRow>
-        <ConfigRow label="Group">
-          <div style={flagRow}><TypeBadge type={g.type}/><span>{g.name}</span><span style={{ fontFamily:MONO, fontSize:11, color:T.inkFaint }}>{g.code}</span></div>
-        </ConfigRow>
-        <ConfigRow label="Flags">
-          <div style={flagRow}>
-            <PolStatusBadge status={p.status}/>
-            {p.isDefault && <Pill>Default</Pill>}
-            {g.type === 'cancel' && <Pill bg={p.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={p.isRefundable === false ? '#991B1B' : '#065F46'}>{p.isRefundable === false ? 'Non-Refundable' : 'Refundable'}</Pill>}
+      {isDraftTarget && <Banner level="warn" title="Draft policy" action={finishAction}>This policy setup is incomplete. Complete its remaining {meta.childWords.toLowerCase()} before activation.</Banner>}
+      <PolDetailCard number="01" title="Policy configuration" description={`Identity, assignment state, and downstream usage for this ${meta.label.toLowerCase()} policy.`}>
+        <div>
+          <div style={{ marginBottom:9 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Identity</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Stable identifiers used in assignment, reporting, and audit records.</div>
           </div>
-        </ConfigRow>
-        <ConfigRow label={g.type === 'deposit' ? 'Lines' : 'Bands'}>
-          <div style={flagRow}>{kids.length} configured <CoverPill ok={v.issues.length === 0 && kids.length > 0} label={kids.length === 0 ? 'None configured' : v.issues.length === 0 ? 'Coverage complete' : 'Window/coverage gaps'}/></div>
-        </ConfigRow>
-        <ConfigRow label="Referenced by">{p.usedIn > 0 ? `${p.usedIn} Faretype / Farecode records` : 'Not referenced'}</ConfigRow>
-        <ConfigRow label="Modified"><span style={{ color:T.inkSoft }}>{p.mod} · {p.editor}</span></ConfigRow>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <PolValueField label="Policy name" value={p.name}/>
+            <PolValueField label="Policy code" value={p.code} mono/>
+          </div>
+          <div style={{ marginTop:10, minWidth:0, padding:'10px 12px', border:`1px solid ${T.line}`, borderRadius:8, background:T.fill }}>
+            <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Parent group</div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginTop:7 }}>
+              <TypeBadge type={g.type}/>
+              <span style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{g.name}</span>
+              <span style={{ fontFamily:MONO, fontSize:10.5, fontWeight:700, color:T.inkSoft }}>{g.code}</span>
+            </div>
+          </div>
         </div>
-      </SCard>
-      <SCard title={g.type === 'deposit' ? 'Resolved Deposit by Window' : 'Resolved Penalty by Window'} pad="0">
-        {kids.length === 0 ? <div style={{ padding:'32px 20px', textAlign:'center', fontSize:13, color:T.inkSoft }}>No {meta.childWords.toLowerCase()} configured yet.</div> : kids.map((r, i) => (
-          <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 14px', borderTop:i ? `1px solid ${T.lineSoft}` : 'none', fontSize:12.5, flexWrap:'wrap' }}>
-            <span style={{ fontFamily:MONO, fontSize:11.5, fontWeight:700, color:T.inkSoft, width:56 }}>{childCode(p.code, i)}</span>
-            <span style={{ color:T.inkSoft }}>{childSummary(g.type, r)}</span>
+
+        <div style={{ paddingTop:13, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:9 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Assignment state</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Current lifecycle and default-selection behavior.</div>
           </div>
-        ))}
-      </SCard>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <PolStateTile label="Lifecycle" helper={p.status === 'Active' ? 'Available for Farecode assignment' : 'Unavailable for new assignments'}><PolStatusBadge status={p.status}/></PolStateTile>
+            <PolStateTile label="Default selection" helper={p.isDefault ? 'Automatically selected within this group' : 'Selected only when explicitly assigned'}><Pill bg={p.isDefault ? T.primaryBg : T.fill} color={p.isDefault ? T.primary : T.inkSoft}>{p.isDefault ? 'Default policy' : 'Not default'}</Pill></PolStateTile>
+            {g.type === 'cancel' && <PolStateTile full label="Refundability" helper="Policy-level setting inherited by its cancellation bands"><Pill bg={p.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={p.isRefundable === false ? '#991B1B' : '#065F46'}>{p.isRefundable === false ? 'Non-Refundable' : 'Refundable'}</Pill></PolStateTile>}
+          </div>
+        </div>
+
+        <div style={{ paddingTop:13, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:9 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Usage & ownership</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Rule coverage, downstream references, and record ownership.</div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <PolMetricTile label={g.type === 'deposit' ? 'Configured lines' : 'Configured bands'} value={String(kids.length)} helper={<CoverPill ok={v.issues.length === 0 && kids.length > 0} label={kids.length === 0 ? 'None configured' : v.issues.length === 0 ? 'Coverage complete' : 'Coverage needs attention'}/>}/>
+            <PolMetricTile label="Referenced by" value={String(p.usedIn || 0)} helper="Faretype / Farecode records"/>
+            <PolMetricTile full label="Last modified" value={p.mod} helper={p.editor}/>
+          </div>
+        </div>
+      </PolDetailCard>
+      <PolResolvedSchedule type={g.type} parentCode={p.code} rows={kids} complete={v.issues.length === 0 && kids.length > 0}/>
       {v.issues.length > 0 && <IssueList issues={v.issues} title="Configuration gaps"/>}
       {refundIssues.length > 0 && <IssueList issues={refundIssues} title="Refundability conflict"/>}
-      {g.type === 'deposit' && <HelpList items={DEP_HELP}/>}
-      {g.type === 'cancel' && <HelpList items={PEN_HELP}/>}
+      <PolRuleReference type={g.type}/>
     </>
   );
 
@@ -160,12 +393,13 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
 
   const actions = (
     <>
-      {(g.status === 'Draft' || (p && p.status === 'Draft')) && (
-        <button style={{ ...polGhost, color:'#15803D', borderColor:'#A7F3D0' }} onClick={() => onFinish(g, p)}>Finish setup</button>
-      )}
       {isGroup && <button style={polGhost} onClick={() => onAddPolicy(g)}>+ Add policy</button>}
       <button style={editBtn} onClick={() => onEdit(g, p)}><IcEdit/>{isGroup ? 'Edit group' : 'Edit policy'}</button>
       <RowMenu items={[
+        ...(isDraftTarget ? [
+          { icon:'↻', label:'Finish setup', onClick:() => onFinish(g, p) },
+          { sep:true },
+        ] : []),
         (isGroup ? g.status : p.status) === 'Active'
           ? { icon:'⊘', label:'Deactivate', danger:true, onClick:() => onToggleActive(g, p) }
           : { icon:'✓', label:'Activate', success:true, onClick:() => onToggleActive(g, p) },
@@ -184,9 +418,9 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
       {tab === 'overview' && (isGroup ? groupOverview : parentOverview)}
       {tab === 'children' && (isGroup ? groupChildren : parentChildren)}
       {tab === 'used' && !isGroup && <UsedInTables row={p}/>}
-      {tab === 'audit' && <AuditList status={isGroup ? g.status : p.status} label={isGroup ? 'Group' : 'Policy'}/>}
+      {tab === 'audit' && <PolActivityHistory status={isGroup ? g.status : p.status} label={isGroup ? 'Group' : 'Policy'}/>}
     </DetailShell>
   );
 }
 
-Object.assign(window, { PolDetailDrawer, DetailShell });
+Object.assign(window, { PolDetailDrawer, DetailShell, PolDetailCard, PolValueField, PolStateTile, PolMetricTile, PolActivityHistory });

@@ -62,7 +62,7 @@ function LineGrid({ codeNum, rows, setRows, cellErr, editing }) {
               ) : <span>{depAmountLabel(r)}</span>}
               {editing ? <CatSelect value={r.cats} onChange={v => upd(i,'cats',v)} err={cellErr[`${i}:cats`]}/> : <span style={{ color:T.inkSoft }}>{catLabel(r.cats)}</span>}
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <Toggle on={r.cancelApplies} dis={!editing} onChange={v => upd(i,'cancelApplies',v)}/>
+                <Toggle on={r.cancelApplies} dis={!editing} onChange={v => upd(i,'cancelApplies',v)} label={`Cancellation policy applies to line ${i + 1}`}/>
               </div>
               <span>
                 {editing && <button onClick={() => setRows(rows.filter((_,ri) => ri !== i))} disabled={rows.length<=1} title="Remove line"
@@ -286,20 +286,20 @@ function DCParentPanel({ kind, group, parent, depParents, initialTab, initialEdi
             {!isDep && (
               <Field label="Refundable" helper="Non-refundable requires every band to be PCT_CABIN_FARE or FULL_DEPOSIT.">
                 <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                  <Toggle on={form.isRefundable} onChange={v => set('isRefundable', v)}/>
+                  <Toggle on={form.isRefundable} onChange={v => set('isRefundable', v)} label="Refundable policy"/>
                   <span style={{ fontSize:13, color:T.inkSoft }}>{form.isRefundable ? 'Refundable' : 'Non-Refundable'}</span>
                 </div>
               </Field>
             )}
             <Field label="Active">
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <Toggle on={form.isActive} onChange={v => set('isActive', v)}/>
+                <Toggle on={form.isActive} onChange={v => set('isActive', v)} label="Active policy"/>
                 <span style={{ fontSize:13, color:T.inkSoft }}>{form.isActive ? 'Active' : 'Inactive'}</span>
               </div>
             </Field>
             <Field label="Default in Group" helper={`Only one policy inside ${group.name} can be the default.`}>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <Toggle on={form.isDefault} onChange={on => { if (on && currentDefault) setConfirmDefault(currentDefault); else set('isDefault', on); }}/>
+                <Toggle on={form.isDefault} onChange={on => { if (on && currentDefault) setConfirmDefault(currentDefault); else set('isDefault', on); }} label="Default policy in group"/>
                 <span style={{ fontSize:13, color:T.inkSoft }}>{form.isDefault ? 'Default for this group' : 'Not the default'}</span>
               </div>
             </Field>

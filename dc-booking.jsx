@@ -47,7 +47,7 @@ function FlowPreview({ ctx }) {
     <div style={{ display:'grid', gridTemplateColumns:'1.15fr 1fr', gap:16, alignItems:'start' }}>
       <SCard title="Deposit & policies">
         <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'12px 14px', border:`1px solid ${T.line}`, borderRadius:9, background:'#FCFDFE' }}>
-          <Toggle on={optIn} onChange={setOptIn}/>
+          <Toggle on={optIn} onChange={setOptIn} label="Pay deposit now"/>
           <div>
             <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>Pay deposit now — {money(depositDue)}</div>
             <div style={{ fontSize:12, color:T.inkSoft, marginTop:3, lineHeight:1.5 }}>

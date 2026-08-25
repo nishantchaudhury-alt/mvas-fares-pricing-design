@@ -3,13 +3,13 @@
 const { useState: useSD, useRef: useRD, useEffect: useED } = React;
 
 const T = {
-  ink:'#0F172A', inkSoft:'#475569', inkFaint:'#94A3B8', inkLabel:'#64748B',
+  ink:'#0F172A', inkSoft:'#475569', inkFaint:'#5B6B82', inkLabel:'#5B6B82',
   bg:'#F1F5F9', panel:'#FFFFFF', fill:'#F8FAFC',
   line:'#E2E8F0', lineSoft:'#EEF2F6',
   primary:'#1B2434', primaryBg:'#EFF6FF', primaryLine:'#DBEAFE',
-  teal:'#0D9488', tealDark:'#0F766E', tealLight:'#ECFDF5',
-  amber:'#F59E0B', amberDark:'#D97706', amberLight:'#FFFBEB', amberBorder:'#FCD34D',
-  red:'#DC2626', redLight:'#FEF2F2', green:'#059669', greenLight:'#F0FDF4',
+  teal:'#047857', tealDark:'#047857', tealLight:'#ECFDF5',
+  amber:'#92400E', amberDark:'#92400E', amberLight:'#FFFBEB', amberBorder:'#FCD34D',
+  red:'#DC2626', redLight:'#FEF2F2', green:'#047857', greenLight:'#F0FDF4',
 };
 const MONO = "'SF Mono', Menlo, monospace";
 
@@ -230,20 +230,65 @@ function CoverPill({ ok, label }) {
 function iS(err, dis) {
   return { width:'100%', padding:'9px 12px', border:`1.5px solid ${err ? T.red : dis ? '#E8EDF3' : '#D8DFE8'}`, borderRadius:7, fontSize:13, color:dis?T.inkFaint:T.ink, background:dis?'#F3F4F6':'#fff', outline:'none', cursor:dis?'not-allowed':undefined };
 }
+
+/* Associates the visible Field label and supporting copy with the first form control,
+   including controls nested inside a styled wrapper or implemented as a component. */
+function bindFieldControl(node, { id, label, describedBy, invalid, required }) {
+  let bound = false;
+  let controlId = id;
+  const joinIds = (...ids) => [...new Set(ids.filter(Boolean).flatMap(v => String(v).split(/\s+/)))].join(' ') || undefined;
+  const walk = child => {
+    if (!React.isValidElement(child) || bound) return child;
+    const native = typeof child.type === 'string';
+    const formControl = native && (['input','select','textarea'].includes(child.type) || (child.type === 'button' && child.props.role === 'combobox'));
+    if (formControl) {
+      bound = true;
+      controlId = child.props.id || id;
+      return React.cloneElement(child, {
+        id:controlId,
+        'aria-describedby':joinIds(child.props['aria-describedby'], describedBy),
+        'aria-invalid':invalid || child.props['aria-invalid'] || undefined,
+        'aria-required':required || child.props['aria-required'] || undefined,
+      });
+    }
+    if (!native) {
+      bound = true;
+      controlId = child.props.inputId || id;
+      return React.cloneElement(child, {
+        inputId:controlId,
+        ariaLabel:child.props.ariaLabel || label,
+        ariaDescribedBy:joinIds(child.props.ariaDescribedBy, describedBy),
+        ariaInvalid:invalid || child.props.ariaInvalid || undefined,
+        ariaRequired:required || child.props.ariaRequired || undefined,
+      });
+    }
+    if (child.props.children === undefined) return child;
+    return React.cloneElement(child, undefined, React.Children.map(child.props.children, walk));
+  };
+  return { node:walk(node), bound, controlId };
+}
+
 function Field({ label, required, helper, error, children }) {
+  const uid = React.useId().replace(/:/g, '');
+  const controlId = `field-${uid}`;
+  const labelId = `${controlId}-label`;
+  const helpId = `${controlId}-help`;
+  const errorId = `${controlId}-error`;
+  const describedBy = error ? errorId : helper ? helpId : undefined;
+  const bound = bindFieldControl(children, { id:controlId, label, describedBy, invalid:!!error, required:!!required });
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-      {label && <label style={{ fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}{required && <span style={{ color:T.red, marginLeft:3 }}>*</span>}</label>}
-      {children}
-      {error && <span style={{ fontSize:11, color:T.red }}>{error}</span>}
-      {!error && helper && <span style={{ fontSize:11, color:T.inkFaint, lineHeight:1.45, fontStyle:'italic' }}>{helper}</span>}
+    <div role={label ? 'group' : undefined} aria-labelledby={label ? labelId : undefined} style={{ display:'flex', flexDirection:'column', gap:5 }}>
+      {label && <label id={labelId} htmlFor={bound.bound ? bound.controlId : undefined} style={{ fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}{required && <span aria-hidden="true" style={{ color:T.red, marginLeft:3 }}>*</span>}</label>}
+      {bound.node}
+      {error && <span id={errorId} role="alert" style={{ fontSize:11, color:T.red }}>{error}</span>}
+      {!error && helper && <span id={helpId} style={{ fontSize:11, color:T.inkFaint, lineHeight:1.45, fontStyle:'italic' }}>{helper}</span>}
     </div>
   );
 }
-function Sel({ value, onChange, opts, err, dis, compact }) {
+function Sel({ value, onChange, opts, err, dis, compact, inputId, ariaLabel, ariaDescribedBy, ariaInvalid, ariaRequired }) {
   return (
     <div style={{ position:'relative' }}>
-      <select className="fi" value={value} onChange={e => !dis && onChange(e.target.value)} disabled={dis}
+      <select id={inputId} className="fi" value={value} onChange={e => !dis && onChange(e.target.value)} disabled={dis} aria-label={ariaLabel} aria-describedby={ariaDescribedBy} aria-invalid={ariaInvalid || !!err} aria-required={ariaRequired}
         style={{ ...iS(err, dis), appearance:'none', cursor:dis?'not-allowed':'pointer', paddingRight:26, ...(compact ? { padding:'6px 24px 6px 9px', fontSize:12.5 } : {}) }}>
         {opts.map(([v,l]) => <option key={v} value={v}>{l !== undefined ? l : v}</option>)}
       </select>
@@ -251,9 +296,12 @@ function Sel({ value, onChange, opts, err, dis, compact }) {
     </div>
   );
 }
-function Toggle({ on, onChange, dis }) {
+function Toggle({ on, onChange, dis, label = 'Toggle setting' }) {
   return (
-    <div onClick={() => !dis && onChange(!on)} style={{ width:38, height:22, borderRadius:11, flexShrink:0, background:dis?'#E2E8F0':on?T.primary:'#CBD5E1', cursor:dis?'not-allowed':'pointer', position:'relative', transition:'background .2s', opacity:dis?.65:1 }}>
+    <div role="switch" aria-label={label} aria-checked={on} aria-disabled={dis || undefined} tabIndex={dis ? -1 : 0}
+      onClick={() => !dis && onChange(!on)}
+      onKeyDown={e => { if (!dis && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onChange(!on); } }}
+      style={{ width:38, height:22, borderRadius:11, flexShrink:0, background:dis?'#E2E8F0':on?T.primary:'#CBD5E1', cursor:dis?'not-allowed':'pointer', position:'relative', transition:'background .2s', opacity:dis ? .65 : 1 }}>
       <div style={{ position:'absolute', top:3, left:on?19:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.2)' }}/>
     </div>
   );
@@ -350,9 +398,10 @@ function UsedInTables({ row }) {
 }
 
 /* ─────────── Stateroom multi-select ─────────── */
-function CatSelect({ value, onChange, err }) {
+function CatSelect({ value, onChange, err, inputId, ariaLabel = 'Stateroom types', ariaDescribedBy, ariaInvalid, ariaRequired }) {
   const [open, setOpen] = useSD(false);
   const ref = useRD();
+  const menuId = useRD(`category-select-${Math.random().toString(36).slice(2)}`).current;
   useED(() => {
     if (!open) return;
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -369,12 +418,12 @@ function CatSelect({ value, onChange, err }) {
   };
   return (
     <div ref={ref} style={{ position:'relative' }}>
-      <button onClick={() => setOpen(p => !p)} style={{ ...iS(err), padding:'6px 22px 6px 9px', fontSize:12, textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer', gap:6 }}>
+      <button id={inputId} type="button" aria-label={ariaLabel} aria-describedby={ariaDescribedBy} aria-invalid={ariaInvalid || !!err} aria-required={ariaRequired} aria-haspopup="dialog" aria-controls={menuId} aria-expanded={open} onClick={() => setOpen(p => !p)} style={{ ...iS(err), padding:'6px 22px 6px 9px', fontSize:12, textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer', gap:6 }}>
         <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{value.length === 0 ? 'Select…' : catLabel(value)}</span>
         <span style={{ color:T.inkFaint, position:'absolute', right:8, display:'flex' }}><IcChevron up={open}/></span>
       </button>
       {open && (
-        <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, background:'#fff', border:`1px solid ${T.line}`, borderRadius:9, boxShadow:'0 8px 28px rgba(15,23,42,.12)', zIndex:600, minWidth:170, overflow:'hidden' }}>
+        <div id={menuId} role="dialog" aria-label={`${ariaLabel} options`} style={{ position:'absolute', top:'calc(100% + 4px)', left:0, background:'#fff', border:`1px solid ${T.line}`, borderRadius:9, boxShadow:'0 8px 28px rgba(15,23,42,.12)', zIndex:600, minWidth:170, overflow:'hidden' }}>
           {['All', ...CATS].map(c => {
             const on = c === 'All' ? all : all || value.includes(c);
             return (
@@ -566,12 +615,12 @@ function DCGroupList({ kind, groups, onOpen, onCreate, onToggleActive, onDelete 
             <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
               <div style={{ flex:'1 1 240px', display:'flex', alignItems:'center', gap:8, padding:'7px 12px', border:`1px solid ${T.line}`, borderRadius:8, background:'#fff' }}>
                 <span style={{ color:T.inkFaint, display:'flex' }}><IcSearch/></span>
-                <input value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="Filter by group name…" style={{ border:'none', outline:'none', background:'transparent', fontSize:13, color:T.ink, width:'100%' }}/>
-                {q && <button onClick={() => setQ('')} style={{ background:'none', border:'none', cursor:'pointer', color:T.inkFaint, display:'flex', padding:0 }}><IcX size={11}/></button>}
+                <input aria-label="Filter policy groups" value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="Filter by group name…" style={{ border:'none', outline:'none', background:'transparent', fontSize:13, color:T.ink, width:'100%' }}/>
+                {q && <button type="button" aria-label="Clear group search" onClick={() => setQ('')} style={{ background:'none', border:'none', cursor:'pointer', color:T.inkFaint, display:'flex', padding:0 }}><IcX size={11}/></button>}
               </div>
               {!isDep && (
                 <div style={{ width:190 }}>
-                  <Sel compact value={refund} onChange={v => { setRefund(v); setPage(1); }} opts={[['all','All refundability'],['refundable','Refundable'],['nonrefundable','Non-Refundable']]}/>
+                  <Sel compact ariaLabel="Filter by refundability" value={refund} onChange={v => { setRefund(v); setPage(1); }} opts={[['all','All refundability'],['refundable','Refundable'],['nonrefundable','Non-Refundable']]}/>
                 </div>
               )}
               <span style={{ fontSize:11, color:T.inkFaint, marginLeft:'auto' }}>{rows.length} of {groups.length} groups</span>
@@ -629,7 +678,7 @@ function DCGroupList({ kind, groups, onOpen, onCreate, onToggleActive, onDelete 
             {totalPages > 1 && (
               <div style={{ display:'flex', gap:4 }}>
                 {Array.from({ length:totalPages }, (_,i) => i+1).map(p => (
-                  <button key={p} onClick={() => setPage(p)} style={{ width:32, height:32, borderRadius:6, border:`1px solid ${p===page?T.primary:T.line}`, background:p===page?T.primary:'#fff', color:p===page?'#fff':T.ink, fontSize:13, cursor:'pointer', fontWeight:p===page?700:400 }}>{p}</button>
+                  <button key={p} type="button" aria-label={`Page ${p}`} aria-current={p===page ? 'page' : undefined} onClick={() => setPage(p)} style={{ width:32, height:32, borderRadius:6, border:`1px solid ${p===page?T.primary:T.line}`, background:p===page?T.primary:'#fff', color:p===page?'#fff':T.ink, fontSize:13, cursor:'pointer', fontWeight:p===page?700:400 }}>{p}</button>
                 ))}
               </div>
             )}

@@ -85,6 +85,56 @@ const POLICIES_INIT = [
     ]},
 ];
 
+/* Additional seeded records keep the list views representative of production-scale data. */
+const seededDepositLines = ({ holdDts=90, holdPct=10, fullAmount=200 } = {}) => [
+  { marketingName:'Rate Hold Deposit', beginDts:'', endDts:holdDts, depositType:'PCT', amount:holdPct, cats:['All'], cancelApplies:false },
+  { marketingName:'Full Deposit', beginDts:holdDts - 1, endDts:0, depositType:'FC', amount:fullAmount, cats:['All'], cancelApplies:true },
+];
+const seededCancellationBands = ({ freeDts=60, partialDts=30, pct=50 } = {}) => [
+  { beginDts:'', endDts:freeDts, penaltyType:'NONE', penaltyValue:'', cats:['All'] },
+  { beginDts:freeDts - 1, endDts:partialDts, penaltyType:'PCT_CABIN_FARE', penaltyValue:pct, cats:['All'] },
+  { beginDts:partialDts - 1, endDts:0, penaltyType:'FULL_DEPOSIT', penaltyValue:'', cats:['All'] },
+];
+const seededNonRefundableBands = () => [
+  { beginDts:'', endDts:0, penaltyType:'FULL_DEPOSIT', penaltyValue:'', cats:['All'] },
+];
+const seededDepositGroup = ({ number, name, parentCode, parentName, status='Active', mod, created, editor='jane.doe@mvas.com', usedIn=0, lines }) => ({
+  id:`seed-deposit-group-${number}`, type:'deposit', code:`DEP-GRP-${String(number).padStart(2, '0')}`, name, status, isDefault:false, mod, created, editor,
+  parents:[{
+    id:`seed-deposit-policy-${number}`, code:parentCode, name:parentName, status, isDefault:true, usedIn, mod, created, editor,
+    lines, usedInFaretypes:[], usedInFarecodes:[],
+  }],
+});
+const seededCancellationGroup = ({ number, name, parentCode, parentName, status='Active', refundable=true, mod, created, editor='jane.doe@mvas.com', usedIn=0, bands }) => ({
+  id:`seed-cancel-group-${number}`, type:'cancel', code:`CANC-GRP-${String(number).padStart(2, '0')}`, name, status, isDefault:false, isRefundable:refundable, mod, created, editor,
+  parents:[{
+    id:`seed-cancel-policy-${number}`, code:parentCode, name:parentName, status, isDefault:true, isRefundable:refundable, usedIn, mod, created, editor,
+    bands, usedInFaretypes:[], usedInFarecodes:[],
+  }],
+});
+
+POLICIES_INIT.push(
+  seededDepositGroup({ number:5, name:'Alaska 7-Night Standard', parentCode:'DEP-601', parentName:'Alaska Standard Deposit', mod:'13 Jun 2026', created:'21 May 2026', usedIn:6, lines:seededDepositLines({ holdDts:120, fullAmount:250 }) }),
+  seededDepositGroup({ number:6, name:'Caribbean 4-Night Retail', parentCode:'DEP-602', parentName:'Short Cruise Retail Deposit', mod:'11 Jun 2026', created:'22 May 2026', editor:'admin@mvas.com', usedIn:8, lines:seededDepositLines({ holdDts:60, fullAmount:150 }) }),
+  seededDepositGroup({ number:7, name:'Holiday Sailings', parentCode:'DEP-603', parentName:'Holiday Sailing Deposit', mod:'10 Jun 2026', created:'23 May 2026', usedIn:4, lines:seededDepositLines({ holdDts:120, holdPct:15, fullAmount:300 }) }),
+  seededDepositGroup({ number:8, name:'Europe 10-Night Standard', parentCode:'DEP-604', parentName:'Europe Extended Voyage Deposit', mod:'09 Jun 2026', created:'24 May 2026', editor:'maria.santos@mvas.com', usedIn:3, lines:seededDepositLines({ holdDts:150, holdPct:15, fullAmount:400 }) }),
+  seededDepositGroup({ number:9, name:'Loyalty Member Flex', parentCode:'DEP-605', parentName:'Margaritaville Rewards Deposit', mod:'08 Jun 2026', created:'25 May 2026', usedIn:7, lines:seededDepositLines({ holdDts:45, holdPct:5, fullAmount:125 }) }),
+  seededDepositGroup({ number:10, name:'Group & Charter', parentCode:'DEP-606', parentName:'Group Contract Deposit', mod:'07 Jun 2026', created:'26 May 2026', editor:'operations@mvas.com', usedIn:2, lines:seededDepositLines({ holdDts:180, holdPct:20, fullAmount:500 }) }),
+  seededDepositGroup({ number:11, name:'Last-Minute Retail', parentCode:'DEP-607', parentName:'Last-Minute Full Deposit', status:'Draft', mod:'06 Jun 2026', created:'27 May 2026', usedIn:0, lines:seededDepositLines({ holdDts:30, fullAmount:200 }) }),
+  seededDepositGroup({ number:12, name:'World Cruise Extended', parentCode:'DEP-608', parentName:'Extended Voyage Deposit', status:'Inactive', mod:'05 Jun 2026', created:'28 May 2026', editor:'admin@mvas.com', usedIn:0, lines:seededDepositLines({ holdDts:240, holdPct:20, fullAmount:750 }) }),
+
+  seededCancellationGroup({ number:3, name:'Flexible Retail', parentCode:'CANC-021', parentName:'Flexible Retail Cancellation', mod:'13 Jun 2026', created:'19 May 2026', usedIn:9, bands:seededCancellationBands({ freeDts:60, partialDts:30, pct:50 }) }),
+  seededCancellationGroup({ number:4, name:'Early Saver', parentCode:'CANC-022', parentName:'Early Saver Non-Refundable', refundable:false, mod:'12 Jun 2026', created:'20 May 2026', editor:'admin@mvas.com', usedIn:6, bands:seededNonRefundableBands() }),
+  seededCancellationGroup({ number:5, name:'Suites & Premium', parentCode:'CANC-023', parentName:'Premium Suite Cancellation', mod:'11 Jun 2026', created:'21 May 2026', usedIn:4, bands:seededCancellationBands({ freeDts:90, partialDts:45, pct:40 }) }),
+  seededCancellationGroup({ number:6, name:'Holiday Flexible', parentCode:'CANC-024', parentName:'Holiday Sailing Cancellation', mod:'10 Jun 2026', created:'22 May 2026', usedIn:5, bands:seededCancellationBands({ freeDts:75, partialDts:30, pct:35 }) }),
+  seededCancellationGroup({ number:7, name:'Group Contract', parentCode:'CANC-025', parentName:'Group Contract Cancellation', mod:'09 Jun 2026', created:'23 May 2026', editor:'operations@mvas.com', usedIn:3, bands:seededCancellationBands({ freeDts:120, partialDts:60, pct:25 }) }),
+  seededCancellationGroup({ number:8, name:'Casino Offer', parentCode:'CANC-026', parentName:'Casino Guest Cancellation', mod:'08 Jun 2026', created:'24 May 2026', usedIn:7, bands:seededCancellationBands({ freeDts:30, partialDts:15, pct:50 }) }),
+  seededCancellationGroup({ number:9, name:'Last-Minute', parentCode:'CANC-027', parentName:'Last-Minute Non-Refundable', refundable:false, mod:'07 Jun 2026', created:'25 May 2026', usedIn:4, bands:seededNonRefundableBands() }),
+  seededCancellationGroup({ number:10, name:'Trade Partner', parentCode:'CANC-028', parentName:'Trade Partner Cancellation', mod:'06 Jun 2026', created:'26 May 2026', editor:'admin@mvas.com', usedIn:8, bands:seededCancellationBands({ freeDts:60, partialDts:21, pct:30 }) }),
+  seededCancellationGroup({ number:11, name:'Resident Promotion', parentCode:'CANC-029', parentName:'Resident Offer Cancellation', status:'Draft', mod:'05 Jun 2026', created:'27 May 2026', usedIn:0, bands:seededCancellationBands({ freeDts:45, partialDts:14, pct:50 }) }),
+  seededCancellationGroup({ number:12, name:'World Cruise', parentCode:'CANC-030', parentName:'Extended Voyage Cancellation', status:'Inactive', mod:'04 Jun 2026', created:'28 May 2026', editor:'admin@mvas.com', usedIn:0, bands:seededCancellationBands({ freeDts:180, partialDts:90, pct:25 }) }),
+);
+
 /* Adapters — the Farecode-assignment and booking-flow screens consume the older group shape. */
 const toLegacy = (policies, type) => policies.filter(g => g.type === type).map(g => ({
   ...g, isActive:g.status === 'Active',

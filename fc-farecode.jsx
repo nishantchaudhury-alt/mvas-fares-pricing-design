@@ -8,13 +8,13 @@ const { useState, useRef, useEffect } = React;
 
 /* ── Design tokens ── */
 const T = {
-  ink:'#0F172A', inkSoft:'#475569', inkFaint:'#94A3B8', inkLabel:'#64748B',
+  ink:'#0F172A', inkSoft:'#475569', inkFaint:'#5B6B82', inkLabel:'#5B6B82',
   bg:'#F1F5F9', panel:'#FFFFFF', fill:'#F8FAFC', navFill:'#F9FAFB',
   line:'#E2E8F0', lineSoft:'#EEF2F6',
   primary:'#1B2434', primaryBg:'#EFF6FF', primaryLine:'#DBEAFE',
-  teal:'#10B981', tealDark:'#059669', tealLight:'#ECFDF5',
-  amber:'#F59E0B', amberDark:'#D97706', amberLight:'#FFFBEB', amberBorder:'#FCD34D',
-  red:'#DC2626', redLight:'#FEF2F2',
+  teal:'#047857', tealDark:'#047857', tealLight:'#ECFDF5',
+  amber:'#92400E', amberDark:'#92400E', amberLight:'#FFFBEB', amberBorder:'#FCD34D',
+  red:'#DC2626', redLight:'#FEF2F2', green:'#047857', greenLight:'#F0FDF4',
 };
 
 /* ── Form / override data ── */
@@ -45,14 +45,15 @@ function sailDates(code) {
 }
 const FT_DATA = [
   { code:'FT-00101', basis:'CORE-RETAIL', group:'Core',
-    vals:{ cancellationPolicy:'Standard Cancellation', depositPolicy:'5 Night Standard Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:4, standbyEligible:false, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, chInternal:false, includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
+    vals:{ cancellationPolicy:'Standard Cancellation', depositPolicy:'5 Night Standard Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:4, standbyEligible:false, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
   { code:'FT-00102', basis:'NR-PROMO', group:'Non-Refundable',
-    vals:{ cancellationPolicy:'Non-Refundable', depositPolicy:'5 Night Promo Deposit', residency:'US Only', minAge:21, minOccupancy:2, maxOccupancy:4, standbyEligible:false, upgradeEligible:false, couponEligible:false, advancedPurchase:30, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:false, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, chInternal:false, includeDiscount:false, discountMessage:'', offerPrimary:'OFFER-2026-SPRING', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
+    vals:{ cancellationPolicy:'Non-Refundable', depositPolicy:'5 Night Promo Deposit', residency:'US Only', minAge:21, minOccupancy:2, maxOccupancy:4, standbyEligible:false, upgradeEligible:false, couponEligible:false, advancedPurchase:30, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:false, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'OFFER-2026-SPRING', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
   { code:'FT-00103', basis:'INT-AGENCY', group:'Interline',
-    vals:{ cancellationPolicy:'Standard — Suites Enhanced', depositPolicy:'7 Night Trade Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:3, standbyEligible:true, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:false, chMVASB2C:false, chMVASB2B:false, chCC:false, chTradeAPI:true, chCRM:true, chGroup:true, chInternal:false, includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
+    vals:{ cancellationPolicy:'Standard — Suites Enhanced', depositPolicy:'7 Night Trade Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:3, standbyEligible:true, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:false, chMVASB2C:false, chMVASB2B:false, chCC:false, chTradeAPI:true, chCRM:true, chGroup:true, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
 ];
+const CHANNEL_PARTNERS = ['Virtuoso', 'AMEX Travel', 'Ensemble', 'Signature Travel', 'Travel Leaders', 'Nexion', 'Avoya Travel'];
 const OVRD_KEYS = ['cancellationPolicy','depositPolicy','minOccupancy','maxOccupancy','advancedPurchase','standbyEligible','upgradeEligible','couponEligible','cruiseControlAccess','channelVisibility','includeDiscount','discountMessage','offerPrimary','offerSecondary','offerTertiary','waiveGovTaxes','waiveCruiseExp','noFareDisplay'];
-const DEFAULT_FORM  = () => ({ ship:'', sailing:'', faretype:'', cancellationPolicy:'', depositPolicy:'', residency:'Any', minAge:18, minOccupancy:'', maxOccupancy:'', advancedPurchase:'', standbyEligible:false, upgradeEligible:true, couponEligible:true, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, chInternal:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false });
+const DEFAULT_FORM  = () => ({ ship:'', sailing:'', faretype:'', cancellationPolicy:'', depositPolicy:'', residency:'Any', minAge:18, minOccupancy:'', maxOccupancy:'', advancedPurchase:'', standbyEligible:false, upgradeEligible:true, couponEligible:true, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false });
 const DEFAULT_OVRD  = () => Object.fromEntries(OVRD_KEYS.map(k => [k,'inherited']));
 const GUEST_ROWS = [
   { grp:'Occupancy 1–2', rows:[{ k:'single',l:'Single Guest' },{ k:'dbl1',l:'Double Guest 1' },{ k:'dbl2',l:'Double Guest 2' }] },
@@ -83,50 +84,239 @@ function iS(err, dis) {
   return { width:'100%', padding:'9px 12px', border:`1.5px solid ${err?T.red:dis?'#E8EDF3':'#D8DFE8'}`, borderRadius:7, fontSize:13, color:dis?T.inkFaint:T.ink, background:dis?'#F3F4F6':'#fff', outline:'none', cursor:dis?'not-allowed':undefined };
 }
 function Field({ label, required, helper, error, children }) {
+  const uid = React.useId().replace(/:/g, '');
+  const controlId = `fc-field-${uid}`;
+  const labelId = `${controlId}-label`, helpId = `${controlId}-help`, errorId = `${controlId}-error`;
+  const describedBy = error ? errorId : helper ? helpId : undefined;
+  const bound = bindFieldControl(children, { id:controlId, label, describedBy, invalid:!!error, required:!!required });
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-      {label && <label style={{ fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}{required && <span style={{ color:T.red, marginLeft:3 }}>*</span>}</label>}
-      {children}
-      {error  && <span style={{ fontSize:11, color:T.red }}>{error}</span>}
-      {!error && helper && <span style={{ fontSize:11, color:T.inkFaint, lineHeight:1.4 }}>{helper}</span>}
+    <div role={label ? 'group' : undefined} aria-labelledby={label ? labelId : undefined} style={{ display:'flex', flexDirection:'column', gap:5 }}>
+      {label && <label id={labelId} htmlFor={bound.bound ? bound.controlId : undefined} style={{ fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}{required && <span aria-hidden="true" style={{ color:T.red, marginLeft:3 }}>*</span>}</label>}
+      {bound.node}
+      {error  && <span id={errorId} role="alert" style={{ fontSize:11, color:T.red }}>{error}</span>}
+      {!error && helper && <span id={helpId} style={{ fontSize:11, color:T.inkFaint, lineHeight:1.4 }}>{helper}</span>}
     </div>
   );
 }
 function OField({ label, required, status, onOverride, onRevert, helper, error, noOvr, children }) {
+  const uid = React.useId().replace(/:/g, '');
+  const controlId = `fc-override-field-${uid}`;
+  const labelId = `${controlId}-label`, helpId = `${controlId}-help`, errorId = `${controlId}-error`;
+  const describedBy = error ? errorId : helper ? helpId : undefined;
+  const bound = bindFieldControl(children, { id:controlId, label, describedBy, invalid:!!error, required:!!required });
   const showLock  = status === 'locked' || status === 'inherited';
   const showBtn   = status === 'inherited' && !noOvr;
   const showBadge = status === 'overridden';
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+    <div role={label ? 'group' : undefined} aria-labelledby={label ? labelId : undefined} style={{ display:'flex', flexDirection:'column', gap:5 }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', minHeight:17 }}>
-        {label && <label style={{ fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}{required && <span style={{ color:T.red, marginLeft:3 }}>*</span>}</label>}
+        {label && <label id={labelId} htmlFor={bound.bound ? bound.controlId : undefined} style={{ fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}{required && <span aria-hidden="true" style={{ color:T.red, marginLeft:3 }}>*</span>}</label>}
         <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-          {showBtn   && <button onClick={onOverride} style={{ padding:'2px 7px', borderRadius:4, border:`1px solid #D1D5DB`, background:'#fff', fontSize:10, fontWeight:600, color:T.inkSoft, cursor:'pointer' }}>Override</button>}
-          {showBadge && <span onClick={onRevert} title="Revert to inherited" style={{ padding:'2px 7px', borderRadius:4, background:'#E1F5EE', color:'#0F6E56', fontSize:10, fontWeight:600, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:3 }}>Overridden <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>}
+          {showBtn   && <button onClick={onOverride} style={{ padding:'2px 7px', borderRadius:4, border:`1px solid ${T.primaryLine}`, background:'#fff', fontSize:10, fontWeight:600, color:T.primary, cursor:'pointer' }}>Override</button>}
+          {showBadge && <span onClick={onRevert} title="Revert to inherited" style={{ padding:'2px 7px', borderRadius:4, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary, fontSize:10, fontWeight:700, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:3 }}>Overridden <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>}
           {showLock  && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
         </div>
       </div>
-      {children}
-      {error  && <span style={{ fontSize:11, color:T.red }}>{error}</span>}
-      {!error && helper && <span style={{ fontSize:11, color:T.inkFaint, lineHeight:1.4 }}>{helper}</span>}
+      {bound.node}
+      {error  && <span id={errorId} role="alert" style={{ fontSize:11, color:T.red }}>{error}</span>}
+      {!error && helper && <span id={helpId} style={{ fontSize:11, color:T.inkFaint, lineHeight:1.4 }}>{helper}</span>}
     </div>
   );
 }
-function Sel({ value, onChange, opts, err, dis }) {
+function Sel({ value, onChange, opts, err, dis, ariaLabel='Select option', inputId, ariaDescribedBy, ariaInvalid, ariaRequired }) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [menuPos, setMenuPos] = useState(null);
+  const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const menuId = useRef(`fc-select-${Math.random().toString(36).slice(2)}`).current;
+  const selectedIndex = Math.max(0, opts.findIndex(([v]) => v === value));
+  const selected = opts[selectedIndex] || ['', 'Select…'];
+  const selectedLabel = selected[1] !== undefined ? selected[1] : selected[0];
+  const isPlaceholder = value === '' || value === null || value === undefined;
+
+  useEffect(() => {
+    if (dis && open) setOpen(false);
+  }, [dis, open]);
+
+  useEffect(() => {
+    if (!open) { setMenuPos(null); return; }
+    setActiveIndex(selectedIndex);
+    const updatePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+      const menuWidth = Math.min(Math.max(rect.width, 260), viewportW - 16);
+      const left = Math.min(Math.max(8, rect.left), viewportW - menuWidth - 8);
+      const spaceBelow = viewportH - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const opensUp = spaceBelow < 170 && spaceAbove > spaceBelow;
+      const available = Math.max(96, (opensUp ? spaceAbove : spaceBelow) - 5);
+      setMenuPos({
+        left,
+        width:menuWidth,
+        top:opensUp ? undefined : rect.bottom + 5,
+        bottom:opensUp ? viewportH - rect.top + 5 : undefined,
+        maxHeight:Math.min(240, available),
+      });
+    };
+    const onPointerDown = e => {
+      if (!rootRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
+    };
+    updatePosition();
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open, selectedIndex]);
+
+  const choose = index => {
+    const option = opts[index];
+    if (!option) return;
+    onChange(option[0]);
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  };
+  const move = delta => {
+    if (!open) { setOpen(true); return; }
+    setActiveIndex(i => (i + delta + opts.length) % opts.length);
+  };
+  const onKeyDown = e => {
+    if (dis) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+    else if (e.key === 'Home' && open) { e.preventDefault(); setActiveIndex(0); }
+    else if (e.key === 'End' && open) { e.preventDefault(); setActiveIndex(opts.length-1); }
+    else if ((e.key === 'Enter' || e.key === ' ') && open) { e.preventDefault(); choose(activeIndex); }
+    else if ((e.key === 'Enter' || e.key === ' ') && !open) { e.preventDefault(); setOpen(true); }
+    else if (e.key === 'Escape' && open) { e.preventDefault(); setOpen(false); }
+    else if (e.key === 'Tab' && open) setOpen(false);
+  };
+  const triggerStyle = iS(err,dis);
+
   return (
-    <div style={{ position:'relative' }}>
-      <select className="fi" value={value} onChange={e => !dis && onChange(e.target.value)} disabled={dis}
-        style={{ ...iS(err, dis), appearance:'none', cursor:dis?'not-allowed':'pointer', paddingRight:28 }}>
-        {opts.map(([v,l]) => <option key={v} value={v}>{l !== undefined ? l : v}</option>)}
-      </select>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.5" style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}><polyline points="6 9 12 15 18 9"/></svg>
+    <div ref={rootRef} style={{ position:'relative' }}>
+      <button id={inputId} ref={triggerRef} type="button" role="combobox" className="fi" disabled={dis} aria-label={ariaLabel} aria-describedby={ariaDescribedBy} aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-invalid={ariaInvalid || !!err} aria-required={ariaRequired} aria-activedescendant={open?`${menuId}-option-${activeIndex}`:undefined}
+        onClick={() => !dis && setOpen(v => !v)} onKeyDown={onKeyDown}
+        style={{ ...triggerStyle, minHeight:37, padding:'8px 10px 8px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, textAlign:'left', fontFamily:'inherit', cursor:dis?'not-allowed':'pointer', border:open?`1.5px solid ${T.primary}`:triggerStyle.border, boxShadow:open?'0 0 0 3px rgba(27,36,52,.1)':undefined }}>
+        <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:dis?T.inkFaint:isPlaceholder?T.inkFaint:T.ink }}>{selectedLabel}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={open?T.primary:T.inkFaint} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, transform:open?'rotate(180deg)':'none', transition:'transform .15s ease' }}><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      {open && menuPos && ReactDOM.createPortal(
+        <div ref={menuRef} id={menuId} role="listbox" aria-label={`${ariaLabel} options`} style={{ position:'fixed', left:menuPos.left, top:menuPos.top, bottom:menuPos.bottom, width:menuPos.width, maxHeight:menuPos.maxHeight, overflowY:'auto', zIndex:2200, padding:4, background:T.panel, border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 8px 24px rgba(15,23,42,.14)' }}>
+          {opts.map(([v,l], index) => {
+            const label = l !== undefined ? l : v;
+            const isSelected = v === value;
+            const isActive = index === activeIndex;
+            return (
+              <button key={`${v}-${index}`} id={`${menuId}-option-${index}`} type="button" role="option" aria-selected={isSelected} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(index)}
+                style={{ width:'100%', padding:'8px 9px', border:'none', borderRadius:6, background:isSelected?T.primaryBg:isActive?T.fill:'transparent', color:v===''?T.inkFaint:isSelected?T.primary:T.ink, fontSize:12.5, fontWeight:isSelected?700:500, lineHeight:1.35, fontFamily:'inherit', textAlign:'left', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+                <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis' }}>{label}</span>
+                {isSelected && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.primary} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0 }}><polyline points="20 6 9 17 4 12"/></svg>}
+              </button>
+            );
+          })}
+        </div>, document.body
+      )}
     </div>
   );
 }
-function Toggle({ on, onChange, dis }) {
+function MultiChip({ values, onChange, opts, placeholder, inputId, ariaLabel, ariaDescribedBy, ariaInvalid, ariaRequired }) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [menuPos, setMenuPos] = useState(null);
+  const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const inputRef = useRef(null);
+  const menuRef = useRef(null);
+  const menuId = useRef(`fc-multi-${Math.random().toString(36).slice(2)}`).current;
+  const filtered = opts.filter(o => !values.includes(o) && o.toLowerCase().includes(q.toLowerCase()));
+
+  useEffect(() => {
+    if (!open) { setMenuPos(null); return; }
+    const updatePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+      const menuWidth = Math.min(Math.max(rect.width, 260), viewportW - 16);
+      const left = Math.min(Math.max(8, rect.left), viewportW - menuWidth - 8);
+      const spaceBelow = viewportH - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const opensUp = spaceBelow < 170 && spaceAbove > spaceBelow;
+      const available = Math.max(96, (opensUp ? spaceAbove : spaceBelow) - 5);
+      setMenuPos({ left, width:menuWidth, top:opensUp ? undefined : rect.bottom + 5, bottom:opensUp ? viewportH - rect.top + 5 : undefined, maxHeight:Math.min(240, available) });
+    };
+    const onPointerDown = e => {
+      if (!rootRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
+    };
+    updatePosition();
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open]);
+
+  useEffect(() => { setActiveIndex(0); }, [q, values.length]);
+
+  const choose = option => {
+    if (!option) return;
+    onChange([...values, option]);
+    setQ('');
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+  const onKeyDown = e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActiveIndex(i => filtered.length ? (i + 1) % filtered.length : 0); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setOpen(true); setActiveIndex(i => filtered.length ? (i - 1 + filtered.length) % filtered.length : 0); }
+    else if (e.key === 'Enter' && open && filtered[activeIndex]) { e.preventDefault(); choose(filtered[activeIndex]); }
+    else if (e.key === 'Escape' && open) { e.preventDefault(); setOpen(false); }
+    else if (e.key === 'Tab' && open) setOpen(false);
+  };
+
   return (
-    <div onClick={() => !dis && onChange(!on)}
-      style={{ width:38, height:22, borderRadius:11, flexShrink:0, background:dis?'#E2E8F0':on?T.primary:'#CBD5E1', cursor:dis?'not-allowed':'pointer', position:'relative', transition:'background .2s', opacity:dis?.65:1 }}>
+    <div ref={rootRef} style={{ position:'relative' }}>
+      <div ref={triggerRef} onClick={() => { setOpen(true); inputRef.current?.focus(); }}
+      style={{ minHeight:42, padding:'5px 8px', border:`1.5px solid ${open ? T.primary : '#D8DFE8'}`, borderRadius:7, display:'flex', flexWrap:'wrap', gap:5, cursor:'text', alignItems:'center', background:'#fff', boxShadow:open ? '0 0 0 3px rgba(27,36,52,.1)' : 'none', transition:'border-color .15s, box-shadow .15s' }}>
+        {values.map(v => (
+          <span key={v} style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 7px', borderRadius:6, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary, fontSize:11.5, fontWeight:600 }}>
+            {v}
+            <button type="button" aria-label={`Remove ${v}`} onClick={e => { e.stopPropagation(); onChange(values.filter(x => x !== v)); }}
+            style={{ width:14, height:14, padding:0, display:'inline-flex', alignItems:'center', justifyContent:'center', border:'none', background:'none', cursor:'pointer', color:T.inkFaint, fontSize:14, lineHeight:1 }}>×</button>
+          </span>
+        ))}
+        <input id={inputId} ref={inputRef} role="combobox" aria-label={ariaLabel || placeholder || 'Search options'} aria-describedby={ariaDescribedBy} aria-invalid={ariaInvalid} aria-required={ariaRequired} aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-activedescendant={open && filtered[activeIndex] ? `${menuId}-option-${activeIndex}` : undefined}
+        value={q} onChange={e => setQ(e.target.value)} onFocus={() => setOpen(true)} onKeyDown={onKeyDown} placeholder={values.length ? '' : placeholder}
+        style={{ border:'none', outline:'none', fontSize:13, color:T.ink, flex:1, minWidth:100, background:'transparent', padding:4 }}/>
+      </div>
+      {open && menuPos && ReactDOM.createPortal(
+        <div ref={menuRef} id={menuId} role="listbox" aria-label={`${placeholder || 'Search'} options`} className="pscroll" style={{ position:'fixed', left:menuPos.left, top:menuPos.top, bottom:menuPos.bottom, width:menuPos.width, maxHeight:menuPos.maxHeight, overflowY:'auto', zIndex:2200, padding:4, background:T.panel, border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 8px 24px rgba(15,23,42,.14)' }}>
+          {filtered.length ? filtered.map((o, index) => (
+            <button key={o} id={`${menuId}-option-${index}`} type="button" role="option" aria-selected="false" onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(o)}
+            style={{ width:'100%', padding:'8px 9px', border:'none', borderRadius:6, background:index === activeIndex ? T.fill : 'transparent', color:T.ink, fontSize:12.5, fontWeight:500, lineHeight:1.35, fontFamily:'inherit', textAlign:'left', cursor:'pointer' }}>{o}</button>
+          )) : <div style={{ padding:'10px 9px', color:T.inkFaint, fontSize:12, lineHeight:1.4 }}>No matching options</div>}
+        </div>, document.body)
+      }
+    </div>
+  );
+}
+
+function Toggle({ on, onChange, dis, label = 'Toggle setting' }) {
+  return (
+    <div role="switch" aria-label={label} aria-checked={on} aria-disabled={dis || undefined} tabIndex={dis ? -1 : 0}
+      onClick={() => !dis && onChange(!on)}
+      onKeyDown={e => { if (!dis && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onChange(!on); } }}
+      style={{ width:38, height:22, borderRadius:11, flexShrink:0, background:dis?'#E2E8F0':on?T.primary:'#CBD5E1', cursor:dis?'not-allowed':'pointer', position:'relative', transition:'background .2s', opacity:dis ? .65 : 1 }}>
       <div style={{ position:'absolute', top:3, left:on?19:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,.2)' }}/>
     </div>
   );
@@ -148,10 +338,10 @@ function OTRow({ label, helper, on, onChange, status, onOverride, onRevert }) {
         {helper && <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:2 }}>{helper}</div>}
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-        {status==='inherited'  && <button onClick={onOverride} style={{ padding:'2px 7px', borderRadius:4, border:`1px solid #D1D5DB`, background:'#fff', fontSize:10, fontWeight:600, color:T.inkSoft, cursor:'pointer' }}>Override</button>}
-        {status==='overridden' && <span onClick={onRevert} style={{ padding:'2px 7px', borderRadius:4, background:'#E1F5EE', color:'#0F6E56', fontSize:10, fontWeight:600, cursor:'pointer' }}>Overridden ×</span>}
+        {status==='inherited'  && <button onClick={onOverride} style={{ padding:'2px 7px', borderRadius:4, border:`1px solid ${T.primaryLine}`, background:'#fff', fontSize:10, fontWeight:600, color:T.primary, cursor:'pointer' }}>Override</button>}
+        {status==='overridden' && <span onClick={onRevert} title="Revert to inherited" style={{ padding:'2px 7px', borderRadius:4, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary, fontSize:10, fontWeight:700, cursor:'pointer' }}>Overridden ×</span>}
         {dis && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
-        <Toggle on={on} onChange={onChange} dis={dis}/>
+        <Toggle on={on} onChange={onChange} dis={dis} label={label}/>
       </div>
     </div>
   );
@@ -162,19 +352,19 @@ function OTRow({ label, helper, on, onChange, status, onOverride, onRevert }) {
 ─────────────────────────────────────────────── */
 function ROSection({ n, title, action, children }) {
   return (
-    <div style={{ background:'#fff', border:`1px solid ${T.line}`, borderRadius:10, padding:'18px 20px 20px', boxShadow:'0 1px 3px rgba(15,23,42,.04)', marginBottom:10 }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:16 }}>
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.04)', marginBottom:10, overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'11px 16px', background:T.fill, borderBottom:`1px solid ${T.lineSoft}` }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
           {n !== undefined && (
-            <div style={{ width:22, height:22, borderRadius:'50%', background:T.primaryBg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <span style={{ fontSize:9, fontWeight:800, color:T.primary }}>{String(n).padStart(2,'0')}</span>
+            <div style={{ padding:'3px 7px', borderRadius:5, background:T.primary, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <span style={{ fontSize:9.5, fontWeight:800, color:'#fff' }}>{String(n).padStart(2,'0')}</span>
             </div>
           )}
-          <span style={{ fontSize:13.5, fontWeight:700, color:T.ink }}>{title}</span>
+          <span style={{ fontSize:14, fontWeight:700, color:T.ink }}>{title}</span>
         </div>
         {action && <div style={{ display:'flex', alignItems:'center', flexShrink:0 }}>{action}</div>}
       </div>
-      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>{children}</div>
+      <div style={{ display:'flex', flexDirection:'column', gap:12, padding:'14px 16px 16px' }}>{children}</div>
     </div>
   );
 }
@@ -184,13 +374,13 @@ function ROField({ label, value, status, mono, teal, extra }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', minHeight:16 }}>
-        <span style={{ fontSize:10, fontWeight:700, color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'.6px' }}>{label}</span>
+        <span style={{ fontSize:9.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>{label}</span>
         <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-          {isOvrd && <span style={{ padding:'2px 7px', borderRadius:4, background:'#E1F5EE', color:'#0F6E56', fontSize:10, fontWeight:600 }}>Overridden</span>}
+          {isOvrd && <span style={{ padding:'2px 7px', borderRadius:4, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary, fontSize:10, fontWeight:700 }}>Overridden</span>}
           {isLock && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
         </div>
       </div>
-      <div style={{ padding:'8px 12px', borderRadius:6, fontSize:13, lineHeight:1.5, background:isLock?'#F3F4F6':'#F9FAFB', color:teal?T.tealDark:T.ink, fontFamily:mono?"'SF Mono',Menlo,monospace":undefined, fontWeight:mono&&teal?700:400 }}>
+      <div style={{ padding:'9px 11px', minHeight:36, borderRadius:7, border:`1px solid ${T.line}`, fontSize:13, lineHeight:1.35, background:isLock?T.fill:'#fff', color:teal?T.primary:T.ink, fontFamily:mono?"'SF Mono',Menlo,monospace":undefined, fontWeight:mono&&teal?700:400, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
         {value || <span style={{ color:T.inkFaint }}>—</span>}
         {extra && <span style={{ fontFamily:'inherit', fontSize:11.5, color:T.inkSoft, fontWeight:400, marginLeft:6 }}>{extra}</span>}
       </div>
@@ -201,15 +391,15 @@ function ROToggle({ label, helper, value, status }) {
   const isLock = status === 'inherited' || status === 'locked';
   const isOvrd = status === 'overridden';
   return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', background:isLock?'#F8FAFC':'#fff', border:`1.5px solid ${isOvrd?'#A7F3D0':'#E8EDF3'}`, borderRadius:8 }}>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 12px', background:value?T.greenLight:isLock?T.fill:'#fff', border:`1px solid ${isOvrd?T.primaryLine:T.line}`, borderRadius:8, gap:12 }}>
       <div>
-        <div style={{ fontSize:13, fontWeight:500, color:T.ink }}>{label}</div>
-        {helper && <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:2 }}>{helper}</div>}
+        <div style={{ fontSize:12.5, fontWeight:600, color:T.ink }}>{label}</div>
+        {helper && <div style={{ fontSize:11, color:T.inkSoft, marginTop:2 }}>{helper}</div>}
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-        {isOvrd && <span style={{ padding:'2px 7px', borderRadius:4, background:'#E1F5EE', color:'#0F6E56', fontSize:10, fontWeight:600 }}>Overridden</span>}
+        {isOvrd && <span style={{ padding:'2px 7px', borderRadius:4, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary, fontSize:10, fontWeight:700 }}>Overridden</span>}
         {isLock && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
-        <span style={{ padding:'3px 10px', borderRadius:999, fontSize:12, fontWeight:600, background:value?T.tealLight:T.fill, color:value?T.tealDark:T.inkSoft }}>{value?'Enabled':'Disabled'}</span>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 8px', borderRadius:999, fontSize:11.5, fontWeight:700, background:value?'#fff':T.fill, color:value?T.green:T.inkSoft }}><span style={{ width:6, height:6, borderRadius:'50%', background:value?T.green:T.inkFaint }}/>{value?'Enabled':'Disabled'}</span>
       </div>
     </div>
   );
@@ -333,7 +523,7 @@ function PricingExpandedModal({ pricing, leadIn, onClose }) {
   );
 }
 
-/* ── Read-only overview (all 7 sections) ── */
+/* ── Read-only overview (all 8 sections) ── */
 function OverviewReadOnly({ form, overrides, pricing }) {
   const [pricingExpanded, setPricingExpanded] = useState(false);
   const expandBtnRef = useRef(null);
@@ -342,7 +532,7 @@ function OverviewReadOnly({ form, overrides, pricing }) {
   const CHS = [
     { k:'chMVASB2C', l:'MVAS B2C' }, { k:'chMVASB2B', l:'MVAS B2B' },
     { k:'chCC', l:'Cruise Control' }, { k:'chTradeAPI', l:'Trade API' },
-    { k:'chCRM', l:'CRM' }, { k:'chGroup', l:'Group' }, { k:'chInternal', l:'Internal' },
+    { k:'chCRM', l:'CRM' }, { k:'chGroup', l:'Group' },
   ];
   const vis = CHS.filter(c => form[c.k]).map(c => c.l);
   const hid = CHS.filter(c => !form[c.k]).map(c => c.l);
@@ -362,13 +552,17 @@ function OverviewReadOnly({ form, overrides, pricing }) {
     <div>
       {/* 1. Ship & Sailing */}
       <ROSection n={1} title="Ship & Sailing">
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(0, 1fr))', gap:10 }}>
           <ROField label="Ship"    value={form.ship}/>
           <ROField label="Sailing" value={form.sailing} mono/>
           <ROField label="Start Date" value={sailDates(form.sailing).start}/>
           <ROField label="End Date"   value={sailDates(form.sailing).end}/>
         </div>
-        <ROField label="Faretype" value={form.faretype} mono teal extra={selFT?`· ${selFT.basis} · ${selFT.group}`:''}/>
+        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:8, background:T.primaryBg, border:`1px solid ${T.primaryLine}` }}>
+          <span style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px', flexShrink:0 }}>Faretype Source</span>
+          <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:800, color:T.primary }}>{form.faretype}</span>
+          {selFT && <><span style={{ color:T.inkFaint }}>·</span><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:11.5, color:T.inkSoft }}>{selFT.basis}</span><span style={{ color:T.inkFaint }}>·</span><span style={{ padding:'2px 7px', borderRadius:999, background:'#fff', color:T.primary, fontSize:10.5, fontWeight:700 }}>{selFT.group}</span></>}
+        </div>
       </ROSection>
 
       {/* 2. Policies */}
@@ -394,7 +588,7 @@ function OverviewReadOnly({ form, overrides, pricing }) {
       </ROSection>
 
       {/* 4. Channels */}
-      <ROSection n={4} title="Channels & Access">
+      <ROSection n={4} title="Channel Access">
         <ROToggle label="Show in Cruise Control" helper="Internal CRM booking visibility." value={form.cruiseControlAccess} status={getO('cruiseControlAccess')}/>
         <ROField label="Distribution Channels" value={vis.length?vis.join(', '):'None'} status={getO('channelVisibility')}/>
         <div style={{ fontSize:12, color:T.inkFaint, padding:'8px 12px', background:T.fill, borderRadius:7, lineHeight:1.5 }}>
@@ -402,8 +596,16 @@ function OverviewReadOnly({ form, overrides, pricing }) {
         </div>
       </ROSection>
 
-      {/* 5. Marketing */}
-      <ROSection n={5} title="Marketing & Messaging">
+      {/* 5. Partner Access */}
+      <ROSection n={5} title="Partner Access">
+        <ROField label="Applicable Channel Partners" value={form.channelPartners.length?form.channelPartners.join(', '):'All agencies'}/>
+        <div style={{ fontSize:12, color:T.inkSoft, padding:'8px 12px', background:T.fill, borderRadius:7, lineHeight:1.5 }}>
+          {form.channelPartners.length ? `${form.channelPartners.length} selected partner${form.channelPartners.length===1?'':'s'} can access this Farecode through MVAS B2B.` : 'No partner restriction is applied; every agency can access this Farecode when MVAS B2B is enabled.'}
+        </div>
+      </ROSection>
+
+      {/* 6. Marketing */}
+      <ROSection n={6} title="Marketing & Messaging">
         <ROToggle label="Discount Message" value={form.includeDiscount} status={getO('includeDiscount')}/>
         {form.includeDiscount && <ROField label="Message Copy" value={form.discountMessage||'—'} status={getO('discountMessage')}/>}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
@@ -413,16 +615,16 @@ function OverviewReadOnly({ form, overrides, pricing }) {
         </div>
       </ROSection>
 
-      {/* 6. Taxes */}
-      <ROSection n={6} title="Taxes & Privacy">
+      {/* 7. Taxes */}
+      <ROSection n={7} title="Taxes & Privacy">
         <WarnBanner><span style={{ fontSize:12.5, color:T.amberDark, fontWeight:500, lineHeight:1.45 }}>These settings override core financial calculations. Use only for comp, crew, or special promotional fares.</span></WarnBanner>
         <ROToggle label="Waive All Government Taxes"         helper="Zeros out all government taxes."    value={form.waiveGovTaxes}  status={getO('waiveGovTaxes')}/>
         <ROToggle label="Waive All Cruise Expenses"          helper="Zeros out port fees and expenses."  value={form.waiveCruiseExp} status={getO('waiveCruiseExp')}/>
         <ROToggle label="Hide Fares on PDFs & Cruise Control" helper="Pricing hidden from confirmations." value={form.noFareDisplay}  status={getO('noFareDisplay')}/>
       </ROSection>
 
-      {/* 7. Pricing */}
-      <ROSection n={7} title="Pricing" action={
+      {/* 8. Pricing */}
+      <ROSection n={8} title="Pricing" action={
         <button ref={expandBtnRef} onClick={() => setPricingExpanded(true)} aria-label="Expand pricing table" title="Expand pricing table"
           style={{ width:30, height:30, borderRadius:7, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background .12s, color .12s, border-color .12s' }}
           onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; e.currentTarget.style.borderColor='#CBD5E1'; }}
@@ -443,12 +645,13 @@ function OverviewReadOnly({ form, overrides, pricing }) {
 }
 
 /* ─────────────────────────────────────────────
-   EDIT mode sections S1–S7
+   EDIT mode sections S1–S8
 ─────────────────────────────────────────────── */
 function S1({ form, set, mode, errors, onFaretypeSelect }) {
   const [ftQ, setFtQ]       = useState('');
   const [ftOpen, setFtOpen] = useState(false);
   const ftRef = useRef();
+  const ftMenuId = useRef(`faretype-search-${Math.random().toString(36).slice(2)}`).current;
   useEffect(() => {
     if (!ftOpen) return;
     const h = e => { if (ftRef.current && !ftRef.current.contains(e.target)) setFtOpen(false); };
@@ -458,55 +661,86 @@ function S1({ form, set, mode, errors, onFaretypeSelect }) {
   const filteredFTs = FT_DATA.filter(ft => ft.code.toLowerCase().includes(ftQ.toLowerCase()) || ft.basis.toLowerCase().includes(ftQ.toLowerCase()));
   const selFT  = FT_DATA.find(ft => ft.code === form.faretype);
   const locked = mode !== 'create';
-  const LockNote = () => <span style={{ fontSize:11, color:T.inkFaint, marginTop:3, display:'flex', alignItems:'center', gap:4 }}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Locked after creation</span>;
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-      <div><h2 style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Ship &amp; Sailing</h2><p style={{ fontSize:13, color:T.inkSoft, lineHeight:1.5 }}>Select the ship, sailing, and parent faretype.</p></div>
-      <Field label="Ship" required error={errors.ship}>
-        <Sel value={form.ship} onChange={v => { set('ship',v); set('sailing',''); }} disabled={locked} err={errors.ship} opts={[['','Select ship…'],...Object.keys(SHIPS_DATA).map(s=>[s,s])]}/>
-        {locked && <LockNote/>}
-      </Field>
-      <Field label="Sailing" required error={errors.sailing}>
-        <Sel value={form.sailing} onChange={v => set('sailing',v)} disabled={locked||!form.ship} err={errors.sailing} opts={[['','Select sailing…'],...sailings.map(s=>[s,s])]}/>
-        {locked && <LockNote/>}
-      </Field>
-      <Field label="Faretype" required helper={!locked?"Selecting a faretype auto-populates all inherited fields.":undefined} error={errors.faretype}>
-        {locked ? (
-          <div style={{ ...iS(false,true), display:'flex', alignItems:'center', gap:8 }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:700 }}>{form.faretype}</span>
-            {selFT && <span style={{ fontSize:11.5, color:T.inkSoft }}>· {selFT.basis} · {selFT.group}</span>}
-          </div>
-        ) : (
-          <div ref={ftRef} style={{ position:'relative' }}>
-            <div onClick={() => setFtOpen(true)} style={{ ...iS(!!errors.faretype,false), display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
-              {selFT ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:700 }}>{form.faretype}</span><span style={{ fontSize:11.5, color:T.inkSoft }}>· {selFT.basis} · {selFT.group}</span></> : <span style={{ color:T.inkFaint }}>Search by code or basis…</span>}
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'visible' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}`, borderRadius:'10px 10px 0 0' }}>
+        <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>01</span>
+        <div>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Ship &amp; Sailing</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Define the voyage context and the parent Faretype for this Farecode.</p>
+        </div>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
+        <div>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:10 }}>
+            <div>
+              <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Sailing Context</div>
+              <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>The ship and departure that this Farecode prices.</div>
             </div>
-            {ftOpen && (
-              <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:4, background:'#fff', border:`1px solid ${T.line}`, borderRadius:9, boxShadow:'0 8px 24px rgba(0,0,0,.1)', zIndex:600 }}>
-                <div style={{ padding:'8px 12px', borderBottom:`1px solid ${T.lineSoft}`, display:'flex', gap:6, alignItems:'center' }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  <input autoFocus value={ftQ} onChange={e => setFtQ(e.target.value)} placeholder="Search faretype…" style={{ border:'none', outline:'none', fontSize:13, color:T.ink, background:'transparent', width:'100%' }}/>
-                </div>
-                {filteredFTs.map(ft => (
-                  <div key={ft.code} onClick={() => { onFaretypeSelect(ft); setFtOpen(false); setFtQ(''); }} style={{ padding:'10px 14px', cursor:'pointer', display:'flex', gap:8, alignItems:'center' }} onMouseEnter={e => e.currentTarget.style.background=T.fill} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                    <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:700, color:T.primary }}>{ft.code}</span>
-                    <span style={{ fontSize:11.5, color:T.inkSoft }}>· {ft.basis}</span>
-                    <span style={{ marginLeft:'auto', padding:'2px 7px', borderRadius:999, fontSize:10.5, fontWeight:600, background:T.primaryBg, color:T.primary }}>{ft.group}</span>
-                  </div>
-                ))}
-                {filteredFTs.length===0 && <div style={{ padding:14, fontSize:13, color:T.inkFaint, textAlign:'center' }}>No match</div>}
-              </div>
+            {locked && (
+              <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 7px', borderRadius:5, background:T.fill, border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:600, whiteSpace:'nowrap' }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Locked after creation
+              </span>
             )}
           </div>
-        )}
-      </Field>
-      {form.faretype && !locked && (
-        <div style={{ padding:'10px 14px', background:T.tealLight, border:`1px solid #A7F3D0`, borderRadius:8, fontSize:12.5, color:T.tealDark, display:'flex', gap:8 }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ flexShrink:0, marginTop:1 }}><polyline points="20 6 9 17 4 12"/></svg>
-          Fields auto-populated from <strong style={{ fontFamily:"'SF Mono',Menlo,monospace" }}>{form.faretype}</strong>.
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <Field label="Ship" required error={errors.ship}>
+              <Sel ariaLabel="Ship" value={form.ship} onChange={v => { set('ship',v); set('sailing',''); }} dis={locked} err={errors.ship} opts={[['','Select ship…'],...Object.keys(SHIPS_DATA).map(s=>[s,s])]}/>
+            </Field>
+            <Field label="Sailing" required error={errors.sailing}>
+              <Sel ariaLabel="Sailing" value={form.sailing} onChange={v => set('sailing',v)} dis={locked||!form.ship} err={errors.sailing} opts={[['','Select sailing…'],...sailings.map(s=>[s,s])]}/>
+            </Field>
+          </div>
         </div>
-      )}
+
+        <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Parent Faretype</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Supplies inherited policies, eligibility, access, and pricing defaults.</div>
+          </div>
+          <Field label="Faretype Code" required helper={!locked?"Selecting a Faretype auto-populates inherited settings.":undefined} error={errors.faretype}>
+            {locked ? (
+              <div style={{ ...iS(false,true), display:'flex', alignItems:'center', gap:8 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:700 }}>{form.faretype}</span>
+                {selFT && <span style={{ fontSize:11.5, color:T.inkSoft }}>· {selFT.basis} · {selFT.group}</span>}
+              </div>
+            ) : (
+              <div ref={ftRef} style={{ position:'relative' }}>
+                <button type="button" role="combobox" aria-haspopup="listbox" aria-controls={ftMenuId} aria-expanded={ftOpen}
+                  onClick={() => setFtOpen(true)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); setFtOpen(true); } else if (e.key === 'Escape') setFtOpen(false); }}
+                  style={{ ...iS(!!errors.faretype,false), display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
+                  {selFT ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:700 }}>{form.faretype}</span><span style={{ fontSize:11.5, color:T.inkSoft }}>· {selFT.basis} · {selFT.group}</span></> : <span style={{ color:T.inkFaint }}>Search by code or basis…</span>}
+                </button>
+                {ftOpen && (
+                  <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:4, background:'#fff', border:`1px solid ${T.line}`, borderRadius:9, boxShadow:'0 8px 24px rgba(0,0,0,.1)', zIndex:600, overflow:'hidden' }}>
+                    <div style={{ padding:'8px 12px', borderBottom:`1px solid ${T.lineSoft}`, display:'flex', gap:6, alignItems:'center' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                      <input autoFocus aria-label="Search Faretypes" value={ftQ} onChange={e => setFtQ(e.target.value)} placeholder="Search faretype…" style={{ border:'none', outline:'none', fontSize:13, color:T.ink, background:'transparent', width:'100%' }}/>
+                    </div>
+                    <div id={ftMenuId} role="listbox" aria-label="Faretype options">
+                      {filteredFTs.map(ft => (
+                        <button key={ft.code} type="button" role="option" aria-selected={ft.code === form.faretype} onClick={() => { onFaretypeSelect(ft); setFtOpen(false); setFtQ(''); }} style={{ width:'100%', padding:'10px 14px', border:'none', background:ft.code === form.faretype ? T.primaryBg : '#fff', cursor:'pointer', display:'flex', gap:8, alignItems:'center', fontFamily:'inherit', textAlign:'left' }} onMouseEnter={e => e.currentTarget.style.background=T.fill} onMouseLeave={e => e.currentTarget.style.background=ft.code === form.faretype ? T.primaryBg : '#fff'}>
+                          <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:700, color:T.primary }}>{ft.code}</span>
+                          <span style={{ fontSize:11.5, color:T.inkSoft }}>· {ft.basis}</span>
+                          <span style={{ marginLeft:'auto', padding:'2px 7px', borderRadius:999, fontSize:10.5, fontWeight:600, background:T.primaryBg, color:T.primary }}>{ft.group}</span>
+                        </button>
+                      ))}
+                      {filteredFTs.length===0 && <div style={{ padding:14, fontSize:13, color:T.inkFaint, textAlign:'center' }}>No match</div>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </Field>
+          {form.faretype && !locked && (
+            <div style={{ marginTop:12, padding:'10px 12px', background:T.greenLight, border:'1px solid #BBF7D0', borderRadius:7, fontSize:12, color:T.green, display:'flex', alignItems:'center', gap:8 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ flexShrink:0 }}><polyline points="20 6 9 17 4 12"/></svg>
+              Inherited settings loaded from <strong style={{ fontFamily:"'SF Mono',Menlo,monospace" }}>{form.faretype}</strong>.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -521,99 +755,278 @@ function S2({ form, set, overrides, toggleOverride, errors, policies }) {
   };
   const getS  = k => hasFT?(overrides[k]||'inherited'):'free';
   const isD   = k => hasFT && getS(k)!=='overridden';
+  const policyCardStyle = k => ({
+    padding:'12px',
+    border:`1px solid ${getS(k)==='overridden'?T.primaryLine:T.line}`,
+    borderRadius:8,
+    background:isD(k)?T.fill:'#fff',
+  });
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-      <div><h2 style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Policies</h2><p style={{ fontSize:13, color:T.inkSoft, lineHeight:1.5 }}>Cancellation and deposit policies. Inherited from faretype — override as needed.</p></div>
-      <OField label="Cancellation Policy" required status={getS('cancellationPolicy')} error={errors.cancellationPolicy} onOverride={() => toggleOverride('cancellationPolicy')} onRevert={() => toggleOverride('cancellationPolicy')}>
-        <Sel value={form.cancellationPolicy} onChange={v => set('cancellationPolicy',v)} dis={isD('cancellationPolicy')} err={errors.cancellationPolicy} opts={polOpts('cancel', form.cancellationPolicy)}/>
-      </OField>
-      <OField label="Deposit Policy" required status={getS('depositPolicy')} error={errors.depositPolicy} onOverride={() => toggleOverride('depositPolicy')} onRevert={() => toggleOverride('depositPolicy')}>
-        <Sel value={form.depositPolicy} onChange={v => set('depositPolicy',v)} dis={isD('depositPolicy')} err={errors.depositPolicy} opts={polOpts('deposit', form.depositPolicy)}/>
-      </OField>
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>02</span>
+        <div>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Policies</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Assign the cancellation and deposit rules that govern this Farecode.</p>
+        </div>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:14, padding:'16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', borderRadius:8, background:hasFT?T.primaryBg:T.fill, border:`1px solid ${hasFT?T.primaryLine:T.line}` }}>
+          <div style={{ width:26, height:26, borderRadius:6, background:'#fff', border:`1px solid ${hasFT?T.primaryLine:T.line}`, color:hasFT?T.primary:T.inkFaint, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+          </div>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>{hasFT?'Inherited policy source':'No parent Faretype selected'}</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.4, marginTop:2 }}>
+              {hasFT ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontWeight:700, color:T.primary }}>{form.faretype}</span> supplies the defaults. Override only when this Farecode needs an exception.</> : <>Choose a parent Faretype in Ship &amp; Sailing to prefill defaults, or assign policies directly here.</>}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy Assignment</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Review both rules together to keep payment and refund terms aligned.</div>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            <div style={policyCardStyle('cancellationPolicy')}>
+              <OField label="Cancellation Policy" required helper="Controls cancellation charges and refund treatment." status={getS('cancellationPolicy')} error={errors.cancellationPolicy} onOverride={() => toggleOverride('cancellationPolicy')} onRevert={() => toggleOverride('cancellationPolicy')}>
+                <Sel ariaLabel="Cancellation Policy" value={form.cancellationPolicy} onChange={v => set('cancellationPolicy',v)} dis={isD('cancellationPolicy')} err={errors.cancellationPolicy} opts={polOpts('cancel', form.cancellationPolicy)}/>
+              </OField>
+            </div>
+            <div style={policyCardStyle('depositPolicy')}>
+              <OField label="Deposit Policy" required helper="Defines deposit amount and payment timing." status={getS('depositPolicy')} error={errors.depositPolicy} onOverride={() => toggleOverride('depositPolicy')} onRevert={() => toggleOverride('depositPolicy')}>
+                <Sel ariaLabel="Deposit Policy" value={form.depositPolicy} onChange={v => set('depositPolicy',v)} dis={isD('depositPolicy')} err={errors.depositPolicy} opts={polOpts('deposit', form.depositPolicy)}/>
+              </OField>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 function S3({ form, set, overrides, toggleOverride }) {
   const hasFT = !!form.faretype;
   const getS  = (k, noOvr=false) => noOvr?(hasFT?'locked':'free'):(hasFT?(overrides[k]||'inherited'):'free');
-  const isD   = k => hasFT && getS(k)!=='overridden' && getS(k)!=='free';
+  const isD   = (k, noOvr=false) => {
+    const status = getS(k, noOvr);
+    return status === 'locked' || status === 'inherited';
+  };
+  const fieldCardStyle = (k, noOvr=false) => {
+    const status = getS(k, noOvr);
+    return {
+      padding:'12px',
+      border:`1px solid ${status==='overridden'?T.primaryLine:T.line}`,
+      borderRadius:8,
+      background:isD(k,noOvr)?T.fill:'#fff',
+      transition:'border-color .15s, background .15s',
+    };
+  };
   const FLAGS = [{ k:'standbyEligible',l:'Standby Eligible',h:'Allow standby booking.' },{ k:'upgradeEligible',l:'Upgrade Eligible',h:'Allow cabin upgrades.' },{ k:'couponEligible',l:'Coupon Eligible',h:'Allow coupon codes.' }];
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-      <div><h2 style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Eligibility</h2><p style={{ fontSize:13, color:T.inkSoft, lineHeight:1.5 }}>Residency and Min Age are set at the faretype level and cannot be overridden.</p></div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-        <OField label="Residency"    status={getS('residency',true)}    noOvr><Sel value={form.residency}    onChange={v => set('residency',v)}    dis={isD('residency')}    opts={[['Any','Any'],['US Only','US Only'],['Non-US','Non-US'],['Canada','Canada'],['UK','UK']]}/></OField>
-        <OField label="Min Age"      status={getS('minAge',true)}       noOvr><input className="fi" type="number" style={iS(false,isD('minAge'))}       value={form.minAge}       disabled={isD('minAge')}       min={0} max={99}  onChange={e => set('minAge',e.target.value)}/></OField>
-        <OField label="Min Occupancy" status={getS('minOccupancy')} onOverride={() => toggleOverride('minOccupancy')} onRevert={() => toggleOverride('minOccupancy')}><input className="fi" type="number" style={iS(false,isD('minOccupancy'))} value={form.minOccupancy} disabled={isD('minOccupancy')} placeholder="1" onChange={e => set('minOccupancy',e.target.value)}/></OField>
-        <OField label="Max Occupancy" status={getS('maxOccupancy')} onOverride={() => toggleOverride('maxOccupancy')} onRevert={() => toggleOverride('maxOccupancy')}><input className="fi" type="number" style={iS(false,isD('maxOccupancy'))} value={form.maxOccupancy} disabled={isD('maxOccupancy')} placeholder="4" onChange={e => set('maxOccupancy',e.target.value)}/></OField>
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>03</span>
+        <div>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Eligibility</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Define who can book, party limits, and permitted booking paths.</p>
+        </div>
       </div>
-      <OField label="Advanced Purchase (days)" status={getS('advancedPurchase')} helper="Min days before sailing. Blank = no restriction." onOverride={() => toggleOverride('advancedPurchase')} onRevert={() => toggleOverride('advancedPurchase')}><input className="fi" type="number" style={iS(false,isD('advancedPurchase'))} value={form.advancedPurchase} disabled={isD('advancedPurchase')} onChange={e => set('advancedPurchase',e.target.value)}/></OField>
-      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        {FLAGS.map(({ k,l,h }) => (
-          <div key={k} style={{ border:`1.5px solid ${overrides[k]==='overridden'?'#A7F3D0':'#E8EDF3'}`, borderRadius:8, padding:'11px 14px', background:isD(k)?'#F8FAFC':'#fff', transition:'all .15s' }}>
-            <OTRow label={l} helper={h} on={form[k]} onChange={v => set(k,v)} status={getS(k)} onOverride={() => toggleOverride(k)} onRevert={() => toggleOverride(k)}/>
+      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', borderRadius:8, background:hasFT?T.primaryBg:T.fill, border:`1px solid ${hasFT?T.primaryLine:T.line}` }}>
+          <div style={{ width:26, height:26, borderRadius:6, background:'#fff', border:`1px solid ${hasFT?T.primaryLine:T.line}`, color:hasFT?T.primary:T.inkFaint, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
           </div>
-        ))}
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>{hasFT?'Inherited eligibility source':'Farecode-level eligibility'}</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.4, marginTop:2 }}>
+              {hasFT ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontWeight:700, color:T.primary }}>{form.faretype}</span> controls residency and minimum age. Other inherited rules can be overridden for this Farecode.</> : <>Select a parent Faretype to inherit its rules. Until then, eligibility is configured directly here.</>}
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Guest Requirements</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>{hasFT?'Parent-controlled qualification rules for this Farecode.':'Core qualification rules for eligible guests.'}</div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={fieldCardStyle('residency',true)}>
+              <OField label="Residency" status={getS('residency',true)} noOvr>
+                <Sel ariaLabel="Residency" value={form.residency} onChange={v => set('residency',v)} dis={isD('residency',true)} opts={[['Any','Any'],['US Only','US Only'],['Non-US','Non-US'],['Canada','Canada'],['UK','UK']]}/>
+              </OField>
+            </div>
+            <div style={fieldCardStyle('minAge',true)}>
+              <OField label="Minimum Age" status={getS('minAge',true)} noOvr>
+                <input className="fi" type="number" style={iS(false,isD('minAge',true))} value={form.minAge} disabled={isD('minAge',true)} min={0} max={99} onChange={e => set('minAge',e.target.value)}/>
+              </OField>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Booking Constraints</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Set party-size boundaries and the minimum booking lead time.</div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div style={fieldCardStyle('minOccupancy')}>
+              <OField label="Min Occupancy" status={getS('minOccupancy')} onOverride={() => toggleOverride('minOccupancy')} onRevert={() => toggleOverride('minOccupancy')}>
+                <input className="fi" type="number" style={iS(false,isD('minOccupancy'))} value={form.minOccupancy} disabled={isD('minOccupancy')} placeholder="1" onChange={e => set('minOccupancy',e.target.value)}/>
+              </OField>
+            </div>
+            <div style={fieldCardStyle('maxOccupancy')}>
+              <OField label="Max Occupancy" status={getS('maxOccupancy')} onOverride={() => toggleOverride('maxOccupancy')} onRevert={() => toggleOverride('maxOccupancy')}>
+                <input className="fi" type="number" style={iS(false,isD('maxOccupancy'))} value={form.maxOccupancy} disabled={isD('maxOccupancy')} placeholder="4" onChange={e => set('maxOccupancy',e.target.value)}/>
+              </OField>
+            </div>
+            <div style={{ ...fieldCardStyle('advancedPurchase'), gridColumn:'1 / -1' }}>
+              <OField label="Advanced Purchase" status={getS('advancedPurchase')} helper="Minimum days before sailing. Leave blank for no restriction." onOverride={() => toggleOverride('advancedPurchase')} onRevert={() => toggleOverride('advancedPurchase')}>
+                <input className="fi" type="number" style={iS(false,isD('advancedPurchase'))} value={form.advancedPurchase} disabled={isD('advancedPurchase')} placeholder="No restriction" onChange={e => set('advancedPurchase',e.target.value)}/>
+              </OField>
+            </div>
+          </div>
+        </div>
+        <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Booking Permissions</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Control optional booking paths and commercial entitlements.</div>
+          </div>
+          <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden' }}>
+            {FLAGS.map(({ k,l,h }, index) => (
+              <div key={k} style={{ padding:'11px 12px', borderBottom:index<FLAGS.length-1?`1px solid ${T.lineSoft}`:'none', background:getS(k)==='overridden'?T.primaryBg:isD(k)?T.fill:'#fff', transition:'background .15s' }}>
+                <OTRow label={l} helper={h} on={form[k]} onChange={v => set(k,v)} status={getS(k)} onOverride={() => toggleOverride(k)} onRevert={() => toggleOverride(k)}/>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-function S4({ form, set, overrides, toggleOverride }) {
+function PartnerAccessStep({ form, set }) {
+  const selected = form.channelPartners.length;
+  const hasFT = !!form.faretype;
+  return (
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>05</span>
+        <div>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Partner Access</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Choose which agency partners can access this Farecode through the MVAS B2B channel.</p>
+        </div>
+      </div>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', borderRadius:8, background:form.chMVASB2B?T.primaryBg:T.amberLight, border:`1px solid ${form.chMVASB2B?T.primaryLine:T.amberBorder}` }}>
+          <div style={{ width:26, height:26, borderRadius:6, background:'#fff', border:`1px solid ${form.chMVASB2B?T.primaryLine:T.amberBorder}`, color:form.chMVASB2B?T.primary:T.amberDark, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><path d="M7 7l3 3M17 7l-3 3"/></svg>
+          </div>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:form.chMVASB2B?T.ink:T.amberDark }}>{form.chMVASB2B?'MVAS B2B is enabled':'MVAS B2B is disabled in Step 4'}</div>
+            <div style={{ fontSize:11.5, color:form.chMVASB2B?T.inkSoft:T.amberDark, lineHeight:1.4, marginTop:2 }}>
+              {hasFT ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontWeight:700 }}>{form.faretype}</span> supplies the initial partner access. Changes here apply only to this Farecode.</> : <>Partner selections are retained and apply whenever the B2B channel is enabled.</>}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ border:`1px solid ${T.lineSoft}`, borderRadius:9, background:T.fill, padding:14 }}>
+          <div style={{ marginBottom:11 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Partner Restrictions</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, lineHeight:1.4, marginTop:3 }}>Optional — leave empty to make this Farecode available to every agency.</div>
+          </div>
+          <label style={{ display:'block', fontSize:10.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px', marginBottom:6 }}>Applicable Channel Partners</label>
+          <MultiChip values={form.channelPartners} onChange={v => set('channelPartners',v)} opts={CHANNEL_PARTNERS} placeholder="Search agencies…" ariaLabel="Search channel partners"/>
+        </div>
+
+        <div style={{ padding:'10px 12px', border:`1px solid ${T.line}`, borderRadius:8, background:'#fff', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+          <div>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Partner Availability</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:4 }}>{selected?`${selected} selected partner${selected===1?'':'s'}`:'Available to every agency'}</div>
+          </div>
+          <span style={{ minWidth:30, height:24, padding:'0 8px', borderRadius:999, display:'inline-flex', alignItems:'center', justifyContent:'center', background:selected?T.primaryBg:T.fill, border:`1px solid ${selected?T.primaryLine:T.line}`, color:selected?T.primary:T.inkSoft, fontSize:11, fontWeight:800 }}>{selected||'All'}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChannelAccessStep({ form, set, overrides, toggleOverride }) {
   const hasFT = !!form.faretype;
   const getS  = k => hasFT?(overrides[k]||'inherited'):'free';
   const chLocked = hasFT && getS('channelVisibility')!=='overridden';
-  const CHS = [{ k:'chMVASB2C',l:'MVAS B2C' },{ k:'chMVASB2B',l:'MVAS B2B' },{ k:'chCC',l:'Cruise Control' },{ k:'chTradeAPI',l:'Trade API' },{ k:'chCRM',l:'CRM' },{ k:'chGroup',l:'Group' },{ k:'chInternal',l:'Internal' }];
+  const CHS = [
+    { k:'chMVASB2C', l:'MVAS B2C',       h:'Consumer booking channel' },
+    { k:'chMVASB2B', l:'MVAS B2B',       h:'Travel advisor sales' },
+    { k:'chCC',      l:'Cruise Control',  h:'Internal booking workspace' },
+    { k:'chTradeAPI',l:'Trade API',       h:'Partner integrations' },
+    { k:'chCRM',     l:'CRM',             h:'Agent servicing workspace' },
+    { k:'chGroup',   l:'Group',           h:'Group sales tools' },
+  ];
   const vis = CHS.filter(c => form[c.k]).map(c => c.l);
   const hid = CHS.filter(c => !form[c.k]).map(c => c.l);
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-      <div><h2 style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Channels &amp; Access</h2><p style={{ fontSize:13, color:T.inkSoft, lineHeight:1.5 }}>Control where this farecode is visible and bookable.</p></div>
-      <div style={{ border:`1.5px solid ${overrides.cruiseControlAccess==='overridden'?'#A7F3D0':'#E8EDF3'}`, borderRadius:8, padding:'11px 14px', background:hasFT&&getS('cruiseControlAccess')!=='overridden'?'#F8FAFC':'#fff' }}>
-        <OTRow label="Show in Cruise Control" helper="Internal CRM booking visibility." on={form.cruiseControlAccess} onChange={v => set('cruiseControlAccess',v)} status={getS('cruiseControlAccess')} onOverride={() => toggleOverride('cruiseControlAccess')} onRevert={() => toggleOverride('cruiseControlAccess')}/>
-      </div>
-      <OField label="Distribution Channels" status={getS('channelVisibility')} onOverride={() => toggleOverride('channelVisibility')} onRevert={() => toggleOverride('channelVisibility')}>
-        <div style={{ display:'flex', flexDirection:'column', gap:5, marginTop:4 }}>
-          {CHS.map(c => (
-            <div key={c.k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px', border:`1.5px solid #E8EDF3`, borderRadius:7, background:chLocked?'#F8FAFC':'#fff' }}>
-              <span style={{ fontSize:13, color:T.ink }}>{c.l}</span>
-              <Toggle on={form[c.k]} onChange={v => set(c.k,v)} dis={chLocked}/>
-            </div>
-          ))}
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>04</span>
+        <div>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Channel Access</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Control where this Farecode can be booked and which systems can surface it.</p>
         </div>
-      </OField>
-      <div style={{ fontSize:12, color:T.inkFaint, padding:'9px 12px', background:T.fill, borderRadius:7, border:`1px solid ${T.lineSoft}`, lineHeight:1.5 }}>
-        <strong style={{ color:T.inkSoft }}>Visible:</strong> {vis.length?vis.join(', '):'None'} &nbsp;·&nbsp; <strong style={{ color:T.inkSoft }}>Hidden:</strong> {hid.length?hid.join(', '):'None'}
       </div>
-    </div>
-  );
-}
-function S5({ form, set, overrides, toggleOverride }) {
-  const hasFT = !!form.faretype;
-  const getS  = k => hasFT?(overrides[k]||'inherited'):'free';
-  const isD   = k => hasFT && getS(k)!=='overridden';
-  const OFFERS = [['','None'],['OFFER-2026-SPRING','OFFER-2026-SPRING'],['OFFER-2026-SUMMER','OFFER-2026-SUMMER'],['OFFER-CASINO-Q2','OFFER-CASINO-Q2']];
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-      <div><h2 style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Marketing &amp; Messaging</h2><p style={{ fontSize:13, color:T.inkSoft, lineHeight:1.5 }}>Attach discount messages and offers. All optional.</p></div>
-      <div style={{ border:`1.5px solid ${overrides.includeDiscount==='overridden'?'#A7F3D0':'#E8EDF3'}`, borderRadius:8, padding:'11px 14px' }}>
-        <OTRow label="Add Discount Message" on={form.includeDiscount} onChange={v => set('includeDiscount',v)} status={getS('includeDiscount')} onOverride={() => toggleOverride('includeDiscount')} onRevert={() => toggleOverride('includeDiscount')}/>
-        {form.includeDiscount && (
-          <div style={{ marginTop:12 }}>
-            <OField label="Discount Message Copy" status={getS('discountMessage')} onOverride={() => toggleOverride('discountMessage')} onRevert={() => toggleOverride('discountMessage')}>
-              <div style={{ position:'relative' }}>
-                <textarea className="fi" style={{ ...iS(false,isD('discountMessage')), minHeight:72, resize:'vertical', lineHeight:1.6 }} value={form.discountMessage} disabled={isD('discountMessage')} maxLength={200} placeholder="e.g. Last-minute savings — book by Friday for 25% off" onChange={e => set('discountMessage',e.target.value)}/>
-                <span style={{ position:'absolute', bottom:8, right:10, fontSize:11, color:T.inkFaint }}>{(form.discountMessage||'').length}/200</span>
-              </div>
-            </OField>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', borderRadius:8, background:hasFT?T.primaryBg:T.fill, border:`1px solid ${hasFT?T.primaryLine:T.line}` }}>
+          <div style={{ width:26, height:26, borderRadius:6, background:'#fff', border:`1px solid ${hasFT?T.primaryLine:T.line}`, color:hasFT?T.primary:T.inkFaint, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg>
           </div>
-        )}
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
-        {[['offerPrimary','Primary Offer'],['offerSecondary','Secondary Offer'],['offerTertiary','Tertiary Offer']].map(([k,l]) => (
-          <OField key={k} label={l} status={getS(k)} onOverride={() => toggleOverride(k)} onRevert={() => toggleOverride(k)}>
-            <Sel value={form[k]} onChange={v => set(k,v)} dis={isD(k)} opts={OFFERS}/>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>{hasFT?'Inherited access source':'Farecode-level access'}</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.4, marginTop:2 }}>
+              {hasFT ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontWeight:700, color:T.primary }}>{form.faretype}</span> supplies the default access and channel reach. Override a section only when this Farecode needs an exception.</> : <>Configure access directly here. Selecting a parent Faretype will prefill its channel rules.</>}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Internal Workspace</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Decide whether internal teams can find and book this Farecode.</div>
+          </div>
+          <div style={{ padding:'12px', border:`1px solid ${getS('cruiseControlAccess')==='overridden'?T.primaryLine:T.line}`, borderRadius:8, background:hasFT&&getS('cruiseControlAccess')!=='overridden'?T.fill:'#fff' }}>
+            <OTRow label="Available in Cruise Control" helper="Shows this Farecode in the internal booking workspace." on={form.cruiseControlAccess} onChange={v => set('cruiseControlAccess',v)} status={getS('cruiseControlAccess')} onOverride={() => toggleOverride('cruiseControlAccess')} onRevert={() => toggleOverride('cruiseControlAccess')}/>
+          </div>
+        </div>
+
+        <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Distribution Reach</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Choose the customer, partner, and operations channels that can surface this Farecode.</div>
+          </div>
+          <OField label="Visibility Rules" status={getS('channelVisibility')} onOverride={() => toggleOverride('channelVisibility')} onRevert={() => toggleOverride('channelVisibility')}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:4 }}>
+              {CHS.map((c,index) => (
+                <div key={c.k} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, padding:'10px 11px', border:`1px solid ${T.line}`, borderRadius:8, background:chLocked?T.fill:form[c.k]?'#fff':T.fill, gridColumn:CHS.length % 2 === 1 && index === CHS.length - 1?'1 / -1':undefined }}>
+                  <div style={{ minWidth:0 }}>
+                    <div style={{ fontSize:12.5, fontWeight:600, color:T.ink }}>{c.l}</div>
+                    <div style={{ fontSize:10.5, color:T.inkFaint, marginTop:2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.h}</div>
+                  </div>
+                  <Toggle on={form[c.k]} onChange={v => set(c.k,v)} dis={chLocked} label={c.l}/>
+                </div>
+              ))}
+            </div>
           </OField>
-        ))}
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10 }}>
+            <div style={{ padding:'10px 11px', borderRadius:8, background:T.greenLight, border:'1px solid #BBF7D0' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11.5, fontWeight:700, color:T.green }}><span style={{ width:6, height:6, borderRadius:'50%', background:T.green }}/>{vis.length} visible</div>
+              <div style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.45, marginTop:5 }}>{vis.length?vis.join(' · '):'No channels selected'}</div>
+            </div>
+            <div style={{ padding:'10px 11px', borderRadius:8, background:T.fill, border:`1px solid ${T.line}` }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:11.5, fontWeight:700, color:T.inkSoft }}><span style={{ width:6, height:6, borderRadius:'50%', background:T.inkFaint }}/>{hid.length} hidden</div>
+              <div style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.45, marginTop:5 }}>{hid.length?hid.join(' · '):'All channels visible'}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -621,18 +1034,164 @@ function S5({ form, set, overrides, toggleOverride }) {
 function S6({ form, set, overrides, toggleOverride }) {
   const hasFT = !!form.faretype;
   const getS  = k => hasFT?(overrides[k]||'inherited'):'free';
-  const ITEMS = [{ k:'waiveGovTaxes',l:'Waive All Government Taxes',h:'Zeros out all government taxes. Comp/crew only.' },{ k:'waiveCruiseExp',l:'Waive All Cruise Expenses',h:'Zeros out port fees and cruise expenses.' },{ k:'noFareDisplay',l:'Hide Fares on PDFs & Cruise Control',h:'Pricing hidden from confirmations and CRM view.' }];
+  const isD   = k => hasFT && getS(k)!=='overridden';
+  const OFFERS = [['','None'],['OFFER-2026-SPRING','OFFER-2026-SPRING'],['OFFER-2026-SUMMER','OFFER-2026-SUMMER'],['OFFER-CASINO-Q2','OFFER-CASINO-Q2']];
+  const SLOTS = [
+    { k:'offerPrimary',   n:'01', l:'Primary offer',   h:'First promotion evaluated for this Farecode.' },
+    { k:'offerSecondary', n:'02', l:'Secondary offer', h:'Fallback when the primary offer is unavailable.' },
+    { k:'offerTertiary',  n:'03', l:'Tertiary offer',  h:'Final fallback in the offer sequence.' },
+  ];
+  const slotCardStyle = k => ({
+    padding:'12px',
+    border:`1px solid ${getS(k)==='overridden'?T.primaryLine:T.line}`,
+    borderRadius:8,
+    background:isD(k)?T.fill:'#fff',
+  });
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-      <div><h2 style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Taxes &amp; Privacy</h2><p style={{ fontSize:13, color:T.inkSoft, lineHeight:1.5 }}>Advanced financial settings. Apply with care.</p></div>
-      <WarnBanner><span style={{ fontSize:12.5, color:T.amberDark, fontWeight:500, lineHeight:1.45 }}>These settings override core financial calculations. Use only for comp, crew, or special promotional fares.</span></WarnBanner>
-      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-        {ITEMS.map(({ k,l,h }) => (
-          <div key={k} style={{ border:`1.5px solid ${form[k]?T.amberBorder:overrides[k]==='overridden'?'#A7F3D0':'#E8EDF3'}`, borderRadius:8, padding:'12px 14px', background:hasFT&&getS(k)!=='overridden'?'#F8FAFC':'#fff', transition:'all .15s' }}>
-            <OTRow label={l} helper={h} on={form[k]} onChange={v => set(k,v)} status={getS(k)} onOverride={() => toggleOverride(k)} onRevert={() => toggleOverride(k)}/>
-            {form[k] && <div style={{ marginTop:9, padding:'8px 11px', background:T.amberLight, border:`1px solid ${T.amberBorder}`, borderRadius:6, fontSize:11.5, color:T.amberDark }}>{h}</div>}
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>06</span>
+        <div>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Marketing &amp; Messaging</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Manage optional promotional copy and the prioritized offer sequence.</p>
+        </div>
+      </div>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', borderRadius:8, background:hasFT?T.primaryBg:T.fill, border:`1px solid ${hasFT?T.primaryLine:T.line}` }}>
+          <div style={{ width:26, height:26, borderRadius:6, background:'#fff', border:`1px solid ${hasFT?T.primaryLine:T.line}`, color:hasFT?T.primary:T.inkFaint, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l4 4V5L7 9H5a2 2 0 0 0-2 2z"/><path d="M15 9a4 4 0 0 1 0 6"/><path d="M18 6a8 8 0 0 1 0 12"/></svg>
           </div>
-        ))}
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>{hasFT?'Inherited marketing source':'Farecode-level marketing'}</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.4, marginTop:2 }}>
+              {hasFT ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontWeight:700, color:T.primary }}>{form.faretype}</span> supplies the default message and offer stack. Override only the item that needs to differ.</> : <>Configure optional messaging and offers directly here. A parent Faretype can prefill these defaults.</>}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Guest-facing Message</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Add concise promotional copy where supported by the booking channel.</div>
+          </div>
+          <div style={{ padding:'12px', border:`1px solid ${getS('includeDiscount')==='overridden'?T.primaryLine:T.line}`, borderRadius:8, background:isD('includeDiscount')?T.fill:'#fff' }}>
+            <OTRow label="Show discount message" helper="Displays promotional copy alongside this Farecode." on={form.includeDiscount} onChange={v => set('includeDiscount',v)} status={getS('includeDiscount')} onOverride={() => toggleOverride('includeDiscount')} onRevert={() => toggleOverride('includeDiscount')}/>
+            {form.includeDiscount ? (
+              <div style={{ marginTop:12, paddingTop:12, borderTop:`1px solid ${T.lineSoft}` }}>
+                <OField label="Message Copy" status={getS('discountMessage')} helper="Keep the message specific, factual, and under 200 characters." onOverride={() => toggleOverride('discountMessage')} onRevert={() => toggleOverride('discountMessage')}>
+                  <div style={{ position:'relative' }}>
+                    <textarea className="fi" style={{ ...iS(false,isD('discountMessage')), minHeight:78, resize:'vertical', lineHeight:1.55, paddingRight:48 }} value={form.discountMessage} disabled={isD('discountMessage')} maxLength={200} placeholder="e.g. Last-minute savings — book by Friday for 25% off" onChange={e => set('discountMessage',e.target.value)}/>
+                    <span style={{ position:'absolute', bottom:9, right:10, fontSize:10.5, color:T.inkFaint }}>{(form.discountMessage||'').length}/200</span>
+                  </div>
+                </OField>
+              </div>
+            ) : (
+              <div style={{ marginTop:10, paddingTop:10, borderTop:`1px solid ${T.lineSoft}`, fontSize:11.5, color:T.inkFaint }}>No guest-facing discount message will be shown.</div>
+            )}
+          </div>
+        </div>
+        <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Offer Priority</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Offers are evaluated in sequence. Leave a slot set to None when no fallback is needed.</div>
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {SLOTS.map(slot => (
+              <div key={slot.k} style={slotCardStyle(slot.k)}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                  <span style={{ minWidth:28, height:24, padding:'0 6px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{slot.n}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{slot.l}</div>
+                    <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.4, marginTop:2 }}>{slot.h}</div>
+                    <div style={{ marginTop:10 }}>
+                      <OField label="Offer" status={getS(slot.k)} onOverride={() => toggleOverride(slot.k)} onRevert={() => toggleOverride(slot.k)}>
+                        <Sel ariaLabel={slot.l} value={form[slot.k]} onChange={v => set(slot.k,v)} dis={isD(slot.k)} opts={OFFERS}/>
+                      </OField>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function S7({ form, set, overrides, toggleOverride }) {
+  const hasFT = !!form.faretype;
+  const getS  = k => hasFT?(overrides[k]||'inherited'):'free';
+  const isD   = k => hasFT && getS(k)!=='overridden';
+  const FINANCIALS = [
+    { k:'waiveGovTaxes', l:'Waive government taxes', h:'Sets all government-tax charges to zero.', impact:'Government taxes will calculate at $0.' },
+    { k:'waiveCruiseExp',l:'Waive cruise expenses',  h:'Sets port fees and cruise expenses to zero.', impact:'Port fees and cruise expenses will calculate at $0.' },
+  ];
+  const waiverCount = FINANCIALS.filter(item => form[item.k]).length;
+  return (
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>07</span>
+        <div>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Taxes &amp; Privacy</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Manage restricted financial waivers and fare-display privacy.</p>
+        </div>
+      </div>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', borderRadius:8, background:hasFT?T.primaryBg:T.fill, border:`1px solid ${hasFT?T.primaryLine:T.line}` }}>
+          <div style={{ width:26, height:26, borderRadius:6, background:'#fff', border:`1px solid ${hasFT?T.primaryLine:T.line}`, color:hasFT?T.primary:T.inkFaint, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9.5 9.5c0-1 1-1.7 2.5-1.7s2.5.6 2.5 1.7-1 1.5-2.5 1.8-2.5.8-2.5 1.9 1 1.8 2.5 1.8 2.5-.7 2.5-1.8"/><path d="M12 6.5v10"/></svg>
+          </div>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>{hasFT?'Inherited control source':'Farecode-level safeguards'}</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.4, marginTop:2 }}>
+              {hasFT ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontWeight:700, color:T.primary }}>{form.faretype}</span> supplies the defaults. Override only with documented approval for this Farecode.</> : <>All restricted controls default to off and are configured directly for this Farecode.</>}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Financial Waivers</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Exceptions that directly change the Farecode's calculated charges.</div>
+          </div>
+          <WarnBanner>
+            <div>
+              <div style={{ fontSize:12, color:T.amberDark, fontWeight:700 }}>Restricted financial controls</div>
+              <div style={{ fontSize:11.5, color:T.amberDark, lineHeight:1.45, marginTop:2 }}>Use only for approved comp, crew, or promotional fares. Activating a waiver sets the related charge to zero.</div>
+            </div>
+          </WarnBanner>
+          <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:10 }}>
+            {FINANCIALS.map(item => (
+              <div key={item.k} style={{ padding:'12px', border:`1px solid ${form[item.k]?T.amberBorder:getS(item.k)==='overridden'?T.primaryLine:T.line}`, borderRadius:8, background:form[item.k]?T.amberLight:isD(item.k)?T.fill:'#fff', transition:'border-color .15s, background .15s' }}>
+                <OTRow label={item.l} helper={item.h} on={form[item.k]} onChange={v => set(item.k,v)} status={getS(item.k)} onOverride={() => toggleOverride(item.k)} onRevert={() => toggleOverride(item.k)}/>
+                {form[item.k] && <div style={{ marginTop:10, paddingTop:9, borderTop:`1px solid ${T.amberBorder}`, fontSize:11.5, color:T.amberDark }}><strong>Impact:</strong> {item.impact}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Fare Privacy</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Control whether fare amounts appear in customer and internal outputs.</div>
+          </div>
+          <div style={{ padding:'12px', border:`1px solid ${form.noFareDisplay||getS('noFareDisplay')==='overridden'?T.primaryLine:T.line}`, borderRadius:8, background:form.noFareDisplay?T.primaryBg:isD('noFareDisplay')?T.fill:'#fff' }}>
+            <OTRow label="Hide fare amounts" helper="Suppresses pricing on confirmation PDFs and the Cruise Control view." on={form.noFareDisplay} onChange={v => set('noFareDisplay',v)} status={getS('noFareDisplay')} onOverride={() => toggleOverride('noFareDisplay')} onRevert={() => toggleOverride('noFareDisplay')}/>
+          </div>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+          <div style={{ padding:'10px 11px', borderRadius:8, background:waiverCount?T.amberLight:T.fill, border:`1px solid ${waiverCount?T.amberBorder:T.line}` }}>
+            <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Calculation</div>
+            <div style={{ fontSize:12.5, fontWeight:700, color:waiverCount?T.amberDark:T.ink, marginTop:4 }}>{waiverCount?`${waiverCount} waiver${waiverCount===1?'':'s'} active`:'Standard charges'}</div>
+          </div>
+          <div style={{ padding:'10px 11px', borderRadius:8, background:form.noFareDisplay?T.primaryBg:T.fill, border:`1px solid ${form.noFareDisplay?T.primaryLine:T.line}` }}>
+            <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Fare Display</div>
+            <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginTop:4 }}>{form.noFareDisplay?'Amounts hidden':'Amounts visible'}</div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -765,7 +1324,7 @@ function PricingEditorExpandedModal({ pricing, setPricing, errors, onClose, onCo
   );
 }
 
-function S7({ pricing, setPricing, errors, setErrors }) {
+function S8({ pricing, setPricing, errors, setErrors }) {
   const CABINS = Object.keys(pricing);
   const [expanded, setExpanded] = useState(false);
   const [copyOpen, setCopyOpen] = useState(null);
@@ -795,74 +1354,122 @@ function S7({ pricing, setPricing, errors, setErrors }) {
   }
   const PGRID = `120px repeat(${CABINS.length}, minmax(106px,1fr))`;
   const nPriced = CABINS.filter(isPriced).length;
+  const completionPct = CABINS.length ? Math.round((nPriced / CABINS.length) * 100) : 0;
+  const isComplete = CABINS.length > 0 && nPriced === CABINS.length;
+  const hasPricingErrors = !!errors.pricing;
+  const remaining = Math.max(CABINS.length - nPriced, 0);
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16 }}>
-        <div><h2 style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Pricing</h2><p style={{ fontSize:13, color:T.inkSoft, lineHeight:1.5 }}>Set the fare <strong style={{ color:T.ink, fontWeight:600 }}>per guest</strong> for each guest position and cabin category. Each cabin needs at least one price to activate.</p></div>
-        <button ref={expandBtnRef} onClick={() => setExpanded(true)} aria-label="Expand pricing editor" title="Expand pricing editor" style={{ width:32, height:32, borderRadius:7, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; }} onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color=T.inkSoft; }}><IcExpand/></button>
-      </div>
-      <div className="hscroll" style={{ border:`1px solid ${T.line}`, borderRadius:9, overflowX:'auto' }}>
-        <div style={{ minWidth:CABINS.length*106+120 }}>
-          {/* Column header: cabin categories + copy action */}
-          <div style={{ display:'grid', gridTemplateColumns:PGRID, background:'#F7F9FC', borderBottom:`1px solid ${T.line}` }}>
-            <div style={{ padding:'8px 10px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px' }}>Guest Type</div>
-            {CABINS.map(cabin => {
-              const hasErr = errors.pricing?.[cabin];
-              const others = CABINS.filter(c => c !== cabin);
-              return (
-                <div key={cabin} style={{ padding:'5px 8px', borderLeft:`1px solid ${T.lineSoft}`, display:'flex', alignItems:'center', justifyContent:'flex-end', gap:5, position:'relative', background:hasErr?'#FFFBEB':'transparent' }} ref={copyOpen===cabin?copyRef:null}>
-                  {hasErr && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.amber} strokeWidth="2.5" style={{ flexShrink:0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>}
-                  <span style={{ fontSize:10.5, fontWeight:700, color:T.ink, lineHeight:1.3, textAlign:'right' }}>{cabin}</span>
-                  <button onClick={() => setCopyOpen(copyOpen===cabin?null:cabin)} title={`Copy ${cabin} prices to another category`}
-                    style={{ width:20, height:20, borderRadius:4, border:`1px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkFaint, flexShrink:0 }}
-                    onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; }}
-                    onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color=T.inkFaint; }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  </button>
-                  {copyOpen===cabin && (
-                    <div style={{ position:'absolute', right:4, top:'100%', marginTop:3, background:'#fff', border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 8px 20px rgba(0,0,0,.1)', zIndex:500, minWidth:150, overflow:'hidden' }}>
-                      <div style={{ padding:'6px 12px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', borderBottom:`1px solid ${T.lineSoft}` }}>Copy to…</div>
-                      {others.map(to => (
-                        <div key={to} onClick={() => copyCol(cabin,to)} style={{ padding:'8px 12px', fontSize:12.5, color:T.ink, cursor:'pointer', whiteSpace:'nowrap' }} onMouseEnter={e => e.currentTarget.style.background=T.fill} onMouseLeave={e => e.currentTarget.style.background='transparent'}>{to}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:14, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:10, minWidth:0 }}>
+          <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>08</span>
+          <div style={{ minWidth:0 }}>
+            <h2 style={{ fontSize:15, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Pricing</h2>
+            <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Set per-guest fares by cabin category and occupancy.</p>
           </div>
-          {/* Grouped guest-position rows */}
-          {GUEST_ROWS.map((g, gi) => (
-            <div key={g.grp}>
-              <div style={{ display:'grid', gridTemplateColumns:PGRID, background:'#FAFBFD', borderBottom:`1px solid ${T.lineSoft}`, borderTop:gi>0?`1px solid ${T.lineSoft}`:'none' }}>
-                <div style={{ padding:'6px 10px', fontSize:9.5, fontWeight:700, color:T.inkFaint, textTransform:'uppercase', letterSpacing:'.6px', gridColumn:`span ${CABINS.length+1}` }}>{g.grp}</div>
+        </div>
+        <button ref={expandBtnRef} onClick={() => setExpanded(true)} aria-label="Expand pricing matrix" title="Open the full pricing editor"
+          style={{ height:30, padding:'0 10px', borderRadius:7, border:`1px solid ${T.line}`, background:'#fff', color:T.primary, cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6, flexShrink:0, fontSize:11.5, fontWeight:700 }}
+          onMouseEnter={e => { e.currentTarget.style.background=T.primaryBg; e.currentTarget.style.borderColor=T.primaryLine; }}
+          onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.borderColor=T.line; }}>
+          <IcExpand/><span>Expand matrix</span>
+        </button>
+      </div>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
+        <div style={{ padding:'11px 12px', borderRadius:8, background:isComplete?T.greenLight:hasPricingErrors?T.amberLight:T.primaryBg, border:`1px solid ${isComplete?'#A7F3D0':hasPricingErrors?T.amberBorder:T.primaryLine}` }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8 }}>
+            <div>
+              <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Pricing coverage</div>
+              <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginTop:3 }}>{nPriced} of {CABINS.length} cabin categories priced</div>
+            </div>
+            <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 7px', borderRadius:999, background:'#fff', border:`1px solid ${isComplete?'#A7F3D0':hasPricingErrors?T.amberBorder:T.primaryLine}`, color:isComplete?T.green:hasPricingErrors?T.amberDark:T.primary, fontSize:10.5, fontWeight:700, whiteSpace:'nowrap' }}>
+              <span style={{ width:5, height:5, borderRadius:'50%', background:'currentColor' }}/>
+              {isComplete?'Ready':hasPricingErrors?'Needs attention':'In progress'}
+            </span>
+          </div>
+          <div role="progressbar" aria-label="Cabin category pricing coverage" aria-valuemin="0" aria-valuemax="100" aria-valuenow={completionPct} style={{ height:5, borderRadius:999, background:'rgba(148,163,184,.28)', overflow:'hidden' }}>
+            <div style={{ width:`${completionPct}%`, height:'100%', borderRadius:999, background:isComplete?T.green:T.primary, transition:'width .2s ease' }}/>
+          </div>
+          {!isComplete && <div style={{ fontSize:10.5, color:hasPricingErrors?T.amberDark:T.inkSoft, marginTop:7 }}>{remaining} categor{remaining===1?'y':'ies'} still need{remaining===1?'s':''} at least one fare.</div>}
+        </div>
+
+        <div>
+          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:12, marginBottom:9 }}>
+            <div>
+              <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Fare matrix</div>
+              <div style={{ fontSize:11.5, color:T.inkFaint, lineHeight:1.4, marginTop:3 }}>Enter at least one fare in each cabin category.</div>
+            </div>
+            <span style={{ fontSize:10.5, color:T.inkFaint, whiteSpace:'nowrap' }}>Per guest</span>
+          </div>
+
+          <div className="hscroll" role="region" aria-label="Fare pricing matrix" style={{ border:`1px solid ${T.line}`, borderRadius:8, overflowX:'auto', background:'#fff' }}>
+            <div style={{ minWidth:CABINS.length*106+120 }}>
+              {/* Column header: cabin categories + copy action */}
+              <div style={{ display:'grid', gridTemplateColumns:PGRID, background:'#F7F9FC', borderBottom:`1px solid ${T.line}` }}>
+                <div style={{ position:'sticky', left:0, zIndex:3, padding:'8px 10px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', background:'#F7F9FC', borderRight:`1px solid ${T.line}` }}>Guest Type</div>
+                {CABINS.map(cabin => {
+                  const hasErr = errors.pricing?.[cabin];
+                  const others = CABINS.filter(c => c !== cabin);
+                  return (
+                    <div key={cabin} style={{ padding:'5px 8px', borderLeft:`1px solid ${T.lineSoft}`, display:'flex', alignItems:'center', justifyContent:'flex-end', gap:5, position:'relative', background:hasErr?T.amberLight:'transparent' }} ref={copyOpen===cabin?copyRef:null}>
+                      {hasErr && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.amber} strokeWidth="2.5" style={{ flexShrink:0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>}
+                      <span style={{ fontSize:10.5, fontWeight:700, color:T.ink, lineHeight:1.3, textAlign:'right' }}>{cabin}</span>
+                      <button onClick={() => setCopyOpen(copyOpen===cabin?null:cabin)} aria-label={`Copy ${cabin} fares to another category`} title={`Copy ${cabin} fares to another category`}
+                        style={{ width:20, height:20, borderRadius:4, border:`1px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkFaint, flexShrink:0 }}
+                        onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; }}
+                        onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color=T.inkFaint; }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      </button>
+                      {copyOpen===cabin && (
+                        <div style={{ position:'absolute', right:4, top:'100%', marginTop:3, background:'#fff', border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 8px 20px rgba(0,0,0,.1)', zIndex:500, minWidth:150, overflow:'hidden' }}>
+                          <div style={{ padding:'6px 12px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', borderBottom:`1px solid ${T.lineSoft}` }}>Copy to…</div>
+                          {others.map(to => (
+                            <div key={to} onClick={() => copyCol(cabin,to)} style={{ padding:'8px 12px', fontSize:12.5, color:T.ink, cursor:'pointer', whiteSpace:'nowrap' }} onMouseEnter={e => e.currentTarget.style.background=T.fill} onMouseLeave={e => e.currentTarget.style.background='transparent'}>{to}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              {g.rows.map(r => (
-                <div key={r.k} style={{ display:'grid', gridTemplateColumns:PGRID, alignItems:'center', background:'#fff' }}>
-                  <div style={{ padding:'7px 10px', fontSize:12.5, color:T.ink, whiteSpace:'nowrap' }}>{r.l}</div>
-                  {CABINS.map(cabin => (
-                    <div key={cabin} style={{ padding:'4px', borderLeft:`1px solid ${T.lineSoft}` }}>
-                      <input type="text" value={pricing[cabin][r.k]} onChange={e => upd(cabin,r.k,e.target.value)} onBlur={() => blur(cabin,r.k)} placeholder="—" className="price-input"
-                        style={{ width:'100%', padding:'6px 7px', border:`1.5px solid #E2E8F0`, borderRadius:6, fontSize:12, color:T.ink, background:'#fff', outline:'none', textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace" }}/>
+              {/* Grouped guest-position rows */}
+              {GUEST_ROWS.map((g, gi) => (
+                <div key={g.grp}>
+                  <div style={{ display:'grid', gridTemplateColumns:PGRID, background:'#FAFBFD', borderBottom:`1px solid ${T.lineSoft}`, borderTop:gi>0?`1px solid ${T.lineSoft}`:'none' }}>
+                    <div style={{ padding:'6px 10px', fontSize:9.5, fontWeight:700, color:T.inkFaint, textTransform:'uppercase', letterSpacing:'.6px', gridColumn:`span ${CABINS.length+1}` }}>{g.grp}</div>
+                  </div>
+                  {g.rows.map(r => (
+                    <div key={r.k} style={{ display:'grid', gridTemplateColumns:PGRID, alignItems:'center', background:'#fff' }}>
+                      <div style={{ position:'sticky', left:0, zIndex:1, padding:'7px 10px', fontSize:12.5, color:T.ink, whiteSpace:'nowrap', background:'#fff', borderRight:`1px solid ${T.line}` }}>{r.l}</div>
+                      {CABINS.map(cabin => (
+                        <div key={cabin} style={{ padding:'4px', borderLeft:`1px solid ${T.lineSoft}` }}>
+                          <input type="text" value={pricing[cabin][r.k]} onChange={e => upd(cabin,r.k,e.target.value)} onBlur={() => blur(cabin,r.k)} placeholder="—" className="price-input" aria-label={`${cabin} ${r.l} fare`}
+                            style={{ width:'100%', padding:'6px 7px', border:`1.5px solid ${T.line}`, borderRadius:6, fontSize:12, color:T.ink, background:'#fff', outline:'none', textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace" }}/>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
               ))}
+              {/* Footer: double-occupancy cabin fare */}
+              <div style={{ display:'grid', gridTemplateColumns:PGRID, alignItems:'center', borderTop:`1px solid ${T.line}`, background:T.fill }}>
+                <div style={{ position:'sticky', left:0, zIndex:1, padding:'9px 10px', fontSize:11, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', background:T.fill, borderRight:`1px solid ${T.line}` }}>Cabin · Double</div>
+                {CABINS.map(cabin => {
+                  const t = val(cabin,'dbl1')+val(cabin,'dbl2');
+                  return <div key={cabin} style={{ padding:'9px 10px', fontSize:12.5, fontWeight:700, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:t>0?T.ink:T.inkFaint, borderLeft:`1px solid ${T.lineSoft}` }}>{t>0?fmtCur(t):'—'}</div>;
+                })}
+              </div>
             </div>
-          ))}
-          {/* Footer: double-occupancy cabin fare */}
-          <div style={{ display:'grid', gridTemplateColumns:PGRID, alignItems:'center', borderTop:`1px solid ${T.line}`, background:T.fill }}>
-            <div style={{ padding:'9px 10px', fontSize:11, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px' }}>Cabin · Double</div>
-            {CABINS.map(cabin => {
-              const t = val(cabin,'dbl1')+val(cabin,'dbl2');
-              return <div key={cabin} style={{ padding:'9px 10px', fontSize:12.5, fontWeight:700, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:t>0?T.ink:T.inkFaint, borderLeft:`1px solid ${T.lineSoft}` }}>{t>0?fmtCur(t):'—'}</div>;
-            })}
           </div>
         </div>
-      </div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, padding:'10px 14px', background:T.fill, borderRadius:8, border:`1px solid ${T.lineSoft}` }}>
-        {errors.pricing ? <span style={{ fontSize:12, color:T.amber, display:'flex', alignItems:'center', gap:5 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.amber} strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>All cabins need at least one price to activate.</span> : <span style={{ fontSize:12, color:T.inkFaint }}>Tip: expand the matrix to add a custom category or copy prices.</span>}
-        <span style={{ fontSize:12, color:T.inkSoft, whiteSpace:'nowrap' }}>{nPriced} of {CABINS.length} categories priced</span>
+
+        <div style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'10px 11px', borderRadius:8, background:hasPricingErrors?T.amberLight:isComplete?T.greenLight:T.fill, border:`1px solid ${hasPricingErrors?T.amberBorder:isComplete?'#A7F3D0':T.line}` }}>
+          {hasPricingErrors ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.amber} strokeWidth="2.5" style={{ flexShrink:0, marginTop:1 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg> : isComplete ? <span style={{ color:T.green, fontSize:13, fontWeight:800, flexShrink:0 }}>✓</span> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.primary} strokeWidth="2.2" style={{ flexShrink:0, marginTop:1 }}><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>}
+          <div style={{ fontSize:11.5, color:hasPricingErrors?T.amberDark:isComplete?T.green:T.inkSoft, lineHeight:1.45 }}>
+            {hasPricingErrors ? 'Add at least one fare to every highlighted cabin category before activating.' : isComplete ? 'Every cabin category has a fare and is ready for activation.' : 'Use Expand matrix to add custom cabin categories or work in a larger view.'}
+          </div>
+        </div>
       </div>
       {expanded && <PricingEditorExpandedModal pricing={pricing} setPricing={setPricing} errors={errors} onClose={closeExpanded} onColumnRemoved={clearRemovedError}/>} 
     </div>
@@ -883,25 +1490,23 @@ const INIT_DATA = [
   { id:10, code:'FC-20110', ship:'Island Escape',  sailing:'IS-2026-08-20', cabins:['Balcony','Suite','Penthouse'],                      faretype:'FT-00102', status:'Active',   mod:'04 Jun 2026' },
 ].map(r => ({ ...r, ...sailDates(r.sailing) }));
 const SHIPS       = ['Island Escape','Paradise Bay','Northern Star'];
-const CABIN_CATS  = ['Interior','Ocean View','Balcony','Veranda','Suite','Penthouse'];
 const FARETYPES   = ['FT-00101','FT-00102','FT-00103'];
-const ALL_SAILINGS = [...new Set(INIT_DATA.map(r => r.sailing))].sort();
 const PAGE_SIZE   = 10;
 const CHIP_S = { 'Interior':{ bg:'#EEF2FF',color:'#3730A3' }, 'Ocean View':{ bg:'#ECFEFF',color:'#0E7490' }, 'Balcony':{ bg:'#F0FDF4',color:'#166534' }, 'Veranda':{ bg:'#FFF7ED',color:'#C2410C' }, 'Suite':{ bg:'#FDF4FF',color:'#7E22CE' }, 'Penthouse':{ bg:'#FFF1F2',color:'#9F1239' } };
 const STATUS_S = { Active:{ bg:'#ECFDF5',color:'#065F46',dot:'#10B981' }, Draft:{ bg:'#FFFBEB',color:'#92400E',dot:'#F59E0B' }, Inactive:{ bg:'#F8FAFC',color:'#475569',dot:'#94A3B8' } };
 
-const SECTS = [{ n:1,l:'Ship & Sailing' },{ n:2,l:'Policies' },{ n:3,l:'Eligibility' },{ n:4,l:'Channels & Access' },{ n:5,l:'Marketing' },{ n:6,l:'Taxes & Privacy' },{ n:7,l:'Pricing' }];
+const SECTS = [{ n:1,l:'Ship & Sailing' },{ n:2,l:'Policies' },{ n:3,l:'Eligibility' },{ n:4,l:'Channel Access' },{ n:5,l:'Partner Access' },{ n:6,l:'Marketing' },{ n:7,l:'Taxes & Privacy' },{ n:8,l:'Pricing' }];
 function sComplete(n, form, pricing) {
   if (n===1) return !!(form.ship && form.sailing && form.faretype);
   if (n===2) return !!(form.cancellationPolicy && form.depositPolicy);
-  if (n>=3 && n<=6) return !!form.faretype;
-  if (n===7) return Object.values(pricing).some(r => Object.values(r).some(v => v!==''));
+  if (n>=3 && n<=7) return !!form.faretype;
+  if (n===8) return Object.values(pricing).some(r => Object.values(r).some(v => v!==''));
   return false;
 }
 function sHasErr(n, errors) {
   if (n===1) return !!(errors.ship||errors.sailing||errors.faretype);
   if (n===2) return !!(errors.cancellationPolicy||errors.depositPolicy);
-  if (n===7) return !!errors.pricing;
+  if (n===8) return !!errors.pricing;
   return false;
 }
 
@@ -941,7 +1546,6 @@ function useDropdown() {
 
 /* ── Section nav (edit mode) ── */
 function PanelNav({ active, onNav, form, pricing, errors, visited }) {
-  const pct = Math.round(SECTS.filter(s => sComplete(s.n,form,pricing)).length/7*100);
   return (
     <div style={{ width:196, flexShrink:0, background:T.navFill, borderRight:`1px solid ${T.line}`, display:'flex', flexDirection:'column' }}>
       <div style={{ flex:1, padding:'16px 0 0', overflowY:'auto' }}>
@@ -961,15 +1565,6 @@ function PanelNav({ active, onNav, form, pricing, errors, visited }) {
           );
         })}
       </div>
-      <div style={{ padding:'12px 14px', borderTop:`1px solid ${T.line}` }}>
-        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-          <span style={{ fontSize:9.5, fontWeight:700, color:T.inkFaint, textTransform:'uppercase', letterSpacing:'.6px' }}>Completion</span>
-          <span style={{ fontSize:11, fontWeight:700, color:pct===100?T.primary:T.inkSoft }}>{pct}%</span>
-        </div>
-        <div style={{ height:4, background:'#E8EDF3', borderRadius:3, overflow:'hidden' }}>
-          <div style={{ height:'100%', width:`${pct}%`, background:T.primary, borderRadius:3, transition:'width .4s ease' }}/>
-        </div>
-      </div>
     </div>
   );
 }
@@ -977,26 +1572,36 @@ function PanelNav({ active, onNav, form, pricing, errors, visited }) {
 /* ── Audit log tab ── */
 function AuditLogTab() {
   return (
-    <div>
-      <div style={{ fontSize:13, color:T.inkSoft, marginBottom:16 }}>{MOCK_AUDIT.length} recorded events — newest first</div>
-      <div style={{ border:`1px solid ${T.line}`, borderRadius:9, overflow:'hidden', background:T.panel }}>
-        {MOCK_AUDIT.map((ev, i) => (
-          <div key={i} style={{ display:'flex', gap:14, padding:'14px 18px', borderBottom:i<MOCK_AUDIT.length-1?`1px solid ${T.lineSoft}`:'none' }}>
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', paddingTop:4, flexShrink:0 }}>
-              <div style={{ width:10, height:10, borderRadius:'50%', background:ev.color, flexShrink:0 }}/>
-              {i<MOCK_AUDIT.length-1 && <div style={{ width:1, flex:1, background:T.lineSoft, marginTop:5 }}/>}
-            </div>
-            <div style={{ flex:1, minHeight:44 }}>
-              <div style={{ fontSize:13, fontWeight:600, color:T.ink, marginBottom:3 }}>{ev.event}</div>
-              <div style={{ fontSize:12.5, color:T.inkSoft, marginBottom:6, lineHeight:1.5 }}>{ev.detail}</div>
-              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-                <span style={{ fontSize:11.5, color:T.inkFaint }}>{ev.ts}</span>
-                <span style={{ color:T.lineSoft }}>·</span>
-                <span style={{ fontSize:11.5, color:T.inkFaint }}>{ev.editor}</span>
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.04)', overflow:'hidden' }}>
+      <div style={{ padding:'10px 13px', background:T.fill, borderBottom:`1px solid ${T.line}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:13, fontWeight:700, color:T.ink }}>Activity History</span>
+          <span style={{ padding:'2px 7px', borderRadius:999, background:'#fff', border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{MOCK_AUDIT.length}</span>
+        </div>
+        <span style={{ fontSize:10.5, color:T.inkFaint }}>Newest first</span>
+      </div>
+      <div style={{ padding:'2px 0' }}>
+        {MOCK_AUDIT.map((ev, i) => {
+          const positive = /activated|created/i.test(ev.event);
+          return (
+            <div key={i} style={{ display:'grid', gridTemplateColumns:'34px minmax(0,1fr) auto', gap:10, padding:'12px 14px', position:'relative', borderBottom:i<MOCK_AUDIT.length-1?`1px solid ${T.lineSoft}`:'none' }}>
+              <div style={{ position:'relative', display:'flex', justifyContent:'center' }}>
+                {i<MOCK_AUDIT.length-1 && (
+                  <span style={{ position:'absolute', top:24, bottom:-18, width:1, background:T.line }}/>
+                )}
+                <span style={{ width:24, height:24, borderRadius:'50%', zIndex:1, display:'flex', alignItems:'center', justifyContent:'center', background:positive?T.greenLight:T.primaryBg, border:`1px solid ${positive?'#A7F3D0':T.primaryLine}`, color:positive?T.green:T.primary, fontSize:11, fontWeight:800 }}>{positive?'✓':'•'}</span>
+              </div>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:T.ink, lineHeight:1.3 }}>{ev.event}</div>
+                <span style={{ display:'inline-flex', marginTop:6, padding:'4px 7px', borderRadius:5, background:T.fill, border:`1px solid ${T.lineSoft}`, color:T.inkSoft, fontSize:11.5, lineHeight:1.2 }}>{ev.detail}</span>
+              </div>
+              <div style={{ textAlign:'right', paddingTop:1, minWidth:138 }}>
+                <div style={{ fontSize:11, color:T.inkSoft, whiteSpace:'nowrap' }}>{ev.ts}</div>
+                <span style={{ display:'inline-flex', marginTop:6, padding:'2px 6px', borderRadius:5, background:T.fill, color:T.inkFaint, fontSize:10.5 }}>{ev.editor}</span>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1039,7 +1644,6 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   const [visited,     setVisited]     = useState(new Set([1]));
   const [errors,      setErrors]      = useState({});
   const [saved,       setSaved]       = useState(false);
-  const [savedDraft,  setSavedDraft]  = useState(false);
   const [showDiscard, setShowDiscard] = useState(false);
   const [discardCb,   setDiscardCb]   = useState(null);
   const [mounted,     setMounted]     = useState(false);
@@ -1079,19 +1683,37 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
     return e;
   };
 
-  const handleSaveDraft = () => {
-    const e = validate(false);
-    if (Object.keys(e).length) { setErrors(e); setActive(1); return; }
-    setSavedDraft(true); setTimeout(() => setSavedDraft(false), 2200);
+  const validateStep = n => {
+    const e = {};
+    if (n===1) {
+      if (!form.ship)     e.ship = 'Required';
+      if (!form.sailing)  e.sailing = 'Required';
+      if (!form.faretype) e.faretype = 'Required';
+    }
+    if (n===2) {
+      if (!form.cancellationPolicy) e.cancellationPolicy = 'Required';
+      if (!form.depositPolicy)      e.depositPolicy = 'Required';
+    }
+    setErrors(e);
+    return Object.keys(e).length===0;
   };
+
+  const handleBack = () => {
+    if (active>1) navTo(active-1);
+  };
+  const handleNext = () => {
+    if (!validateStep(active)) return;
+    if (active<SECTS.length) navTo(active+1);
+  };
+
   const handleActivate = () => {
     const e = validate(true);
-    if (Object.keys(e).length) { setErrors(e); if (e.ship||e.sailing||e.faretype) setActive(1); else if (e.cancellationPolicy||e.depositPolicy) setActive(2); else if (e.pricing) setActive(7); return; }
+    if (Object.keys(e).length) { setErrors(e); if (e.ship||e.sailing||e.faretype) setActive(1); else if (e.cancellationPolicy||e.depositPolicy) setActive(2); else if (e.pricing) setActive(8); return; }
     setSaved(true); setTimeout(() => { setSaved(false); onClose(); }, 1500);
   };
   const handleSaveChanges = () => {
     const e = validate(true);
-    if (Object.keys(e).length) { setErrors(e); if (e.pricing) setActive(7); return; }
+    if (Object.keys(e).length) { setErrors(e); if (e.pricing) setActive(8); return; }
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -1103,6 +1725,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   const sectProps = { form, set, overrides, toggleOverride:toggleOvrd, errors, policies };
   const selFT = FT_DATA.find(ft => ft.code === form.faretype);
   const showSectionNav = isEditing && activeTab==='overview';
+  const isLast = active===SECTS.length;
 
   const content = (
     <>
@@ -1119,7 +1742,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
               <div style={{ minWidth:0 }}>
                 {/* Title */}
                 <div style={{ fontSize:15, fontWeight:700, color:T.ink, marginBottom:5 }}>
-                  {mode==='create' ? 'Create Farecode' : 'Farecode details'}
+                  {mode==='create' ? 'Configure New Farecode' : 'Farecode details'}
                 </div>
                 {/* Identity: code + status + faretype */}
                 {mode==='view' && (
@@ -1140,13 +1763,12 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
                     <span>jane.doe@mvas.com</span>
                   </div>
                 )}
-                {mode==='create' && <div style={{ fontSize:12, color:T.inkFaint }}>New farecode from blank</div>}
+                {mode==='create' && <div style={{ fontSize:12, color:T.inkFaint }}>Set sailing-specific pricing and booking rules inherited from a Faretype.</div>}
               </div>
             </div>
 
             {/* Right action buttons */}
             <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-              {savedDraft && <span style={{ fontSize:12, color:T.tealDark, display:'flex', alignItems:'center', gap:5 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>Draft saved</span>}
               {saved      && <span style={{ fontSize:12, color:T.tealDark, display:'flex', alignItems:'center', gap:5 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>{mode==='create'?'Activated!':'Saved!'}</span>}
 
               {/* View mode: show Edit button */}
@@ -1155,26 +1777,8 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
                 </button>
               )}
-              {/* View mode editing: Cancel + Save Changes */}
-              {mode==='view' && isEditing && (
-                <>
-                  <button onClick={handleCancel} style={{ padding:'7px 14px', border:`1.5px solid ${T.line}`, borderRadius:7, background:'#fff', fontSize:13, fontWeight:500, color:T.inkSoft, cursor:'pointer' }}>Cancel</button>
-                  <button onClick={handleSaveChanges} style={{ padding:'7px 15px', border:'none', borderRadius:7, background:T.primary, fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', gap:6, boxShadow:'0 1px 4px rgba(27,36,52,.2)' }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save Changes
-                  </button>
-                </>
-              )}
-              {/* Create mode: Save Draft + Activate */}
-              {mode==='create' && (
-                <>
-                  <button onClick={handleSaveDraft} style={{ padding:'7px 14px', border:`1.5px solid ${T.line}`, borderRadius:7, background:'#fff', fontSize:13, fontWeight:600, color:T.inkSoft, cursor:'pointer' }}>Save as Draft</button>
-                  <button onClick={handleActivate} style={{ padding:'7px 15px', border:'none', borderRadius:7, background:T.primary, fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', gap:6, boxShadow:'0 1px 4px rgba(27,36,52,.2)' }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Activate
-                  </button>
-                </>
-              )}
               {/* Close */}
-              <button onClick={handleClose} style={{ width:32, height:32, borderRadius:7, border:`1.5px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkSoft }}
+              <button onClick={handleClose} aria-label="Close Farecode drawer" style={{ width:32, height:32, borderRadius:7, border:`1.5px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkSoft }}
                 onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; }}
                 onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color=T.inkSoft; }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1185,7 +1789,10 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
           {/* Tab bar (view mode only) */}
           {mode==='view' && (
             <div style={{ display:'flex', gap:0, marginBottom:-1 }}>
-              {[{ k:'overview',l:'Overview' },{ k:'auditlog',l:'History',badge:MOCK_AUDIT.length }].map(tab => (
+              {[
+                { k:'overview',l:'Overview' },
+                ...(!isEditing ? [{ k:'auditlog',l:'History',badge:MOCK_AUDIT.length }] : []),
+              ].map(tab => (
                 <button key={tab.k} onClick={() => setActiveTab(tab.k)}
                   style={{ background:'none', border:'none', padding:'0 18px 12px 0', fontSize:13.5, fontWeight:activeTab===tab.k?600:500, color:activeTab===tab.k?T.ink:T.inkFaint, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:7, borderBottom:activeTab===tab.k?`2px solid ${T.primary}`:'2px solid transparent', transition:'color .12s' }}>
                   {tab.l}
@@ -1219,10 +1826,11 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
                     {active===1 && <S1 {...sectProps} onFaretypeSelect={onFTSelect} mode={mode}/>}
                     {active===2 && <S2 {...sectProps}/>}
                     {active===3 && <S3 {...sectProps}/>}
-                    {active===4 && <S4 {...sectProps}/>}
-                    {active===5 && <S5 {...sectProps}/>}
+                    {active===4 && <ChannelAccessStep {...sectProps}/>}
+                    {active===5 && <PartnerAccessStep {...sectProps}/>}
                     {active===6 && <S6 {...sectProps}/>}
-                    {active===7 && <S7 pricing={pricing} setPricing={setPricing} errors={errors} setErrors={setErrors}/>} 
+                    {active===7 && <S7 {...sectProps}/>}
+                    {active===8 && <S8 pricing={pricing} setPricing={setPricing} errors={errors} setErrors={setErrors}/>}
                   </div>
                 )}
               </>
@@ -1233,24 +1841,36 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
           </div>
         </div>
 
-        {/* ─── Footer (edit/create mode only, overview tab) ─── */}
+        {/* ─── Footer actions (edit/create mode) ─── */}
         {isEditing && activeTab==='overview' && (
-          <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'12px 22px', background:T.panel, borderTop:`1px solid ${T.line}`, display:'flex', alignItems:'center', justifyContent:'space-between', zIndex:10 }}>
-            <div style={{ display:'flex', gap:8 }}>
-              <button onClick={() => active>1 && navTo(active-1)} disabled={active===1}
-                style={{ padding:'7px 14px', border:`1.5px solid ${T.line}`, borderRadius:7, background:'#fff', fontSize:13, fontWeight:500, color:active===1?T.inkFaint:T.inkSoft, cursor:active===1?'not-allowed':'pointer', display:'flex', alignItems:'center', gap:5 }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>Prev
-              </button>
-              <button onClick={() => active<7 && navTo(active+1)} disabled={active===7}
-                style={{ padding:'7px 14px', border:`1.5px solid ${T.line}`, borderRadius:7, background:'#fff', fontSize:13, fontWeight:500, color:active===7?T.inkFaint:T.inkSoft, cursor:active===7?'not-allowed':'pointer', display:'flex', alignItems:'center', gap:5 }}>
-                Next<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-            {Object.keys(errors).length>0 && (
+          <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'12px 22px', background:T.panel, borderTop:`1px solid ${T.line}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, zIndex:10 }}>
+            {Object.keys(errors).length>0 ? (
               <span style={{ fontSize:11.5, color:T.amber, display:'flex', alignItems:'center', gap:5 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>Fix errors before saving
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>Complete the required fields to continue
               </span>
-            )}
+            ) : <span/>}
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginLeft:'auto' }}>
+              <button onClick={handleBack} disabled={active===1}
+                style={{ padding:'7px 14px', border:`1.5px solid ${T.line}`, borderRadius:7, background:'#fff', color:active===1?'#CBD5E1':T.inkSoft, fontSize:13, cursor:active===1?'default':'pointer', fontWeight:500 }}>
+                Back
+              </button>
+              {!isLast ? (
+                <button onClick={handleNext} style={{ padding:'7px 15px', border:'none', borderRadius:7, background:T.primary, fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', gap:6, boxShadow:'0 1px 4px rgba(27,36,52,.2)' }}>
+                  Next Step
+                </button>
+              ) : mode==='create' ? (
+                <button onClick={handleActivate} style={{ padding:'7px 15px', border:'none', borderRadius:7, background:T.primary, fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', gap:6, boxShadow:'0 1px 4px rgba(27,36,52,.2)' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Activate
+                </button>
+              ) : (
+                <>
+                  <button onClick={handleCancel} style={{ padding:'7px 14px', border:`1.5px solid ${T.line}`, borderRadius:7, background:'#fff', fontSize:13, fontWeight:500, color:T.inkSoft, cursor:'pointer' }}>Cancel</button>
+                  <button onClick={handleSaveChanges} style={{ padding:'7px 15px', border:'none', borderRadius:7, background:T.primary, fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', gap:6, boxShadow:'0 1px 4px rgba(27,36,52,.2)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save Changes
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -1309,51 +1929,6 @@ function ShipFilter({ selected, onChange }) {
     </div>
   );
 }
-function SailingFilter({ value, onChange }) {
-  const [open, setOpen, ref] = useDropdown();
-  return (
-    <div ref={ref} style={{ position:'relative' }}>
-      <FilterBtn label={value||'All Sailings'} active={!!value} open={open} onClick={() => setOpen(p=>!p)}/>
-      {open && (
-        <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, background:T.panel, border:`1px solid ${T.line}`, borderRadius:9, boxShadow:'0 8px 28px rgba(15,23,42,.1)', zIndex:500, minWidth:200, maxHeight:280, overflowY:'auto' }} className="pscroll">
-          <div style={{ padding:'9px 14px', borderBottom:`1px solid ${T.lineSoft}`, fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px', position:'sticky', top:0, background:T.panel }}>Sailing</div>
-          <div onClick={() => { onChange(''); setOpen(false); }} style={{ padding:'9px 14px', fontSize:13, color:!value?T.primary:T.ink, fontWeight:!value?600:400, cursor:'pointer', background:!value?T.primaryBg:'transparent' }}>All Sailings</div>
-          {ALL_SAILINGS.map(s => (
-            <div key={s} onClick={() => { onChange(s); setOpen(false); }} style={{ padding:'9px 14px', fontSize:12.5, fontFamily:"'SF Mono',Menlo,monospace", color:value===s?T.primary:T.ink, fontWeight:value===s?600:400, cursor:'pointer', background:value===s?T.primaryBg:'transparent' }}
-              onMouseEnter={e => { if(value!==s) e.currentTarget.style.background=T.fill; }} onMouseLeave={e => { if(value!==s) e.currentTarget.style.background='transparent'; }}>{s}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-function CabinCatFilter({ selected, onChange }) {
-  const [open, setOpen, ref] = useDropdown();
-  const label = selected.length===0?'Cabin Categories':`${selected.length} categor${selected.length===1?'y':'ies'} (AND)`;
-  return (
-    <div ref={ref} style={{ position:'relative' }}>
-      <FilterBtn label={label} active={selected.length>0} open={open} onClick={() => setOpen(p=>!p)}/>
-      {open && (
-        <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, background:T.panel, border:`1px solid ${T.line}`, borderRadius:9, boxShadow:'0 8px 28px rgba(15,23,42,.1)', zIndex:500, minWidth:230, overflow:'hidden' }}>
-          <div style={{ padding:'10px 14px', borderBottom:`1px solid ${T.lineSoft}` }}>
-            <div style={{ fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px', marginBottom:3 }}>Cabin Categories</div>
-            <div style={{ fontSize:11.5, color:T.inkFaint }}>AND logic — all selected must be present</div>
-          </div>
-          {CABIN_CATS.map(cat => {
-            const on = selected.includes(cat); const s = CHIP_S[cat]||{ bg:T.fill, color:T.inkSoft };
-            return (
-              <label key={cat} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', cursor:'pointer' }} onMouseEnter={e => e.currentTarget.style.background=T.fill} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                <input type="checkbox" checked={on} onChange={() => onChange(on?selected.filter(c=>c!==cat):[...selected,cat])} style={{ accentColor:T.primary, width:14, height:14, cursor:'pointer', flexShrink:0 }}/>
-                <span style={{ padding:'2px 9px', borderRadius:999, fontSize:12, fontWeight:500, background:s.bg, color:s.color }}>{cat}</span>
-              </label>
-            );
-          })}
-          {selected.length>0 && <div style={{ borderTop:`1px solid ${T.lineSoft}`, padding:'7px 14px' }}><button onClick={() => { onChange([]); setOpen(false); }} style={{ background:'none', border:'none', fontSize:12, color:T.primary, cursor:'pointer', fontWeight:600, padding:0 }}>Clear selection</button></div>}
-        </div>
-      )}
-    </div>
-  );
-}
 function FaretypeFilter({ value, onChange }) {
   const [open, setOpen, ref] = useDropdown(); const [q, setQ] = useState('');
   const filtered = FARETYPES.filter(ft => ft.toLowerCase().includes(q.toLowerCase()));
@@ -1385,8 +1960,6 @@ function FarecodeListScreen({ policies }) {
   const [data,      setData]     = useState(INIT_DATA);
   const [search,    setSearch]   = useState('');
   const [shipF,     setShipF]    = useState([]);
-  const [sailingF,  setSailingF] = useState('');
-  const [cabinF,    setCabinF]   = useState([]);
   const [ftF,       setFtF]      = useState('');
   const [sortCol,   setSortCol]  = useState('mod');
   const [sortDir,   setSortDir]  = useState('desc');
@@ -1398,8 +1971,6 @@ function FarecodeListScreen({ policies }) {
     const q = search.trim().toLowerCase();
     if (q && !r.code.toLowerCase().includes(q) && !r.ship.toLowerCase().includes(q) && !r.sailing.toLowerCase().includes(q)) return false;
     if (shipF.length>0 && !shipF.includes(r.ship)) return false;
-    if (sailingF && r.sailing!==sailingF) return false;
-    if (cabinF.length>0 && !cabinF.every(c => r.cabins.includes(c))) return false;
     if (ftF && r.faretype!==ftF) return false;
     return true;
   });
@@ -1409,12 +1980,12 @@ function FarecodeListScreen({ policies }) {
   if (sortCol) filtered=[...filtered].sort((a,b) => { let cmp=DATE_COLS.includes(sortCol)?parseDate(a[sortCol])-parseDate(b[sortCol]):String(a[sortCol]).localeCompare(String(b[sortCol])); return sortDir==='asc'?cmp:-cmp; });
 
   const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE)), pageRows=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
-  const hasFilter=search||shipF.length>0||sailingF||cabinF.length>0||ftF;
-  const clearFilters=()=>{ setSearch('');setShipF([]);setSailingF('');setCabinF([]);setFtF('');setPage(1); };
+  const hasFilter=search||shipF.length>0||ftF;
+  const clearFilters=()=>{ setSearch('');setShipF([]);setFtF('');setPage(1); };
   const handleSort=col=>{ if(sortCol===col) setSortDir(d=>d==='asc'?'desc':'asc'); else{setSortCol(col);setSortDir('asc');} };
   const toggleRow=id=>setSelected(p=>{ const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
   const toggleAll=rows=>{ const all=rows.every(r=>selected.has(r.id)); setSelected(p=>{ const n=new Set(p); rows.forEach(r=>all?n.delete(r.id):n.add(r.id)); return n; }); };
-  useEffect(()=>setPage(1),[search,shipF,sailingF,cabinF,ftF]);
+  useEffect(()=>setPage(1),[search,shipF,ftF]);
 
   /* Start/End sit next to Sailing — they describe that sailing's window, not the farecode. */
   const COLS=[{ key:'code',label:'Farecode ID',sort:true },{ key:'ship',label:'Ship',sort:false },{ key:'sailing',label:'Sailing',sort:true },{ key:'start',label:'Start Date',sort:true,width:'125px' },{ key:'end',label:'End Date',sort:true,width:'125px' },{ key:'cabins',label:'Cabin Categories',sort:false },{ key:'faretype',label:'Linked Faretype',sort:true },{ key:'status',label:'Status',sort:false },{ key:'mod',label:'Last Modified',sort:true }];
@@ -1462,8 +2033,6 @@ function FarecodeListScreen({ policies }) {
               <FilterRow>
                 <ListSearch value={search} onChange={setSearch} placeholder="Filter by farecode ID, ship, sailing…"/>
                 <ShipFilter selected={shipF} onChange={setShipF}/>
-                <SailingFilter value={sailingF} onChange={setSailingF}/>
-                <CabinCatFilter selected={cabinF} onChange={setCabinF}/>
                 <FaretypeFilter value={ftF} onChange={setFtF}/>
                 {hasFilter && <ClearFilters onClick={clearFilters}/>}
                 <ResultCount>{filtered.length} of {data.length} farecodes</ResultCount>

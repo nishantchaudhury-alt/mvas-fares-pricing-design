@@ -213,7 +213,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
           onMouseEnter={e => e.currentTarget.style.background = '#F9FBFD'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
           <td style={{ ...TD, ...accentTd, padding:`9px 14px 9px ${TREE.pad[0]}px` }}>
             <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-              <Caret open={open} onClick={() => toggle(g.id)}/><CodeChip level="group">{g.code}</CodeChip>
+              <Caret open={open} onClick={() => toggle(g.id)} label={g.code}/><CodeChip level="group">{g.code}</CodeChip>
             </div>
           </td>
           <td style={{ ...TD, padding:'9px 14px' }}>
@@ -242,7 +242,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
             <td style={{ ...TD, position:'relative', padding:`7px 14px 7px ${TREE.pad[1]}px` }}>
               <Rails marks={[{ x:TREE.caret[0], kind:lastP ? 'end' : 'tee', w:TREE.pad[1] - TREE.caret[0] - 5 }]}/>
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <Caret open={pOpen} onClick={() => toggle(p.id)} hidden={kids.length === 0}/><CodeChip level="policy">{p.code}</CodeChip>
+                <Caret open={pOpen} onClick={() => toggle(p.id)} hidden={kids.length === 0} label={p.code}/><CodeChip level="policy">{p.code}</CodeChip>
               </div>
             </td>
             <td style={{ ...TD, padding:'7px 14px' }}>
@@ -294,17 +294,17 @@ function PoliciesList({ policies, setPolicies, onNav }) {
             <div style={{ fontSize:13, color:T.inkSoft, maxWidth:760 }}>Define cancellation and deposit policies that govern booking terms and refund amounts.</div>
           </div>
           <div style={{ position:'relative', flexShrink:0 }}>
-            <button onClick={() => setChooser(c => !c)} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 16px', background:T.primary, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', boxShadow:'0 2px 6px rgba(27,36,52,.2)' }}>+ New Policy</button>
+            <button type="button" aria-haspopup="menu" aria-expanded={chooser} onClick={() => setChooser(c => !c)} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 16px', background:T.primary, color:'#fff', border:'none', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer', boxShadow:'0 2px 6px rgba(27,36,52,.2)' }}>+ New Policy</button>
             {chooser && (
               <>
-                <div onClick={() => setChooser(false)} style={{ position:'fixed', inset:0, zIndex:300 }}/>
-                <div style={{ position:'absolute', right:0, top:'calc(100% + 6px)', width:280, background:'#fff', border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 12px 32px rgba(15,23,42,.14)', zIndex:400, overflow:'hidden' }}>
+                <div aria-hidden="true" onClick={() => setChooser(false)} style={{ position:'fixed', inset:0, zIndex:300 }}/>
+                <div role="menu" aria-label="Choose policy type" style={{ position:'absolute', right:0, top:'calc(100% + 6px)', width:280, background:'#fff', border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 12px 32px rgba(15,23,42,.14)', zIndex:400, overflow:'hidden' }}>
                   <div style={{ padding:'9px 14px', fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px', background:T.fill, borderBottom:`1px solid ${T.lineSoft}` }}>Choose a type</div>
                   {['deposit', 'cancel'].map(t => (
-                    <div key={t} onClick={() => beginFlow(t)} style={{ padding:'12px 14px', cursor:'pointer', borderBottom:t === 'deposit' ? `1px solid ${T.lineSoft}` : 'none' }}
+                    <button key={t} type="button" role="menuitem" onClick={() => beginFlow(t)} style={{ width:'100%', padding:'12px 14px', border:'none', background:'#fff', fontFamily:'inherit', textAlign:'left', cursor:'pointer', borderBottom:t === 'deposit' ? `1px solid ${T.lineSoft}` : 'none' }}
                       onMouseEnter={e => e.currentTarget.style.background = T.fill} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
                       <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>{t === 'deposit' ? 'Deposit Policy' : 'Cancellation Policy'}</div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </>
@@ -329,8 +329,8 @@ function PoliciesList({ policies, setPolicies, onNav }) {
             <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
               <div style={{ flex:'1 1 260px', maxWidth:420, display:'flex', alignItems:'center', gap:8, padding:'7px 12px', border:`1px solid ${T.line}`, borderRadius:8, background:'#fff' }}>
                 <span style={{ color:T.inkFaint, display:'flex' }}><IcSearch/></span>
-                <input value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="Filter by policy code, name…" style={{ border:'none', outline:'none', background:'transparent', fontSize:13, color:T.ink, width:'100%' }}/>
-                {q && <button onClick={() => setQ('')} style={{ background:'none', border:'none', cursor:'pointer', color:T.inkFaint, display:'flex', padding:0 }}><IcX size={11}/></button>}
+                <input aria-label="Filter policies" value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="Filter by policy code, name…" style={{ border:'none', outline:'none', background:'transparent', fontSize:13, color:T.ink, width:'100%' }}/>
+                {q && <button type="button" aria-label="Clear policy search" onClick={() => setQ('')} style={{ background:'none', border:'none', cursor:'pointer', color:T.inkFaint, display:'flex', padding:0 }}><IcX size={11}/></button>}
               </div>
               <span style={{ fontSize:11, color:T.inkFaint, marginLeft:'auto' }}>{sel.size > 0 ? `${sel.size} selected · ` : ''}{rows.length} of {policies.filter(g => g.type === typeF).length} {POL_META[typeF].label.toLowerCase()} policies</span>
             </div>
@@ -358,9 +358,17 @@ function PoliciesList({ policies, setPolicies, onNav }) {
             <span style={{ fontSize:12.5, color:T.inkSoft }}>{rows.length === 0 ? 'No results' : `Showing ${(page-1)*PAGE+1}–${Math.min(page*PAGE, rows.length)} of ${rows.length} policies · ${expandedCount} expanded`}</span>
             {totalPages > 1 && (
               <div style={{ display:'flex', gap:4 }}>
+                <button type="button" aria-label="Previous page" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}
+                  style={{ width:30, height:30, display:'inline-flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:`1px solid ${T.line}`, background:'#fff', color:page === 1 ? T.inkFaint : T.ink, cursor:page === 1 ? 'default' : 'pointer', opacity:page === 1 ? .55 : 1 }}>
+                  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
                 {Array.from({ length:totalPages }, (_, i) => i + 1).map(p => (
-                  <button key={p} onClick={() => setPage(p)} style={{ width:30, height:30, borderRadius:6, border:`1px solid ${p === page ? T.primary : T.line}`, background:p === page ? T.primary : '#fff', color:p === page ? '#fff' : T.ink, fontSize:12.5, cursor:'pointer', fontWeight:p === page ? 700 : 400 }}>{p}</button>
+                  <button key={p} type="button" aria-label={`Page ${p}`} aria-current={p === page ? 'page' : undefined} onClick={() => setPage(p)} style={{ width:30, height:30, borderRadius:6, border:`1px solid ${p === page ? T.primary : T.line}`, background:p === page ? T.primary : '#fff', color:p === page ? '#fff' : T.ink, fontSize:12.5, cursor:'pointer', fontWeight:p === page ? 700 : 400 }}>{p}</button>
                 ))}
+                <button type="button" aria-label="Next page" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  style={{ width:30, height:30, display:'inline-flex', alignItems:'center', justifyContent:'center', borderRadius:6, border:`1px solid ${T.line}`, background:'#fff', color:page === totalPages ? T.inkFaint : T.ink, cursor:page === totalPages ? 'default' : 'pointer', opacity:page === totalPages ? .55 : 1 }}>
+                  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
               </div>
             )}
           </div>

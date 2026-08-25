@@ -57,10 +57,10 @@ function ListSearch({ value, onChange, placeholder }) {
   return (
     <div style={{ flex:'1 1 220px', display:'flex', alignItems:'center', gap:8, padding:'7px 12px', border:`1px solid ${T.line}`, borderRadius:8, background:T.panel }}>
       <span style={{ color:T.inkFaint, flexShrink:0, display:'flex' }}><IcSearch/></span>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      <input type="text" aria-label={placeholder || 'Search'} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
         style={{ border:'none', outline:'none', background:'transparent', fontSize:13, color:T.ink, width:'100%' }}/>
       {value && (
-        <button onClick={() => onChange('')} style={{ background:'none', border:'none', cursor:'pointer', color:T.inkFaint, display:'flex', padding:0, flexShrink:0 }}>
+        <button type="button" aria-label="Clear search" onClick={() => onChange('')} style={{ background:'none', border:'none', cursor:'pointer', color:T.inkFaint, display:'flex', padding:0, flexShrink:0 }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       )}
@@ -70,7 +70,7 @@ function ListSearch({ value, onChange, placeholder }) {
 
 function FilterPill({ label, active, open, onClick }) {
   return (
-    <button onClick={onClick} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 11px', border:`1px solid ${active?T.primary:T.line}`, borderRadius:8, background:active?T.primaryBg:T.panel, fontSize:12.5, color:active?T.primary:T.ink, cursor:'pointer', whiteSpace:'nowrap', fontWeight:active?600:400, transition:'all .15s' }}>
+    <button type="button" aria-haspopup="listbox" aria-expanded={open} onClick={onClick} style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 11px', border:`1px solid ${active?T.primary:T.line}`, borderRadius:8, background:active?T.primaryBg:T.panel, fontSize:12.5, color:active?T.primary:T.ink, cursor:'pointer', whiteSpace:'nowrap', fontWeight:active?600:400, transition:'all .15s' }}>
       <span>{label}</span><IcChevron up={open}/>
     </button>
   );
@@ -89,11 +89,11 @@ function SelectFilter({ value, onChange, options }) {
     <div ref={ref} style={{ position:'relative', flexShrink:0 }}>
       <FilterPill label={value} active={value !== options[0]} open={open} onClick={() => setOpen(p => !p)}/>
       {open && (
-        <div style={listPopover}>
+        <div role="listbox" aria-label={`${options[0]} options`} style={{ ...listPopover, padding:4 }}>
           {options.map(o => (
-            <div key={o} onClick={() => { onChange(o); setOpen(false); }} style={listOptRow(value === o)}
+            <button key={o} type="button" role="option" aria-selected={value === o} onClick={() => { onChange(o); setOpen(false); }} style={{ ...listOptRow(value === o), width:'100%', border:'none', borderRadius:6, fontFamily:'inherit', textAlign:'left' }}
               onMouseEnter={e => { if (value !== o) e.currentTarget.style.background = T.fill; }}
-              onMouseLeave={e => { if (value !== o) e.currentTarget.style.background = 'transparent'; }}>{o}</div>
+              onMouseLeave={e => { if (value !== o) e.currentTarget.style.background = 'transparent'; }}>{o}</button>
           ))}
         </div>
       )}
@@ -146,15 +146,16 @@ function DataTable({
           <tr>
             {selectable && (
               <th style={{ ...LIST_TH, width:44, textAlign:'center', padding:'10px 0' }}>
-                <input type="checkbox" checked={allChk}
+                <input type="checkbox" aria-label="Select all rows" checked={allChk}
                   ref={el => { if (el) el.indeterminate = someChk && !allChk; }}
                   onChange={() => onToggleAll(rows)}
                   style={{ width:14, height:14, accentColor:T.primary, cursor:'pointer' }}/>
               </th>
             )}
             {cols.map(col => (
-              <th key={col.key} style={{ ...LIST_TH, width:col.width, cursor:col.sort?'pointer':'default' }}
-                onClick={col.sort ? () => onSort(col.key) : undefined}>
+              <th key={col.key} aria-sort={col.sort && sortCol===col.key ? (sortDir==='asc'?'ascending':'descending') : undefined} tabIndex={col.sort ? 0 : undefined} style={{ ...LIST_TH, width:col.width, cursor:col.sort?'pointer':'default' }}
+                onClick={col.sort ? () => onSort(col.key) : undefined}
+                onKeyDown={col.sort ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort(col.key); } } : undefined}>
                 {col.label}
                 {col.sort && <span style={{ marginLeft:3, opacity:sortCol===col.key?1:.28, fontSize:10 }}>{sortCol===col.key?(sortDir==='asc'?'↑':'↓'):'↕'}</span>}
               </th>
@@ -175,14 +176,15 @@ function DataTable({
             const k = rowKey(row);
             const sel = selectable && selected.has(k);
             return (
-              <tr key={k}
+              <tr key={k} tabIndex={onRowClick ? 0 : undefined}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={onRowClick ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row); } } : undefined}
                 style={{ background:sel?LIST_SEL_BG:T.panel, borderBottom:`1px solid ${T.lineSoft}`, cursor:onRowClick?'pointer':'default', transition:'background .08s' }}
                 onMouseEnter={e => { if (!sel) e.currentTarget.style.background = T.fill; }}
                 onMouseLeave={e => { e.currentTarget.style.background = sel?LIST_SEL_BG:T.panel; }}>
                 {selectable && (
                   <td style={{ ...LIST_TD, width:44, textAlign:'center' }} onClick={e => e.stopPropagation()}>
-                    <input type="checkbox" checked={sel} onChange={() => onToggleRow(k)} style={{ width:14, height:14, accentColor:T.primary, cursor:'pointer' }}/>
+                    <input type="checkbox" aria-label={`Select row ${k}`} checked={sel} onChange={() => onToggleRow(k)} style={{ width:14, height:14, accentColor:T.primary, cursor:'pointer' }}/>
                   </td>
                 )}
                 {cols.map(col => <td key={col.key} style={LIST_TD}>{cell(row, col.key)}</td>)}
@@ -211,13 +213,13 @@ function ListPager({ page, setPage, total, pageSize, noun = 'results' }) {
       </span>
       {totalPages > 1 && (
         <div style={{ display:'flex', gap:4, alignItems:'center' }}>
-          <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
+          <button type="button" aria-label="Previous page" onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}
             style={btn({ color:page===1?T.inkFaint:T.ink, cursor:page===1?'default':'pointer' })}>‹</button>
           {Array.from({ length:totalPages }, (_,i) => i+1).map(p => (
-            <button key={p} onClick={() => setPage(p)}
+            <button key={p} type="button" aria-label={`Page ${p}`} aria-current={p===page ? 'page' : undefined} onClick={() => setPage(p)}
               style={btn({ border:`1px solid ${p===page?T.primary:T.line}`, background:p===page?T.primary:T.panel, color:p===page?'#fff':T.ink, cursor:'pointer', fontWeight:p===page?700:400, transition:'all .12s' })}>{p}</button>
           ))}
-          <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}
+          <button type="button" aria-label="Next page" onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}
             style={btn({ color:page===totalPages?T.inkFaint:T.ink, cursor:page===totalPages?'default':'pointer' })}>›</button>
         </div>
       )}

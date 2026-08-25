@@ -11,12 +11,12 @@ const { useState, useRef, useEffect } = React;
 
 /* ── Tokens ─────────────────────────────────── */
 const T = {
-  ink: '#0F172A', inkSoft: '#475569', inkFaint: '#94A3B8', inkLabel: '#64748B',
+  ink: '#0F172A', inkSoft: '#475569', inkFaint: '#5B6B82', inkLabel: '#5B6B82',
   bg: '#F1F5F9', panel: '#FFFFFF', fill: '#F8FAFC', navFill: '#F9FAFB',
   line: '#E2E8F0', lineSoft: '#EEF2F6', primary: '#1B2434', primaryBg: '#EFF6FF', primaryLine: '#DBEAFE',
-  teal: '#10B981', tealDark: '#059669', tealLight: '#ECFDF5',
-  amber: '#F59E0B', amberDark: '#D97706', amberLight: '#FFFBEB', amberBorder: '#FCD34D',
-  red: '#DC2626', redLight: '#FEF2F2'
+  teal: '#047857', tealDark: '#047857', tealLight: '#ECFDF5',
+  amber: '#92400E', amberDark: '#92400E', amberLight: '#FFFBEB', amberBorder: '#FCD34D',
+  red: '#DC2626', redLight: '#FEF2F2', green: '#047857', greenLight: '#F0FDF4'
 };
 
 /* ── Seed Data ──────────────────────────────── */
@@ -43,23 +43,21 @@ const STATUS_S = {
 };
 
 /* ── Default form ───────────────────────────── */
-const mkSupp = (id, title, type) => ({ id, title, type, custom: false, enabled: false, name: '', cabin: '', rule: 'Booking', maxCount: '', farePos: '', applicableSailings: [] });
+const mkSupp = (id, title, type) => ({ id, title, type, custom: false, enabled: false, name: '', cabin: '', rule: 'Booking', maxCount: '', farePos: [], applicableSailings: [] });
 const DEFAULT_FORM = () => ({
   faretypeCode: '', fareBasisCode: '', faretypeGroup: '', source: '',
   cancellationPolicy: '', depositPolicy: '',
   residency: 'Any', minAge: 18, minOccupancy: '', maxOccupancy: '', advancedPurchase: '', boardingPass: '',
   standbyEligible: false, upgradeEligible: true, couponEligible: true,
   cruiseControlAccess: true,
-  chMVASB2C: true, chMVASB2B: true, chCC: true, chTradeAPI: false, chCRM: true, chGroup: false, chInternal: false,
+  chMVASB2C: true, chMVASB2B: true, chCC: true, chTradeAPI: false, chCRM: true, chGroup: false,
   channelPartners: [],
   mktExpanded: false, includeDiscount: false, discountMessage: '',
-  offerPrimary: '', offerSecondary: '', offerTertiary: '',
+  offerPrimary: '', offerSecondary: '', offerTertiary: [],
   waiveGovTaxes: false, waiveCruiseExp: false, noFareDisplay: false,
   supp: [
-  mkSupp('ob-comp', 'Complementary Onboard Supplement', 'comp'),
-  mkSupp('os-comp', 'Complementary Onshore Supplement', 'comp'),
-  mkSupp('ob-paid', 'Paid Onboard Supplement', 'paid'),
-  mkSupp('os-paid', 'Paid Onshore Supplement', 'paid')]
+  mkSupp('complimentary', 'Complementary Supplement', 'comp'),
+  mkSupp('paid', 'Paid Supplement', 'paid')]
 
 });
 
@@ -80,42 +78,140 @@ const polLabel = (policies, type, name) => {
 };
 
 /* ── Panel Primitives ───────────────────────── */
-function iS(err) {
-  return { width: '100%', padding: '10px 13px', border: `1.5px solid ${err ? T.red : '#D8DFE8'}`, borderRadius: 8, fontSize: 13, color: T.ink, background: '#fff', outline: 'none', transition: 'border-color .15s' };
+function iS(err, dis) {
+  return { width: '100%', padding: '10px 13px', border: `1.5px solid ${err ? T.red : dis ? '#E8EDF3' : '#D8DFE8'}`, borderRadius: 8, fontSize: 13, color: dis ? T.inkFaint : T.ink, background: dis ? '#F3F4F6' : '#fff', outline: 'none', cursor: dis ? 'not-allowed' : undefined, transition: 'border-color .15s, box-shadow .15s' };
 }
 
 function Field({ label, required, helper, error, children }) {
+  const uid = React.useId().replace(/:/g, '');
+  const controlId = `ft-field-${uid}`;
+  const labelId = `${controlId}-label`, helpId = `${controlId}-help`, errorId = `${controlId}-error`;
+  const describedBy = error ? errorId : helper ? helpId : undefined;
+  const bound = bindFieldControl(children, { id:controlId, label, describedBy, invalid:!!error, required:!!required });
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+    <div role={label ? 'group' : undefined} aria-labelledby={label ? labelId : undefined} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       {label &&
-      <label style={{ fontSize: 10.5, fontWeight: 700, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px', lineHeight: 1 }}>
-          {label}{required && <span style={{ color: T.red, marginLeft: 3 }}>*</span>}
+      <label id={labelId} htmlFor={bound.bound ? bound.controlId : undefined} style={{ fontSize: 10.5, fontWeight: 700, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px', lineHeight: 1 }}>
+          {label}{required && <span aria-hidden="true" style={{ color: T.red, marginLeft: 3 }}>*</span>}
         </label>
       }
-      {children}
-      {error && <span style={{ fontSize: 11, color: T.red, marginTop: 0 }}>{error}</span>}
-      {helper && !error && <span style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.4, marginTop: 0 }}>{helper}</span>}
+      {bound.node}
+      {error && <span id={errorId} role="alert" style={{ fontSize: 11, color: T.red, marginTop: 0 }}>{error}</span>}
+      {helper && !error && <span id={helpId} style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.4, marginTop: 0 }}>{helper}</span>}
     </div>);
 
 }
 
-function Sel({ value, onChange, opts, err }) {
+function Sel({ value, onChange, opts, err, dis, ariaLabel = 'Select option', inputId, ariaDescribedBy, ariaInvalid, ariaRequired }) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [menuPos, setMenuPos] = useState(null);
+  const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const menuId = useRef(`ft-select-${Math.random().toString(36).slice(2)}`).current;
+  const selectedIndex = Math.max(0, opts.findIndex(([v]) => v === value));
+  const selected = opts[selectedIndex] || ['', 'Select…'];
+  const selectedLabel = selected[1] !== undefined ? selected[1] : selected[0];
+  const isPlaceholder = value === '' || value === null || value === undefined;
+
+  useEffect(() => {
+    if (dis && open) setOpen(false);
+  }, [dis, open]);
+
+  useEffect(() => {
+    if (!open) {setMenuPos(null);return;}
+    setActiveIndex(selectedIndex);
+    const updatePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+      const menuWidth = Math.min(Math.max(rect.width, 260), viewportW - 16);
+      const left = Math.min(Math.max(8, rect.left), viewportW - menuWidth - 8);
+      const spaceBelow = viewportH - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const opensUp = spaceBelow < 170 && spaceAbove > spaceBelow;
+      const available = Math.max(96, (opensUp ? spaceAbove : spaceBelow) - 5);
+      setMenuPos({
+        left,
+        width: menuWidth,
+        top: opensUp ? undefined : rect.bottom + 5,
+        bottom: opensUp ? viewportH - rect.top + 5 : undefined,
+        maxHeight: Math.min(240, available)
+      });
+    };
+    const onPointerDown = (e) => {
+      if (!rootRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
+    };
+    updatePosition();
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open, selectedIndex]);
+
+  const choose = (index) => {
+    const option = opts[index];
+    if (!option) return;
+    onChange(option[0]);
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  };
+  const move = (delta) => {
+    if (!open) {setOpen(true);return;}
+    setActiveIndex((i) => (i + delta + opts.length) % opts.length);
+  };
+  const onKeyDown = (e) => {
+    if (dis) return;
+    if (e.key === 'ArrowDown') {e.preventDefault();move(1);} else
+    if (e.key === 'ArrowUp') {e.preventDefault();move(-1);} else
+    if (e.key === 'Home' && open) {e.preventDefault();setActiveIndex(0);} else
+    if (e.key === 'End' && open) {e.preventDefault();setActiveIndex(opts.length - 1);} else
+    if ((e.key === 'Enter' || e.key === ' ') && open) {e.preventDefault();choose(activeIndex);} else
+    if ((e.key === 'Enter' || e.key === ' ') && !open) {e.preventDefault();setOpen(true);} else
+    if (e.key === 'Escape' && open) {e.preventDefault();setOpen(false);} else
+    if (e.key === 'Tab' && open) setOpen(false);
+  };
+  const triggerStyle = iS(err, dis);
+
   return (
-    <div style={{ position: 'relative' }}>
-      <select className="fi" value={value} onChange={(e) => onChange(e.target.value)}
-      style={{ ...iS(err), appearance: 'none', cursor: 'pointer', paddingRight: 36, color: value ? T.ink : T.inkFaint }}>
-        {opts.map(([v, l]) => <option key={v} value={v}>{l !== undefined ? l : v}</option>)}
-      </select>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.2" strokeLinecap="round" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
+    <div ref={rootRef} style={{ position: 'relative' }}>
+      <button id={inputId} ref={triggerRef} type="button" role="combobox" className="fi" disabled={dis} aria-label={ariaLabel} aria-describedby={ariaDescribedBy} aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-invalid={ariaInvalid || !!err} aria-required={ariaRequired} aria-activedescendant={open ? `${menuId}-option-${activeIndex}` : undefined}
+      onClick={() => !dis && setOpen((v) => !v)} onKeyDown={onKeyDown}
+      style={{ ...triggerStyle, minHeight: 37, padding: '8px 10px 8px 12px', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textAlign: 'left', fontFamily: 'inherit', cursor: dis ? 'not-allowed' : 'pointer', border: open ? `1.5px solid ${T.primary}` : triggerStyle.border, boxShadow: open ? '0 0 0 3px rgba(27,36,52,.1)' : undefined }}>
+        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: dis ? T.inkFaint : isPlaceholder ? T.inkFaint : T.ink }}>{selectedLabel}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={open ? T.primary : T.inkFaint} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s ease' }}><polyline points="6 9 12 15 18 9" /></svg>
+      </button>
+      {open && menuPos && ReactDOM.createPortal(
+        <div ref={menuRef} id={menuId} role="listbox" aria-label={`${ariaLabel} options`} className="pscroll" style={{ position: 'fixed', left: menuPos.left, top: menuPos.top, bottom: menuPos.bottom, width: menuPos.width, maxHeight: menuPos.maxHeight, overflowY: 'auto', zIndex: 2200, padding: 4, background: T.panel, border: `1px solid ${T.line}`, borderRadius: 8, boxShadow: '0 8px 24px rgba(15,23,42,.14)' }}>
+          {opts.map(([v, l], index) => {
+            const label = l !== undefined ? l : v;
+            const isSelected = v === value;
+            const isActive = index === activeIndex;
+            return (
+              <button key={`${v}-${index}`} id={`${menuId}-option-${index}`} type="button" role="option" aria-selected={isSelected} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(index)}
+              style={{ width: '100%', padding: '8px 9px', border: 'none', borderRadius: 6, background: isSelected ? T.primaryBg : isActive ? T.fill : 'transparent', color: v === '' ? T.inkFaint : isSelected ? T.primary : T.ink, fontSize: 12.5, fontWeight: isSelected ? 700 : 500, lineHeight: 1.35, fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                {isSelected && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.primary} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12" /></svg>}
+              </button>);
+
+          })}
+        </div>, document.body)
+      }
     </div>);
 
 }
 
-function Toggle({ on, onChange }) {
+function Toggle({ on, onChange, label }) {
   return (
-    <div onClick={() => onChange(!on)}
+    <div role="switch" aria-checked={on} aria-label={label} tabIndex={0}
+    onClick={() => onChange(!on)}
+    onKeyDown={(e) => {if (e.key === 'Enter' || e.key === ' ') {e.preventDefault();onChange(!on);}}}
     style={{ width: 38, height: 22, borderRadius: 11, flexShrink: 0, background: on ? T.primary : '#CBD5E1', cursor: 'pointer', position: 'relative', transition: 'background .2s' }}>
       <div style={{ position: 'absolute', top: 3, left: on ? 19 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
     </div>);
@@ -129,63 +225,98 @@ function TRow({ label, helper, on, onChange }) {
         <div style={{ fontSize: 13.5, fontWeight: 500, color: T.ink, lineHeight: 1.3 }}>{label}</div>
         {helper && <div style={{ fontSize: 12, color: T.inkFaint, marginTop: 2, lineHeight: 1.3 }}>{helper}</div>}
       </div>
-      <Toggle on={on} onChange={onChange} />
+      <Toggle on={on} onChange={onChange} label={label} />
     </div>);
 
 }
 
-function MultiChip({ values, onChange, opts, placeholder }) {
+function MultiChip({ values, onChange, opts, placeholder, inputId, ariaLabel, ariaDescribedBy, ariaInvalid, ariaRequired }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
-  const ref = useRef();
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => {if (ref.current && !ref.current.contains(e.target)) setOpen(false);};
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [open]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [menuPos, setMenuPos] = useState(null);
+  const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const inputRef = useRef(null);
+  const menuRef = useRef(null);
+  const menuId = useRef(`ft-multi-${Math.random().toString(36).slice(2)}`).current;
   const filtered = opts.filter((o) => !values.includes(o) && o.toLowerCase().includes(q.toLowerCase()));
+
+  useEffect(() => {
+    if (!open) {setMenuPos(null);return;}
+    const updatePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+      const menuWidth = Math.min(Math.max(rect.width, 260), viewportW - 16);
+      const left = Math.min(Math.max(8, rect.left), viewportW - menuWidth - 8);
+      const spaceBelow = viewportH - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const opensUp = spaceBelow < 170 && spaceAbove > spaceBelow;
+      const available = Math.max(96, (opensUp ? spaceAbove : spaceBelow) - 5);
+      setMenuPos({ left, width: menuWidth, top: opensUp ? undefined : rect.bottom + 5, bottom: opensUp ? viewportH - rect.top + 5 : undefined, maxHeight: Math.min(240, available) });
+    };
+    const onPointerDown = (e) => {
+      if (!rootRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
+    };
+    updatePosition();
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open]);
+
+  useEffect(() => {setActiveIndex(0);}, [q, values.length]);
+
+  const choose = (option) => {
+    if (!option) return;
+    onChange([...values, option]);
+    setQ('');
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {e.preventDefault();setOpen(true);setActiveIndex((i) => filtered.length ? (i + 1) % filtered.length : 0);} else
+    if (e.key === 'ArrowUp') {e.preventDefault();setOpen(true);setActiveIndex((i) => filtered.length ? (i - 1 + filtered.length) % filtered.length : 0);} else
+    if (e.key === 'Enter' && open && filtered[activeIndex]) {e.preventDefault();choose(filtered[activeIndex]);} else
+    if (e.key === 'Escape' && open) {e.preventDefault();setOpen(false);} else
+    if (e.key === 'Tab' && open) setOpen(false);
+  };
+
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <div onClick={() => setOpen(true)}
-      style={{ minHeight: 46, padding: '6px 12px', border: `1.5px solid #D8DFE8`, borderRadius: 9, display: 'flex', flexWrap: 'wrap', gap: 5, cursor: 'text', alignItems: 'center', background: '#fff' }}>
+    <div ref={rootRef} style={{ position: 'relative' }}>
+      <div ref={triggerRef} onClick={() => {setOpen(true);inputRef.current?.focus();}}
+      style={{ minHeight: 42, padding: '5px 8px', border: `1.5px solid ${open ? T.primary : '#D8DFE8'}`, borderRadius: 7, display: 'flex', flexWrap: 'wrap', gap: 5, cursor: 'text', alignItems: 'center', background: '#fff', boxShadow: open ? '0 0 0 3px rgba(27,36,52,.1)' : 'none', transition: 'border-color .15s, box-shadow .15s' }}>
         {values.map((v) =>
-        <span key={v} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 6, background: T.primaryBg, color: T.primary, fontSize: 12.5, fontWeight: 500 }}>
+        <span key={v} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 7px', borderRadius: 6, background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary, fontSize: 11.5, fontWeight: 600 }}>
             {v}
-            <span onClick={(e) => {e.stopPropagation();onChange(values.filter((x) => x !== v));}}
-          style={{ cursor: 'pointer', color: T.inkFaint, fontSize: 15, lineHeight: 1 }}>×</span>
+            <button type="button" aria-label={`Remove ${v}`} onClick={(e) => {e.stopPropagation();onChange(values.filter((x) => x !== v));}}
+            style={{ width: 14, height: 14, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', cursor: 'pointer', color: T.inkFaint, fontSize: 14, lineHeight: 1 }}>×</button>
           </span>
         )}
-        <input value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setOpen(true)}
+        <input id={inputId} ref={inputRef} role="combobox" aria-label={ariaLabel || placeholder || 'Search options'} aria-describedby={ariaDescribedBy} aria-invalid={ariaInvalid} aria-required={ariaRequired} aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-activedescendant={open && filtered[activeIndex] ? `${menuId}-option-${activeIndex}` : undefined}
+        value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => setOpen(true)} onKeyDown={onKeyDown}
         placeholder={values.length === 0 ? placeholder : ''}
-        style={{ border: 'none', outline: 'none', fontSize: 14, color: T.ink, flex: 1, minWidth: 100, background: 'transparent', padding: '4px 4px' }} />
+        style={{ border: 'none', outline: 'none', fontSize: 13, color: T.ink, flex: 1, minWidth: 100, background: 'transparent', padding: '4px' }} />
       </div>
-      {open && filtered.length > 0 &&
-      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#fff', border: `1px solid ${T.line}`, borderRadius: 9, boxShadow: '0 8px 24px rgba(0,0,0,.1)', zIndex: 600, maxHeight: 180, overflowY: 'auto' }}>
-          {filtered.map((o) =>
-        <div key={o} onClick={() => {onChange([...values, o]);setQ('');}}
-        style={{ padding: '10px 16px', fontSize: 13.5, cursor: 'pointer', color: T.ink }}
-        onMouseEnter={(e) => e.currentTarget.style.background = T.fill}
-        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+      {open && menuPos && ReactDOM.createPortal(
+        <div ref={menuRef} id={menuId} role="listbox" aria-label={`${placeholder || 'Search'} options`} className="pscroll" style={{ position: 'fixed', left: menuPos.left, top: menuPos.top, bottom: menuPos.bottom, width: menuPos.width, maxHeight: menuPos.maxHeight, overflowY: 'auto', zIndex: 2200, padding: 4, background: T.panel, border: `1px solid ${T.line}`, borderRadius: 8, boxShadow: '0 8px 24px rgba(15,23,42,.14)' }}>
+          {filtered.length ? filtered.map((o, index) =>
+          <button key={o} id={`${menuId}-option-${index}`} type="button" role="option" aria-selected="false" onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(o)}
+          style={{ width: '100%', padding: '8px 9px', border: 'none', borderRadius: 6, background: index === activeIndex ? T.fill : 'transparent', color: T.ink, fontSize: 12.5, fontWeight: 500, lineHeight: 1.35, fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
               {o}
-            </div>
-        )}
-        </div>
+            </button>
+          ) :
+          <div style={{ padding: '10px 9px', color: T.inkFaint, fontSize: 12, lineHeight: 1.4 }}>No matching options</div>}
+        </div>, document.body)
       }
     </div>);
 
 }
-
-function SubBlock({ title, children }) {
-  return (
-    <div style={{ border: `1px solid #E8EDF3`, borderRadius: 9, background: '#FAFBFC', padding: '15px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {title && <div style={{ fontSize: 10, fontWeight: 700, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px' }}>{title}</div>}
-      {children}
-    </div>);
-
-}
-
-function HDivider() {return <div style={{ height: 1, background: T.line, margin: '4px 0' }} />;}
 
 function WarnBanner({ children }) {
   return (
@@ -199,78 +330,130 @@ function WarnBanner({ children }) {
 
 }
 
+function StepCard({ number, title, description, aside, children }) {
+  return (
+    <section style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: '0 1px 3px rgba(15,23,42,.06)', overflow: 'visible' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, padding: '15px 16px', background: '#FBFCFE', borderBottom: `1px solid ${T.line}`, borderRadius: '12px 12px 0 0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
+          <span style={{ width: 27, height: 21, borderRadius: 6, background: T.primary, color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '.2px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+            {String(number).padStart(2, '0')}
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <h2 style={{ fontSize: 16.5, fontWeight: 700, color: T.ink, lineHeight: 1.25, margin: 0 }}>{title}</h2>
+            <p style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.45, margin: '3px 0 0' }}>{description}</p>
+          </div>
+        </div>
+        {aside && <div style={{ flexShrink: 0 }}>{aside}</div>}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16 }}>
+        {children}
+      </div>
+    </section>);
+
+}
+
+function GroupHeading({ title, helper, aside }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 750, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.7px', lineHeight: 1.2 }}>{title}</div>
+        {helper && <div style={{ fontSize: 11.5, color: T.inkFaint, lineHeight: 1.4, marginTop: 3 }}>{helper}</div>}
+      </div>
+      {aside && <div style={{ flexShrink: 0 }}>{aside}</div>}
+    </div>);
+
+}
+
 /* ── Section 1 ──────────────────────────────── */
 function S1({ form, set, errors, mode, editData }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div>
-        <h2 style={{ fontSize: 19, fontWeight: 700, color: T.ink, lineHeight: 1.2, marginBottom: 4 }}>Basics &amp; Grouping</h2>
-        <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>Provide global systemic identifiers and operational taxonomies for this template profile.</p>
-      </div>
-      <Field label="Faretype Code" required helper="System-wide unique key for database and reporting." error={errors.faretypeCode}>
-        <input className="fi" style={iS(errors.faretypeCode)} value={form.faretypeCode}
-        onChange={(e) => set('faretypeCode', e.target.value)} placeholder="e.g. CORE-RETAIL-2026" />
-      </Field>
-      <Field label="Farebasis Code Modifier">
-        <input className="fi" style={iS()} value={form.fareBasisCode}
-        onChange={(e) => set('fareBasisCode', e.target.value)} placeholder="e.g. YFLX" />
-      </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <Field label="Faretype Group" required error={errors.faretypeGroup}>
-          <Sel value={form.faretypeGroup} onChange={(v) => set('faretypeGroup', v)} err={errors.faretypeGroup}
-          opts={[['', 'Select group…'], ['Core', 'Core'], ['Interline', 'Interline'], ['Brochure', 'Brochure'], ['Non-Refundable', 'Non-Refundable']]} />
+    <StepCard number={1} title="Basics & Grouping" description="Define the system identity and operational classification for this Faretype.">
+      <div style={{ border: `1px solid ${T.lineSoft}`, borderRadius: 10, background: T.fill, padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <GroupHeading title="System identity" helper="Stable identifiers used in pricing, reporting, and downstream systems." />
+        <Field label="Faretype Code" required helper="System-wide unique key for database and reporting." error={errors.faretypeCode}>
+          <input className="fi" style={iS(errors.faretypeCode)} value={form.faretypeCode}
+          onChange={(e) => set('faretypeCode', e.target.value)} placeholder="e.g. CORE-RETAIL-2026" />
         </Field>
-        <Field label="Source Channel" required error={errors.source}>
-          <Sel value={form.source} onChange={(v) => set('source', v)} err={errors.source}
-          opts={[['', 'Select source…'], ['WC', 'WC'], ['Casino', 'Casino'], ['Partner', 'Partner'], ['YM', 'YM']]} />
+        <Field label="Farebasis Code Modifier" helper="Optional modifier appended when a Farebasis is generated.">
+          <input className="fi" style={iS()} value={form.fareBasisCode}
+          onChange={(e) => set('fareBasisCode', e.target.value)} placeholder="e.g. YFLX" />
         </Field>
       </div>
+
+      <div style={{ border: `1px solid ${T.lineSoft}`, borderRadius: 10, background: '#fff', padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <GroupHeading title="Operational classification" helper="Controls ownership, routing, and how this Faretype is found." />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Field label="Faretype Group" required error={errors.faretypeGroup}>
+            <Sel ariaLabel="Faretype group" value={form.faretypeGroup} onChange={(v) => set('faretypeGroup', v)} err={errors.faretypeGroup}
+            opts={[['', 'Select group…'], ['Core', 'Core'], ['Interline', 'Interline'], ['Brochure', 'Brochure'], ['Non-Refundable', 'Non-Refundable']]} />
+          </Field>
+          <Field label="Source Channel" required error={errors.source}>
+            <Sel ariaLabel="Source channel" value={form.source} onChange={(v) => set('source', v)} err={errors.source}
+            opts={[['', 'Select source…'], ['WC', 'WC'], ['Casino', 'Casino'], ['Partner', 'Partner'], ['YM', 'YM']]} />
+          </Field>
+        </div>
+      </div>
+
       {mode === 'edit' &&
-      <Field label="System Faretype ID">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px', border: `1.5px solid #D8DFE8`, borderRadius: 9, background: T.fill, color: T.inkFaint, fontSize: 13.5, fontFamily: "'SF Mono', Menlo, monospace" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-            FT-ID-{10000 + (editData?.id || 1)}
-          </div>
-        </Field>
+      <div style={{ borderTop: `1px solid ${T.lineSoft}`, paddingTop: 15 }}>
+          <Field label="System Faretype ID" helper="Read-only record identifier.">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', border: `1px solid ${T.line}`, borderRadius: 8, background: T.fill, color: T.inkSoft, fontSize: 13, fontFamily: "'SF Mono', Menlo, monospace" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              FT-ID-{10000 + (editData?.id || 1)}
+            </div>
+          </Field>
+        </div>
       }
-    </div>);
+    </StepCard>);
 
 }
 
 /* ── Section 2 ──────────────────────────────── */
 function S2({ form, set, errors, policies }) {
   const canPol = polParents(policies, 'cancel').find((p) => p.name === form.cancellationPolicy);
+  const assignedPolicies = Number(!!form.cancellationPolicy) + Number(!!form.depositPolicy);
   const chips = [];
   if (canPol) chips.push(canPol.isRefundable === false ?
-  { l: 'Non-refundable', c: T.red, bg: T.redLight } :
-  { l: 'Refundable', c: T.tealDark, bg: T.tealLight });
+  { l: 'Non-refundable', c: T.red, bg: T.redLight, b: '#FECACA' } :
+  { l: 'Refundable', c: T.tealDark, bg: T.tealLight, b: '#A7F3D0' });
+  chips.push(form.standbyEligible ?
+  { l: 'Standby allowed', c: T.primary, bg: T.primaryBg, b: T.primaryLine } :
+  { l: 'Standby blocked', c: T.inkSoft, bg: T.fill, b: T.line });
   chips.push(form.upgradeEligible ?
-  { l: 'Upgrades allowed', c: T.tealDark, bg: T.tealLight } :
-  { l: 'Upgrades blocked', c: T.inkSoft, bg: T.fill });
+  { l: 'Upgrades allowed', c: T.tealDark, bg: T.tealLight, b: '#A7F3D0' } :
+  { l: 'Upgrades blocked', c: T.inkSoft, bg: T.fill, b: T.line });
   chips.push(form.couponEligible ?
-  { l: 'Coupon allowed', c: T.tealDark, bg: T.tealLight } :
-  { l: 'Coupon blocked', c: T.inkSoft, bg: T.fill });
-  if (form.standbyEligible) chips.push({ l: 'Standby eligible', c: '#7C3AED', bg: '#EDE9FE' });
+  { l: 'Coupons allowed', c: T.tealDark, bg: T.tealLight, b: '#A7F3D0' } :
+  { l: 'Coupons blocked', c: T.inkSoft, bg: T.fill, b: T.line });
+  const flags = [
+  { k: 'standbyEligible', l: 'Standby', h: 'Waitlist booking' },
+  { k: 'upgradeEligible', l: 'Upgrades', h: 'Cabin changes' },
+  { k: 'couponEligible', l: 'Coupons', h: 'Promo codes' }];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div>
-        <h2 style={{ fontSize: 19, fontWeight: 700, color: T.ink, lineHeight: 1.2, marginBottom: 4 }}>Policies &amp; Eligibility</h2>
-        <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>Define the commercial behaviour of this fare and who qualifies to book it.</p>
+    <StepCard number={2} title="Policies & Eligibility" description="Set the commercial rules and guest requirements that govern this Faretype.">
+      <div style={{ border: `1px solid ${T.lineSoft}`, borderRadius: 10, background: T.fill, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <GroupHeading title="Commercial policies" helper="Assign payment and refund rules together so the booking terms stay aligned."
+        aside={<span style={{ fontSize: 10.5, fontWeight: 700, color: assignedPolicies === 2 ? T.tealDark : T.inkSoft, background: assignedPolicies === 2 ? T.tealLight : '#fff', border: `1px solid ${assignedPolicies === 2 ? '#A7F3D0' : T.line}`, borderRadius: 999, padding: '3px 8px', whiteSpace: 'nowrap' }}>{assignedPolicies} of 2 assigned</span>} />
+
+        <div style={{ border: `1px solid ${errors.cancellationPolicy ? '#FECACA' : T.line}`, borderRadius: 9, background: '#fff', padding: 12 }}>
+          <Field label="Cancellation Policy" required helper="Controls refundability and cancellation penalties." error={errors.cancellationPolicy}>
+            <Sel ariaLabel="Cancellation policy" value={form.cancellationPolicy} onChange={(v) => set('cancellationPolicy', v)} err={errors.cancellationPolicy}
+            opts={polOptsFor(policies, 'cancel', form.cancellationPolicy)} />
+          </Field>
+        </div>
+        <div style={{ border: `1px solid ${errors.depositPolicy ? '#FECACA' : T.line}`, borderRadius: 9, background: '#fff', padding: 12 }}>
+          <Field label="Deposit Policy" required helper="Controls deposit timing and payment requirements." error={errors.depositPolicy}>
+            <Sel ariaLabel="Deposit policy" value={form.depositPolicy} onChange={(v) => set('depositPolicy', v)} err={errors.depositPolicy}
+            opts={polOptsFor(policies, 'deposit', form.depositPolicy)} />
+          </Field>
+        </div>
       </div>
-      <SubBlock title="Commercial Policies">
-        <Field label="Cancellation Policy" required helper="Refundability and penalty structure." error={errors.cancellationPolicy}>
-          <Sel value={form.cancellationPolicy} onChange={(v) => set('cancellationPolicy', v)} err={errors.cancellationPolicy}
-          opts={polOptsFor(policies, 'cancel', form.cancellationPolicy)} />
-        </Field>
-        <Field label="Deposit Policy" required error={errors.depositPolicy}>
-          <Sel value={form.depositPolicy} onChange={(v) => set('depositPolicy', v)} err={errors.depositPolicy}
-          opts={polOptsFor(policies, 'deposit', form.depositPolicy)} />
-        </Field>
-      </SubBlock>
-      <SubBlock title="Eligibility Criteria">
+
+      <div style={{ border: `1px solid ${T.lineSoft}`, borderRadius: 10, background: '#fff', padding: 14, display: 'flex', flexDirection: 'column', gap: 13 }}>
+        <GroupHeading title="Guest requirements" helper="Define who can book and when the Faretype becomes available." />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Field label="Residency">
-            <Sel value={form.residency} onChange={(v) => set('residency', v)}
+            <Sel ariaLabel="Residency" value={form.residency} onChange={(v) => set('residency', v)}
             opts={[['Any', 'Any'], ['US Only', 'US Only'], ['Non-US', 'Non-US'], ['Canada', 'Canada'], ['UK', 'UK']]} />
           </Field>
           <Field label="Min Age">
@@ -282,27 +465,40 @@ function S2({ form, set, errors, policies }) {
           <Field label="Max Occupancy">
             <input className="fi" type="number" style={iS()} value={form.maxOccupancy} onChange={(e) => set('maxOccupancy', e.target.value)} placeholder="4" />
           </Field>
+          <Field label="Advanced Purchase (Days)" helper="Minimum lead time.">
+            <input className="fi" type="number" style={iS()} value={form.advancedPurchase} onChange={(e) => set('advancedPurchase', e.target.value)} placeholder="No restriction" />
+          </Field>
+          <Field label="Boarding Pass Endorsement" helper="Optional operational code.">
+            <input className="fi" style={iS()} value={form.boardingPass} onChange={(e) => set('boardingPass', e.target.value)} placeholder="e.g. NONEND" />
+          </Field>
         </div>
-        <Field label="Advanced Purchase (Days)" helper="Minimum days before sailing.">
-          <input className="fi" type="number" style={iS()} value={form.advancedPurchase} onChange={(e) => set('advancedPurchase', e.target.value)} />
-        </Field>
-        <Field label="Boarding Pass Endorsement">
-          <input className="fi" style={iS()} value={form.boardingPass} onChange={(e) => set('boardingPass', e.target.value)} placeholder="e.g. NONEND" />
-        </Field>
-      </SubBlock>
-      <SubBlock title="Eligibility Flags">
-        <TRow label="Standby Eligible" helper="Standby booking allowed." on={form.standbyEligible} onChange={(v) => set('standbyEligible', v)} />
-        <TRow label="Upgrade Eligible" helper="Cabin upgrades allowed." on={form.upgradeEligible} onChange={(v) => set('upgradeEligible', v)} />
-        <TRow label="Coupon Eligible" helper="Coupons allowed." on={form.couponEligible} onChange={(v) => set('couponEligible', v)} />
-      </SubBlock>
-      {form.cancellationPolicy &&
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+      </div>
+
+      <div style={{ border: `1px solid ${T.lineSoft}`, borderRadius: 10, background: T.fill, padding: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
+        <GroupHeading title="Booking eligibility" helper="Enable the optional booking actions supported by this Faretype." />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+          {flags.map(({ k, l, h }) =>
+          <div key={k} style={{ border: `1px solid ${form[k] ? T.primaryLine : T.line}`, borderRadius: 9, background: form[k] ? T.primaryBg : '#fff', padding: 10, minWidth: 0 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{l}</div>
+              <div style={{ fontSize: 10.5, color: T.inkFaint, lineHeight: 1.3, marginTop: 2 }}>{h}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 10 }}>
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: form[k] ? T.primary : T.inkFaint }}>{form[k] ? 'Enabled' : 'Disabled'}</span>
+                <Toggle on={form[k]} onChange={(v) => set(k, v)} label={`${l} eligibility`} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ border: `1px solid ${T.line}`, borderRadius: 10, background: '#fff', padding: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <GroupHeading title="Booking behavior" helper="A quick summary of the rules currently in effect." />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {chips.map((c, i) =>
-        <span key={i} style={{ padding: '4px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 500, background: c.bg, color: c.c }}>{c.l}</span>
-        )}
+          <span key={i} style={{ padding: '4px 9px', borderRadius: 999, fontSize: 10.5, fontWeight: 650, background: c.bg, color: c.c, border: `1px solid ${c.b}` }}>{c.l}</span>
+          )}
         </div>
-      }
-    </div>);
+      </div>
+    </StepCard>);
 
 }
 
@@ -311,121 +507,202 @@ function S3({ form, set }) {
   const CHS = [
   { k: 'chMVASB2C', l: 'MVAS B2C' }, { k: 'chMVASB2B', l: 'MVAS B2B' },
   { k: 'chCC', l: 'Cruise Control' }, { k: 'chTradeAPI', l: 'Trade API' },
-  { k: 'chCRM', l: 'CRM' }, { k: 'chGroup', l: 'Group' }, { k: 'chInternal', l: 'Internal' }];
+  { k: 'chCRM', l: 'CRM' }, { k: 'chGroup', l: 'Group' }];
 
   const vis = CHS.filter((c) => form[c.k]).map((c) => c.l);
   const hid = CHS.filter((c) => !form[c.k]).map((c) => c.l);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div>
-        <h2 style={{ fontSize: 19, fontWeight: 700, color: T.ink, lineHeight: 1.2, marginBottom: 4 }}>Channels &amp; Access</h2>
-        <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>Control where this faretype is visible and bookable across distribution channels.</p>
+    <StepCard number={3} title="Channel Access" description="Choose where this Faretype is visible and available to book.">
+      <div style={{ border: `1px solid ${form.cruiseControlAccess ? T.primaryLine : T.line}`, borderRadius: 10, padding: '13px 14px', background: form.cruiseControlAccess ? T.primaryBg : '#fff' }}>
+        <TRow label="Cruise Control access" helper="Show this Faretype in the internal CRM booking workspace." on={form.cruiseControlAccess} onChange={(v) => set('cruiseControlAccess', v)} />
       </div>
-      <TRow label="Cruise Control Access" helper="Internal CRM visibility." on={form.cruiseControlAccess} onChange={(v) => set('cruiseControlAccess', v)} />
-      <HDivider />
-      <div>
-        <div style={{ fontSize: 10, fontWeight: 700, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px', marginBottom: 10 }}>Distribution Channels</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {CHS.map((c) =>
-          <div key={c.k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', border: `1.5px solid #E8EDF3`, borderRadius: 8, background: '#fff' }}>
-              <span style={{ fontSize: 13, color: T.ink, fontWeight: 450 }}>{c.l}</span>
-              <Toggle on={form[c.k]} onChange={(v) => set(c.k, v)} />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <GroupHeading title="Distribution channels" helper="Enable each channel that can display and sell this Faretype."
+        aside={<span style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, background: T.fill, border: `1px solid ${T.line}`, borderRadius: 999, padding: '3px 8px' }}>{vis.length} visible</span>} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {CHS.map((c, i) =>
+          <div key={c.k} style={{ gridColumn: CHS.length % 2 === 1 && i === CHS.length - 1 ? '1 / -1' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 12px', border: `1px solid ${form[c.k] ? T.primaryLine : T.lineSoft}`, borderRadius: 9, background: form[c.k] ? T.primaryBg : '#fff', transition: 'background .15s, border-color .15s' }}>
+              <span style={{ fontSize: 12.5, color: T.ink, fontWeight: 600 }}>{c.l}</span>
+              <Toggle on={form[c.k]} onChange={(v) => set(c.k, v)} label={c.l} />
             </div>
           )}
         </div>
       </div>
-      {form.chMVASB2B &&
-      <Field label="Channel Partner Applicable" helper="Restrict to specific partners.">
-          <MultiChip values={form.channelPartners} onChange={(v) => set('channelPartners', v)}
-        opts={['Virtuoso', 'AMEX Travel', 'Ensemble', 'Signature Travel', 'Travel Leaders', 'Nexion', 'Avoya Travel']}
-        placeholder="Search agencies…" />
-        </Field>
-      }
-      <div style={{ fontSize: 12, color: T.inkFaint, padding: '10px 12px', background: T.fill, borderRadius: 8, border: `1px solid ${T.lineSoft}`, lineHeight: 1.5 }}>
-        <strong style={{ color: T.inkSoft }}>Visible:</strong> {vis.length ? vis.join(', ') : 'None'} &nbsp;·&nbsp; <strong style={{ color: T.inkSoft }}>Hidden:</strong> {hid.length ? hid.join(', ') : 'None'}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, paddingTop: 2 }}>
+        <div style={{ padding: '11px 12px', border: `1px solid ${T.primaryLine}`, borderRadius: 9, background: T.primaryBg }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 750, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.6px' }}>Visible</span>
+            <strong style={{ fontSize: 13, color: T.primary }}>{vis.length}</strong>
+          </div>
+          <div style={{ fontSize: 11, color: T.inkSoft, lineHeight: 1.4, marginTop: 5 }}>{vis.length ? vis.join(', ') : 'No channels selected'}</div>
+        </div>
+        <div style={{ padding: '11px 12px', border: `1px solid ${T.line}`, borderRadius: 9, background: T.fill }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 750, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.6px' }}>Hidden</span>
+            <strong style={{ fontSize: 13, color: T.inkSoft }}>{hid.length}</strong>
+          </div>
+          <div style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.4, marginTop: 5 }}>{hid.length ? hid.join(', ') : 'Visible everywhere'}</div>
+        </div>
       </div>
-    </div>);
+    </StepCard>);
 
 }
 
 /* ── Section 4 ──────────────────────────────── */
 function S4({ form, set }) {
-  const OFFERS = [['', 'None'], ['OFFER-2026-SPRING', 'OFFER-2026-SPRING'], ['OFFER-2026-SUMMER', 'OFFER-2026-SUMMER'], ['OFFER-CASINO-Q2', 'OFFER-CASINO-Q2']];
+  const partners = ['Virtuoso', 'AMEX Travel', 'Ensemble', 'Signature Travel', 'Travel Leaders', 'Nexion', 'Avoya Travel'];
+  const selected = form.channelPartners.length;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div>
-        <h2 style={{ fontSize: 19, fontWeight: 700, color: T.ink, lineHeight: 1.2, marginBottom: 4 }}>Marketing &amp; Messaging</h2>
-        <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>Attach offer copy and discount messages. This section is optional.</p>
-      </div>
-      {!form.mktExpanded ?
-      <button onClick={() => set('mktExpanded', true)}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: `1.5px dashed #D8DFE8`, color: T.inkSoft, fontSize: 13.5, cursor: 'pointer', fontWeight: 500, padding: '14px 20px', borderRadius: 9, textAlign: 'left', transition: 'all .15s' }}
-      onMouseEnter={(e) => {e.currentTarget.style.borderColor = T.primary;e.currentTarget.style.color = T.primary;}}
-      onMouseLeave={(e) => {e.currentTarget.style.borderColor = '#D8DFE8';e.currentTarget.style.color = T.inkSoft;}}>
-          <span style={{ fontSize: 16 }}>+</span> Add marketing message
-        </button> :
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <TRow label="Include Discount Message" on={form.includeDiscount} onChange={(v) => set('includeDiscount', v)} />
-          {form.includeDiscount &&
-        <Field label="Discount Message Copy">
-              <textarea className="fi" style={{ ...iS(), minHeight: 90, resize: 'vertical', lineHeight: 1.6 }}
-          value={form.discountMessage} onChange={(e) => set('discountMessage', e.target.value)}
-          placeholder="e.g. Save 20% on this sailing — limited time offer." />
-            </Field>
-        }
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            {[['offerPrimary', 'Primary'], ['offerSecondary', 'Secondary'], ['offerTertiary', 'Tertiary']].map(([k, lbl]) =>
-          <Field key={k} label={lbl + ' Offer ID'}>
-                <Sel value={form[k]} onChange={(v) => set(k, v)} opts={OFFERS} />
-              </Field>
-          )}
-          </div>
-          <button onClick={() => set('mktExpanded', false)}
-        style={{ background: 'none', border: 'none', color: T.inkFaint, fontSize: 12.5, cursor: 'pointer', fontWeight: 500, padding: 0, textAlign: 'left' }}>
-            − Remove marketing messaging
-          </button>
+    <StepCard number={4} title="Partner Access" description="Choose which agency partners can access this Faretype through the MVAS B2B channel.">
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '11px 12px', borderRadius: 9, background: form.chMVASB2B ? T.primaryBg : T.amberLight, border: `1px solid ${form.chMVASB2B ? T.primaryLine : T.amberBorder}` }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={form.chMVASB2B ? T.inkSoft : T.amberDark} strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true">
+          <circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><line x1="12" y1="7.5" x2="12" y2="7.6" />
+        </svg>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: form.chMVASB2B ? T.ink : T.amberDark }}>{form.chMVASB2B ? 'MVAS B2B is enabled' : 'MVAS B2B is disabled in Step 3'}</div>
+          <div style={{ fontSize: 11.5, color: form.chMVASB2B ? T.inkSoft : T.amberDark, lineHeight: 1.45, marginTop: 2 }}>Partner selections are retained and apply whenever the B2B channel is enabled.</div>
         </div>
-      }
-    </div>);
+      </div>
 
+      <div style={{ border: `1px solid ${T.lineSoft}`, borderRadius: 10, background: T.fill, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <GroupHeading title="Partner restrictions" helper="Optional — leave empty to make the B2B channel available to every agency." />
+        <Field label="Applicable Channel Partners">
+          <MultiChip values={form.channelPartners} onChange={(v) => set('channelPartners', v)} opts={partners} placeholder="Search agencies…" ariaLabel="Search channel partners" />
+        </Field>
+      </div>
+
+      <div style={{ padding: '11px 12px', border: `1px solid ${T.line}`, borderRadius: 9, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 750, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.6px' }}>Partner availability</div>
+          <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 4 }}>{selected ? `${selected} selected partner${selected === 1 ? '' : 's'}` : 'Available to every agency'}</div>
+        </div>
+        <span style={{ minWidth: 28, height: 24, padding: '0 7px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: selected ? T.primaryBg : T.fill, border: `1px solid ${selected ? T.primaryLine : T.line}`, color: selected ? T.primary : T.inkSoft, fontSize: 11, fontWeight: 750 }}>{selected || 'All'}</span>
+      </div>
+    </StepCard>);
 }
 
 /* ── Section 5 ──────────────────────────────── */
 function S5({ form, set }) {
-  const ITEMS = [
-  { k: 'waiveGovTaxes', l: 'Waive All Government Taxes', w: 'Zeros out all government taxes. Comp/crew only.' },
-  { k: 'waiveCruiseExp', l: 'Waive All Cruise Expenses', w: 'Zeros out all cruise expenses. Comp/crew only.' },
-  { k: 'noFareDisplay', l: 'No Fare Display', w: 'Hides fare amounts on PDFs and in Cruise Control.' }];
-
+  const OFFERS = [['', 'None'], ['OFFER-2026-SPRING', 'OFFER-2026-SPRING'], ['OFFER-2026-SUMMER', 'OFFER-2026-SUMMER'], ['OFFER-CASINO-Q2', 'OFFER-CASINO-Q2']];
+  const MULTI_OFFERS = OFFERS.filter(([value]) => value).map(([value]) => value);
+  const offerRows = [
+  ['offerPrimary', '01', 'Primary offer', 'First promotion evaluated for this Faretype.'],
+  ['offerSecondary', '02', 'Secondary offer', 'Fallback when the primary offer is unavailable.'],
+  ['offerTertiary', '03', 'Tertiary offers', 'Final fallbacks in the offer sequence. Select one or more offers.']];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div>
-        <h2 style={{ fontSize: 19, fontWeight: 700, color: T.ink, lineHeight: 1.2, marginBottom: 4 }}>Taxes &amp; Privacy</h2>
-        <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>Configure exceptional financial behaviour for this fare.</p>
-      </div>
-      <WarnBanner>
-        <span style={{ fontSize: 13, color: T.amberDark, fontWeight: 500, lineHeight: 1.5 }}>Advanced settings — apply with care. These override core financial calculations.</span>
-      </WarnBanner>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {ITEMS.map(({ k, l, w }) =>
-        <div key={k} style={{ border: `1.5px solid ${form[k] ? T.amberBorder : '#E8EDF3'}`, borderRadius: 9, padding: '14px 16px', transition: 'border-color .2s' }}>
-            <TRow label={l} on={form[k]} onChange={(v) => set(k, v)} />
-            {form[k] &&
-          <div style={{ marginTop: 10, padding: '9px 12px', background: T.amberLight, border: `1px solid ${T.amberBorder}`, borderRadius: 7, fontSize: 12, color: T.amberDark, lineHeight: 1.5 }}>{w}</div>
+    <StepCard number={5} title="Marketing" description="Manage optional guest-facing copy and the prioritized offer sequence.">
+      {!form.mktExpanded ?
+      <div style={{ border: `1px dashed #CBD5E1`, borderRadius: 10, background: T.fill, padding: '22px 18px', textAlign: 'center' }}>
+          <div style={{ width: 36, height: 36, margin: '0 auto 10px', borderRadius: 9, border: `1px solid ${T.line}`, background: '#fff', color: T.inkSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11v2" /><path d="M6 9v6" /><path d="M10 6v12" /><path d="M14 9v6" /><path d="M18 11v2" /></svg>
+          </div>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: T.ink }}>No marketing content configured</div>
+          <div style={{ fontSize: 12, color: T.inkFaint, lineHeight: 1.45, maxWidth: 330, margin: '4px auto 13px' }}>Add promotional copy or offers only when this Faretype needs its own marketing treatment.</div>
+          <button onClick={() => set('mktExpanded', true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.primary, border: `1px solid ${T.primary}`, color: '#fff', fontSize: 12.5, cursor: 'pointer', fontWeight: 650, padding: '8px 12px', borderRadius: 8 }}>
+            <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> Add marketing configuration
+          </button>
+        </div> :
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ border: `1px solid ${form.includeDiscount ? T.primaryLine : T.lineSoft}`, borderRadius: 10, background: form.includeDiscount ? T.primaryBg : T.fill, padding: 14, display: 'flex', flexDirection: 'column', gap: 13 }}>
+            <GroupHeading title="Guest-facing message" helper="Add concise promotional copy where the booking channel supports it." />
+            <TRow label="Show discount message" helper="Displays promotional copy alongside this Faretype." on={form.includeDiscount} onChange={(v) => set('includeDiscount', v)} />
+          {form.includeDiscount &&
+            <Field label="Discount Message Copy" helper={`${form.discountMessage.length}/200 characters`}>
+                <textarea className="fi" maxLength={200} style={{ ...iS(), minHeight: 86, resize: 'vertical', lineHeight: 1.55 }}
+            value={form.discountMessage} onChange={(e) => set('discountMessage', e.target.value)}
+            placeholder="e.g. Save 20% on this sailing — limited time offer." />
+              </Field>
           }
           </div>
-        )}
-      </div>
-    </div>);
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            <GroupHeading title="Offer priority" helper="Offers are evaluated in sequence. Primary and Secondary accept one offer; Tertiary can include multiple fallbacks." />
+            {offerRows.map(([k, num, title, helper]) =>
+            <div key={k} style={{ border: `1px solid ${T.line}`, borderRadius: 10, background: '#fff', padding: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 11 }}>
+                  <span style={{ width: 24, height: 20, borderRadius: 5, background: T.primary, color: '#fff', fontSize: 9.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{num}</span>
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{title}</div>
+                    <div style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.35, marginTop: 2 }}>{helper}</div>
+                  </div>
+                </div>
+                <Field label={k === 'offerTertiary' ? 'Offers' : 'Offer'} helper={k === 'offerTertiary' ? 'Leave empty when no tertiary fallback is needed.' : undefined}>
+                  {k === 'offerTertiary' ?
+                    <MultiChip values={Array.isArray(form[k]) ? form[k] : form[k] ? [form[k]] : []} onChange={(v) => set(k, v)} opts={MULTI_OFFERS} placeholder="Select one or more offers…" ariaLabel="Tertiary offers" /> :
+                    <Sel ariaLabel={title} value={form[k]} onChange={(v) => set(k, v)} opts={OFFERS} />}
+                </Field>
+              </div>
+            )}
+          </div>
+
+          <button onClick={() => set('mktExpanded', false)}
+        style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: T.red, fontSize: 12, cursor: 'pointer', fontWeight: 600, padding: '2px 0' }}>
+            Remove marketing configuration
+          </button>
+        </div>
+      }
+    </StepCard>);
 
 }
 
 /* ── Section 6 ──────────────────────────────── */
+function S6({ form, set }) {
+  const WAIVERS = [
+  { k: 'waiveGovTaxes', l: 'Waive All Government Taxes', w: 'Zeros out all government taxes. Comp/crew only.' },
+  { k: 'waiveCruiseExp', l: 'Waive All Cruise Expenses', w: 'Zeros out port fees and cruise expenses. Comp/crew only.' }];
+  const waiverCount = WAIVERS.filter(({ k }) => form[k]).length;
+
+  return (
+    <StepCard number={6} title="Taxes & Privacy" description="Configure exceptional financial behavior and fare-display controls.">
+      <WarnBanner>
+        <div>
+          <div style={{ fontSize: 12.5, color: T.amberDark, fontWeight: 700, lineHeight: 1.35 }}>Restricted financial controls</div>
+          <div style={{ fontSize: 11.5, color: T.amberDark, lineHeight: 1.45, marginTop: 2 }}>Tax and expense waivers override core calculations. Use them only for approved comp, crew, or promotional fares.</div>
+        </div>
+      </WarnBanner>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <GroupHeading title="Financial waivers" helper="Both settings default to standard pricing calculations." />
+        {WAIVERS.map(({ k, l, w }) =>
+        <div key={k} style={{ border: `1px solid ${form[k] ? T.amberBorder : T.line}`, borderRadius: 10, padding: '13px 14px', background: form[k] ? T.amberLight : '#fff', transition: 'border-color .2s, background .2s' }}>
+            <TRow label={l} helper={form[k] ? 'Override active' : 'Standard calculation applies'} on={form[k]} onChange={(v) => set(k, v)} />
+            {form[k] &&
+          <div style={{ marginTop: 10, paddingTop: 9, borderTop: `1px solid ${T.amberBorder}`, fontSize: 11.5, color: T.amberDark, lineHeight: 1.45 }}>{w}</div>
+          }
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <GroupHeading title="Fare privacy" helper="Control whether monetary values appear in guest and internal outputs." />
+        <div style={{ border: `1px solid ${form.noFareDisplay ? T.primaryLine : T.line}`, borderRadius: 10, padding: '13px 14px', background: form.noFareDisplay ? T.primaryBg : '#fff', transition: 'border-color .2s, background .2s' }}>
+          <TRow label="Hide Fare Amounts" helper="Removes fare values from PDFs and Cruise Control views." on={form.noFareDisplay} onChange={(v) => set('noFareDisplay', v)} />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div style={{ padding: '11px 12px', background: T.fill, border: `1px solid ${T.line}`, borderRadius: 9 }}>
+          <div style={{ fontSize: 10, fontWeight: 750, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.6px' }}>Calculation</div>
+          <div style={{ fontSize: 12, fontWeight: 650, color: waiverCount ? T.amberDark : T.inkSoft, marginTop: 5 }}>{waiverCount ? `${waiverCount} waiver${waiverCount > 1 ? 's' : ''} active` : 'Standard charges'}</div>
+        </div>
+        <div style={{ padding: '11px 12px', background: form.noFareDisplay ? T.primaryBg : T.fill, border: `1px solid ${form.noFareDisplay ? T.primaryLine : T.line}`, borderRadius: 9 }}>
+          <div style={{ fontSize: 10, fontWeight: 750, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.6px' }}>Fare display</div>
+          <div style={{ fontSize: 12, fontWeight: 650, color: form.noFareDisplay ? T.primary : T.inkSoft, marginTop: 5 }}>{form.noFareDisplay ? 'Amounts hidden' : 'Amounts visible'}</div>
+        </div>
+      </div>
+    </StepCard>);
+
+}
+
+/* ── Section 7 ──────────────────────────────── */
 const SUPP_CABIN = [['', 'Any'], ['Interior', 'Interior'], ['Ocean View', 'Ocean View'], ['Balcony', 'Balcony'], ['Suite', 'Suite']];
 /* Labels say how the supplement is counted, not just what it is counted against. */
 const SUPP_RULE = [['Booking', 'Per booking'], ['Cabin', 'Per cabin'], ['Guest', 'Per guest']];
-const SUPP_FPOS = [['', 'Select…'], ['Fare Position 1', 'Fare Position 1'], ['Fare Position 2', 'Fare Position 2'], ['Fare Position 3', 'Fare Position 3']];
+const SUPP_FPOS = ['Fare Position 1', 'Fare Position 2', 'Fare Position 3', 'Fare Position 4'];
 const SUPP_TYPES = [['comp', 'Complementary'], ['paid', 'Paid']];
 const SUPP_SAILINGS = ['IS-2026-09-01', 'IS-2026-10-15', 'IS-2026-11-20', 'IS-2026-12-05'];
 const typeLabel = (t) => t === 'comp' ? 'Complementary' : 'Paid';
@@ -433,7 +710,7 @@ const ruleLabel = (r) => ({ Booking: 'Per booking', Cabin: 'Per cabin', Guest: '
 
 /* Custom rows get a session-unique id so the review diff can track them across renders. */
 let suppSeq = 0;
-const mkCustomSupp = () => ({ ...mkSupp(`sup-custom-${++suppSeq}`, '', 'paid'), enabled: true, custom: true });
+const mkCustomSupp = (type) => ({ ...mkSupp(`sup-custom-${++suppSeq}`, `${typeLabel(type)} Supplement`, type), enabled: true, custom: true });
 
 function SuppBadge({ type, muted }) {
   const comp = type === 'comp';
@@ -449,46 +726,47 @@ function SuppBadge({ type, muted }) {
    noise the old `—` columns were made of. "All sailings" is the default, so it stays out. */
 function suppRecap(s) {
   const n = s.applicableSailings?.length || 0;
-  return [s.cabin || 'Any cabin', ruleLabel(s.rule), s.maxCount && `Max ${s.maxCount}`, s.farePos,
+  const farePositions = Array.isArray(s.farePos) ? s.farePos.join(', ') : s.farePos;
+  return [s.cabin || 'Any cabin', ruleLabel(s.rule), s.maxCount && `Max ${s.maxCount}`, farePositions,
   n ? `${n} sailing${n > 1 ? 's' : ''}` : null].
   filter(Boolean).join(' · ');
 }
 
-function SuppDetail({ supp, onUpdate }) {
+function SuppDetail({ supp, onUpdate, onAdd }) {
   const s = (k, v) => onUpdate({ ...supp, [k]: v });
   return (
     <div style={{ padding: '14px 13px 15px', background: '#FBFCFE', borderRadius: '0 0 9px 9px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {supp.custom &&
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 12 }}>
-          <Field label="Supplement Title" helper="Shown in the table and on the review screen.">
-            <input className="fi" style={iS()} value={supp.title} onChange={(e) => s('title', e.target.value)} placeholder="e.g. Spa Credit Supplement" />
-          </Field>
-          <Field label="Type">
-            <Sel value={supp.type} onChange={(v) => s('type', v)} opts={SUPP_TYPES} />
-          </Field>
-        </div>
-      }
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Supplement Name">
+        <Field label="Supplement Name" required>
           <input className="fi" style={iS()} value={supp.name} onChange={(e) => s('name', e.target.value)} placeholder="e.g. Drinks Package" />
         </Field>
         <Field label="Cabin Category">
-          <Sel value={supp.cabin} onChange={(v) => s('cabin', v)} opts={SUPP_CABIN} />
+          <Sel ariaLabel="Cabin category" value={supp.cabin} onChange={(v) => s('cabin', v)} opts={SUPP_CABIN} />
         </Field>
         <Field label="Rule" helper="Counting & application method.">
-          <Sel value={supp.rule} onChange={(v) => s('rule', v)} opts={SUPP_RULE} />
+          <Sel ariaLabel="Supplement rule" value={supp.rule} onChange={(v) => s('rule', v)} opts={SUPP_RULE} />
         </Field>
         <Field label="Max Count">
           <input className="fi" type="number" style={iS()} value={supp.maxCount} onChange={(e) => s('maxCount', e.target.value)} placeholder="1" />
         </Field>
       </div>
-      <Field label="Allocation to Fare Position">
-        <Sel value={supp.farePos} onChange={(v) => s('farePos', v)} opts={SUPP_FPOS} />
+      <Field label="Allocation to Fare Positions" helper="Select one or more fare positions.">
+        <MultiChip values={Array.isArray(supp.farePos) ? supp.farePos : supp.farePos ? [supp.farePos] : []}
+        onChange={(v) => s('farePos', v)} opts={SUPP_FPOS} placeholder="Select fare positions…" ariaLabel="Fare position allocation" />
       </Field>
       <Field label="Applicable Sailings" helper="Leave empty to apply to all sailings.">
         <MultiChip values={supp.applicableSailings} onChange={(v) => s('applicableSailings', v)}
         opts={SUPP_SAILINGS} placeholder="Search sailings…" />
       </Field>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 2 }}>
+        <button type="button" onClick={onAdd}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 34, padding: '7px 12px', borderRadius: 8, border: `1px solid ${T.primary}`, background: T.primary, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'background .15s, border-color .15s, color .15s' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Add supplement
+        </button>
+      </div>
     </div>);
 
 }
@@ -496,10 +774,11 @@ function SuppDetail({ supp, onUpdate }) {
 /* One supplement = one self-contained card. A table would need columns, and the only two
    candidates (cabin, rule) are empty until a row is switched on — and then repeat what the
    form directly beneath already says. So the state lives in the summary line instead. */
-function SuppCard({ supp, open, onToggleOpen, onUpdate, onSetEnabled, onRemove }) {
+function SuppCard({ supp, position, open, onToggleOpen, onUpdate, onSetEnabled, onRemove, onAdd }) {
   const on = supp.enabled;
   const [hover, setHover] = useState(false);
   const incomplete = on && !supp.name;
+  const displayName = supp.name || `Configuration ${position}`;
   return (
     <div style={{
       border: `1px solid ${open ? '#CBD5E1' : on ? T.line : '#EAEFF4'}`,
@@ -512,31 +791,29 @@ function SuppCard({ supp, open, onToggleOpen, onUpdate, onSetEnabled, onRemove }
       onClick={() => on && onToggleOpen()}
       onKeyDown={(e) => {if (on && (e.key === 'Enter' || e.key === ' ')) {e.preventDefault();onToggleOpen();}}}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '12px 12px 12px 9px', cursor: on ? 'pointer' : 'default', borderRadius: open ? '9px 9px 0 0' : 9, background: on && hover && !open ? '#FAFCFE' : 'transparent', transition: 'background .15s' }}>
+      style={{ display: 'flex', alignItems: open ? 'flex-start' : 'center', gap: 7, padding: open ? '10px 11px 9px 9px' : '8px 10px 8px 8px', minHeight: open ? 52 : 42, cursor: on ? 'pointer' : 'default', borderRadius: open ? '9px 9px 0 0' : 9, background: on && hover && !open ? '#FAFCFE' : 'transparent', transition: 'background .15s, padding .15s, min-height .15s' }}>
 
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.6" strokeLinecap="round"
-        style={{ flexShrink: 0, marginTop: 4, opacity: on ? 1 : 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .18s' }}>
+        style={{ flexShrink: 0, marginTop: open ? 4 : 0, opacity: on ? 1 : 0, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .18s, margin-top .15s' }}>
           <polyline points="9 6 15 12 9 18" />
         </svg>
 
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35, color: on ? T.ink : T.inkSoft }}>
-              {supp.title || 'Untitled supplement'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', minWidth: 0 }}>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, fontWeight: 650, lineHeight: 1.3, color: on ? T.ink : T.inkSoft }}>
+              {displayName}
             </span>
-            <SuppBadge type={supp.type} muted={!on} />
           </div>
           {on &&
-          <div style={{ marginTop: 3, fontSize: 11.5, lineHeight: 1.45 }}>
+          <div style={{ marginTop: open ? 3 : 1, fontSize: 11, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {incomplete ?
             <span style={{ color: T.amberDark, fontWeight: 500 }}>Needs configuration</span> :
-            <span style={{ color: T.inkSoft, fontWeight: 500 }}>{supp.name}</span>}
-              <span style={{ color: T.inkFaint }}> · {suppRecap(supp)}</span>
+            <span style={{ color: T.inkSoft, fontWeight: 500 }}>{suppRecap(supp)}</span>}
             </div>
           }
         </div>
 
-        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 1 }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, marginTop: open ? 1 : 0 }}>
           {supp.custom &&
           <button onClick={onRemove} title="Remove supplement" aria-label={`Remove ${supp.title || 'supplement'}`}
           style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', borderRadius: 5, cursor: 'pointer', color: T.inkFaint, padding: 0, transition: 'background .15s, color .15s' }}
@@ -547,72 +824,100 @@ function SuppCard({ supp, open, onToggleOpen, onUpdate, onSetEnabled, onRemove }
               </svg>
             </button>
           }
-          <Toggle on={on} onChange={onSetEnabled} />
+          <Toggle on={on} onChange={onSetEnabled} label={`${displayName} included`} />
         </div>
       </div>
 
       {open && on &&
       <div style={{ borderTop: `1px solid ${T.lineSoft}` }}>
-          <SuppDetail supp={supp} onUpdate={onUpdate} />
+          <SuppDetail supp={supp} onUpdate={onUpdate} onAdd={onAdd} />
         </div>
       }
     </div>);
 
 }
 
-function S6({ form, setForm }) {
-  const [open, setOpen] = useState(() => new Set(form.supp.filter((s) => s.enabled).map((s) => s.id)));
-  const mark = (id, isOpen) => setOpen((p) => {const n = new Set(p);isOpen ? n.add(id) : n.delete(id);return n;});
+function SuppGroup({ type, entries, open, onMark, onUpdate, onSetEnabled, onRemove, onAdd }) {
+  const label = typeLabel(type);
+  const included = entries.filter(({ supp }) => supp.enabled).length;
+  const helper = type === 'comp' ? 'Benefits included at no additional charge.' : 'Chargeable extras added to the booking.';
+  return (
+    <section aria-label={`${label} supplement configurations`} style={{ border:`1px solid ${T.line}`, borderRadius:10, background:'#fff', boxShadow:'0 1px 2px rgba(15,23,42,.04)', overflow:'visible' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:9, padding:'10px 12px', borderRadius:'10px 10px 0 0', borderBottom:`1px solid ${T.line}`, background:T.fill }}>
+        <SuppBadge type={type} />
+        <div style={{ minWidth:0, flex:1 }}>
+          <div style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{label} Supplement</div>
+          <div style={{ marginTop:1, fontSize:10.5, color:T.inkFaint, lineHeight:1.35 }}>{helper}</div>
+        </div>
+        <span style={{ padding:'2px 7px', borderRadius:999, background:included ? T.tealLight : '#fff', border:`1px solid ${included ? '#D1FAE5' : T.line}`, color:included ? T.tealDark : T.inkFaint, fontSize:9.5, fontWeight:750, whiteSpace:'nowrap' }}>{included} of {entries.length} included</span>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:6, padding:8, background:'#FBFCFE', borderRadius:'0 0 10px 10px' }}>
+        {entries.map(({ supp, index }, position) =>
+        <SuppCard key={supp.id} supp={supp} position={position + 1} open={open.has(supp.id)}
+        onToggleOpen={() => onMark(supp.id, !open.has(supp.id))}
+        onUpdate={(v) => onUpdate(index, v)}
+        onSetEnabled={(v) => onSetEnabled(index, v)}
+        onAdd={() => onAdd(supp.id, type)}
+        onRemove={() => onRemove(supp.id)} />
+        )}
+      </div>
+    </section>);
+}
+
+function S7({ form, setForm }) {
+  const [open, setOpen] = useState(() => {
+    const firstEnabled = form.supp.find((s) => s.enabled);
+    return new Set(firstEnabled ? [firstEnabled.id] : []);
+  });
+  const mark = (id, isOpen) => setOpen(new Set(isOpen ? [id] : []));
 
   const updSupp = (i, v) => setForm((p) => {const supp = [...p.supp];supp[i] = v;return { ...p, supp };});
-  const setEnabled = (i, v) => {mark(form.supp[i].id, v);updSupp(i, { ...form.supp[i], enabled: v });};
-  const addSupp = () => {
-    const s = mkCustomSupp();
-    mark(s.id, true);
-    setForm((p) => ({ ...p, supp: [...p.supp, s] }));
+  const setEnabled = (i, v) => {
+    const id = form.supp[i].id;
+    setOpen((p) => v ? new Set([id]) : p.has(id) ? new Set() : new Set(p));
+    updSupp(i, { ...form.supp[i], enabled: v });
   };
-  const removeSupp = (i) => {
-    mark(form.supp[i].id, false);
-    setForm((p) => ({ ...p, supp: p.supp.filter((_, j) => j !== i) }));
+  const addSuppAfter = (currentId, type) => {
+    const nextSupp = mkCustomSupp(type);
+    setForm((p) => {
+      const supp = [...p.supp];
+      const currentIndex = supp.findIndex((item) => item.id === currentId);
+      const lastTypeIndex = supp.reduce((last, item, index) => item.type === type ? index : last, -1);
+      const insertAt = currentIndex >= 0 ? currentIndex + 1 : lastTypeIndex >= 0 ? lastTypeIndex + 1 : supp.length;
+      supp.splice(insertAt, 0, nextSupp);
+      return { ...p, supp };
+    });
+    setOpen(new Set([nextSupp.id]));
   };
-
+  const removeSupp = (id) => {
+    setForm((p) => ({ ...p, supp: p.supp.filter((item) => item.id !== id) }));
+    setOpen((p) => p.has(id) ? new Set() : new Set(p));
+  };
   const activeCount = form.supp.filter((s) => s.enabled).length;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* The count sits with the heading it describes, not buried under the list. */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
-        <div>
-          <h2 style={{ fontSize: 19, fontWeight: 700, color: T.ink, lineHeight: 1.2, marginBottom: 4 }}>Supplements</h2>
-          <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5 }}>Define what extras are bundled or charged with this fare, and how they are applied.</p>
-        </div>
-        <span style={{ flexShrink: 0, marginTop: 3, fontSize: 11, fontWeight: 700, letterSpacing: '.2px', whiteSpace: 'nowrap', padding: '3px 9px', borderRadius: 999,
-          color: activeCount ? T.tealDark : T.inkFaint,
-          background: activeCount ? T.tealLight : T.fill,
-          border: `1px solid ${activeCount ? '#D1FAE5' : T.line}` }}>
-          {activeCount} of {form.supp.length} on
-        </span>
-      </div>
+    <StepCard number={7} title="Supplements" description="Define which extras are included or charged, and how each one is applied."
+    aside={<span style={{ fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap', padding: '3px 9px', borderRadius: 999, color: activeCount ? T.tealDark : T.inkFaint, background: activeCount ? T.tealLight : T.fill, border: `1px solid ${activeCount ? '#D1FAE5' : T.line}` }}>{activeCount} of {form.supp.length} included</span>}>
 
       {/* Guidance shows only while it is actionable, and sits with the control it explains. */}
       {!activeCount && form.supp.length > 0 &&
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', background: T.fill, border: `1px solid ${T.line}`, borderRadius: 9 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '11px 12px', background: T.primaryBg, border: `1px solid ${T.primaryLine}`, borderRadius: 9 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.inkSoft} strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
             <circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><line x1="12" y1="7.5" x2="12" y2="7.6" />
           </svg>
           <span style={{ fontSize: 12, color: T.inkSoft, lineHeight: 1.5 }}>
-            No supplements are included in this fare. Turn one on to set its cabin, rule and sailings.
+            No supplements are included. Turn one on to configure its product, cabin scope, application rule, and sailings.
           </span>
         </div>
       }
 
       {/* Cards, not a table — and no overflow clipping, so the Applicable Sailings dropdown can escape. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {form.supp.map((s, i) =>
-        <SuppCard key={s.id} supp={s} open={open.has(s.id)}
-        onToggleOpen={() => mark(s.id, !open.has(s.id))}
-        onUpdate={(v) => updSupp(i, v)}
-        onSetEnabled={(v) => setEnabled(i, v)}
-        onRemove={() => removeSupp(i)} />
+        <GroupHeading title="Available supplements" helper="Enabled supplements become part of this Faretype configuration." />
+        {SUPP_TYPES.map(([type]) =>
+        <SuppGroup key={type} type={type}
+        entries={form.supp.map((supp, index) => ({ supp, index })).filter(({ supp }) => supp.type === type)}
+        open={open} onMark={mark} onUpdate={updSupp} onSetEnabled={setEnabled}
+        onAdd={addSuppAfter} onRemove={removeSupp} />
         )}
 
         {!form.supp.length &&
@@ -621,33 +926,25 @@ function S6({ form, setForm }) {
           </div>
         }
 
-        <button onClick={addSupp}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', padding: '11px 12px', border: '1.5px dashed #CBD5E1', borderRadius: 10, background: 'transparent', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: T.inkSoft, transition: 'color .15s, border-color .15s, background .15s' }}
-        onMouseEnter={(e) => {e.currentTarget.style.color = T.ink;e.currentTarget.style.borderColor = '#94A3B8';e.currentTarget.style.background = T.fill;}}
-        onMouseLeave={(e) => {e.currentTarget.style.color = T.inkSoft;e.currentTarget.style.borderColor = '#CBD5E1';e.currentTarget.style.background = 'transparent';}}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Add supplement
-        </button>
       </div>
-    </div>);
+    </StepCard>);
 
 }
 
-/* ── Section 7 · Review Changes ──────────────── */
+/* ── Section 8 · Review Changes ──────────────── */
 const FIELD_META = {
   faretypeCode: [1, 'Faretype Code'], fareBasisCode: [1, 'Farebasis Code'], faretypeGroup: [1, 'Faretype Group'], source: [1, 'Source'],
   cancellationPolicy: [2, 'Cancellation Policy'], depositPolicy: [2, 'Deposit Policy'], residency: [2, 'Residency'], minAge: [2, 'Minimum Age'],
   minOccupancy: [2, 'Min Occupancy'], maxOccupancy: [2, 'Max Occupancy'], advancedPurchase: [2, 'Advanced Purchase'], boardingPass: [2, 'Boarding Pass'],
   standbyEligible: [2, 'Standby Eligible'], upgradeEligible: [2, 'Upgrade Eligible'], couponEligible: [2, 'Coupon Eligible'],
   cruiseControlAccess: [3, 'Cruise Control Access'], chMVASB2C: [3, 'MVAS B2C'], chMVASB2B: [3, 'MVAS B2B'], chCC: [3, 'Cruise Control'],
-  chTradeAPI: [3, 'Trade API'], chCRM: [3, 'CRM'], chGroup: [3, 'Group Desk'], chInternal: [3, 'Internal Only'], channelPartners: [3, 'Channel Partners'],
-  includeDiscount: [4, 'Include Discount Message'], discountMessage: [4, 'Discount Message'],
-  offerPrimary: [4, 'Primary Offer'], offerSecondary: [4, 'Secondary Offer'], offerTertiary: [4, 'Tertiary Offer'],
-  waiveGovTaxes: [5, 'Waive Government Taxes'], waiveCruiseExp: [5, 'Waive Cruise Expenses'], noFareDisplay: [5, 'No Fare Display']
+  chTradeAPI: [3, 'Trade API'], chCRM: [3, 'CRM'], chGroup: [3, 'Group Desk'],
+  channelPartners: [4, 'Partner Access'],
+  includeDiscount: [5, 'Include Discount Message'], discountMessage: [5, 'Discount Message'],
+  offerPrimary: [5, 'Primary Offer'], offerSecondary: [5, 'Secondary Offer'], offerTertiary: [5, 'Tertiary Offers'],
+  waiveGovTaxes: [6, 'Waive Government Taxes'], waiveCruiseExp: [6, 'Waive Cruise Expenses'], noFareDisplay: [6, 'No Fare Display']
 };
-const SUPP_FIELDS = { enabled: 'Status', title: 'Title', type: 'Type', name: 'Supplement Name', cabin: 'Cabin Category', rule: 'Rule', maxCount: 'Max Count', farePos: 'Fare Position', applicableSailings: 'Applicable Sailings' };
+const SUPP_FIELDS = { enabled: 'Status', title: 'Title', type: 'Type', name: 'Supplement Name', cabin: 'Cabin Category', rule: 'Rule', maxCount: 'Max Count', farePos: 'Fare Positions', applicableSailings: 'Applicable Sailings' };
 
 function fmtVal(v) {
   if (v === true) return 'Enabled';
@@ -657,7 +954,7 @@ function fmtVal(v) {
   return String(v);
 }
 const fmtSuppVal = (k, v) => k === 'type' ? typeLabel(v) : k === 'rule' ? ruleLabel(v) : fmtVal(v);
-const suppName = (s) => s.title || 'Untitled supplement';
+const suppName = (s) => s.name || s.title || 'Untitled supplement';
 
 function diffForm(a, b) {
   const out = [];
@@ -671,17 +968,17 @@ function diffForm(a, b) {
   (b.supp || []).forEach((s) => {
     const o = was.get(s.id);
     if (!o) {
-      out.push({ sec: 6, label: `${suppName(s)} · ${typeLabel(s.type)}`, from: 'Not present', to: 'Added' });
+      out.push({ sec: 7, label: `${suppName(s)} · ${typeLabel(s.type)}`, from: 'Not present', to: 'Added' });
       return;
     }
     Object.keys(SUPP_FIELDS).forEach((k) => {
       if (JSON.stringify(o[k]) !== JSON.stringify(s[k]))
-      out.push({ sec: 6, label: `${suppName(s)} · ${SUPP_FIELDS[k]}`, from: fmtSuppVal(k, o[k]), to: fmtSuppVal(k, s[k]) });
+      out.push({ sec: 7, label: `${suppName(s)} · ${SUPP_FIELDS[k]}`, from: fmtSuppVal(k, o[k]), to: fmtSuppVal(k, s[k]) });
     });
   });
   const now = new Set((b.supp || []).map((s) => s.id));
   (a.supp || []).forEach((o) => {
-    if (!now.has(o.id)) out.push({ sec: 6, label: `${suppName(o)} · ${typeLabel(o.type)}`, from: 'Present', to: 'Removed' });
+    if (!now.has(o.id)) out.push({ sec: 7, label: `${suppName(o)} · ${typeLabel(o.type)}`, from: 'Present', to: 'Removed' });
   });
   return out;
 }
@@ -690,77 +987,94 @@ const DEMO_DIFF = [
 { sec: 1, label: 'Faretype Group', from: 'Core', to: 'Non-Refundable' },
 { sec: 2, label: 'Cancellation Policy', from: 'Standard', to: 'Non-Refundable 100%' },
 { sec: 3, label: 'Trade API', from: 'Disabled', to: 'Enabled' },
-{ sec: 6, label: 'Paid Onboard Supplement · Status', from: 'Disabled', to: 'Enabled' }];
+{ sec: 7, label: 'Paid Supplement · Status', from: 'Disabled', to: 'Enabled' }];
 
 
-const valS = { fontSize: 12.5, lineHeight: 1.35, padding: '3px 8px', borderRadius: 6, fontFamily: "'SF Mono', Menlo, monospace", wordBreak: 'break-word' };
+function ChangeValue({ label, value, after }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 9.5, fontWeight: 750, color: after ? T.primary : T.inkFaint, letterSpacing: '.65px', textTransform: 'uppercase', marginBottom: 5 }}>{label}</div>
+      <div style={{ minHeight: 34, display: 'flex', alignItems: 'center', padding: '7px 9px', borderRadius: 7, border: `1px solid ${after ? T.primaryLine : T.line}`, background: after ? T.primaryBg : T.fill, color: after ? T.primary : T.inkSoft, fontSize: 11.5, fontWeight: after ? 650 : 500, lineHeight: 1.35, fontFamily: "'SF Mono', Menlo, monospace", wordBreak: 'break-word' }}>
+        {value}
+      </div>
+    </div>);
+
+}
 
 function DiffRow({ d, first }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px,34%) 1fr', gap: 16, alignItems: 'start', padding: '12px 16px', borderTop: first ? 'none' : `1px solid ${T.lineSoft}` }}>
-      <div style={{ fontSize: 12.5, color: T.inkLabel, lineHeight: 1.4, paddingTop: 3 }}>{d.label}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ ...valS, color: T.inkFaint, background: T.fill, textDecoration: 'line-through', textDecorationColor: '#CBD5E1' }}>{d.from}</span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="2.4" strokeLinecap="round" style={{ flexShrink: 0 }}><line x1="5" y1="12" x2="18" y2="12" /><polyline points="13 7 18 12 13 17" /></svg>
-        <span style={{ ...valS, color: T.tealDark, background: T.tealLight, fontWeight: 600 }}>{d.to}</span>
+    <div style={{ padding: '12px 14px 14px', borderTop: first ? 'none' : `1px solid ${T.lineSoft}` }}>
+      <div style={{ fontSize: 12.5, fontWeight: 650, color: T.ink, lineHeight: 1.35 }}>{d.label}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 24px minmax(0,1fr)', gap: 7, alignItems: 'end', marginTop: 9 }}>
+        <ChangeValue label="Current" value={d.from} />
+        <div style={{ width: 24, height: 24, marginBottom: 5, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="18" y2="12" /><polyline points="13 7 18 12 13 17" /></svg>
+        </div>
+        <ChangeValue label="After save" value={d.to} after />
       </div>
     </div>);
 
 }
 
-function Stat({ value, label }) {
+function ImpactStat({ value, label, mono }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span style={{ fontSize: 20, fontWeight: 700, color: T.ink, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-      <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: T.inkFaint, whiteSpace: 'nowrap' }}>{label}</span>
+    <div style={{ minWidth: 0, padding: '10px 11px', background: '#fff', border: `1px solid ${T.line}`, borderRadius: 8 }}>
+      <div style={{ fontSize: 9.5, fontWeight: 750, letterSpacing: '.6px', textTransform: 'uppercase', color: T.inkFaint, marginBottom: 5, whiteSpace: 'nowrap' }}>{label}</div>
+      <div style={{ fontSize: mono ? 12.5 : 18, fontWeight: 700, color: T.ink, lineHeight: 1.2, fontFamily: mono ? "'SF Mono', Menlo, monospace" : 'inherit', fontVariantNumeric: 'tabular-nums', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
     </div>);
 
 }
 
-function S7({ diff, demo, farecodes, code, onNav }) {
+function S8({ diff, demo, farecodes, code, onNav }) {
+  const isPreview = !diff.length;
   const rows = diff.length ? diff : demo;
-  const groups = SECTIONS.filter((s) => s.n <= 6).map((s) => ({ ...s, items: rows.filter((r) => r.sec === s.n) })).filter((g) => g.items.length);
+  const groups = SECTIONS.filter((s) => s.n <= 7).map((s) => ({ ...s, items: rows.filter((r) => r.sec === s.n) })).filter((g) => g.items.length);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <h2 style={{ fontSize: 19, fontWeight: 700, color: T.ink, lineHeight: 1.2, marginBottom: 4 }}>Review Changes</h2>
-        <p style={{ fontSize: 13, color: T.inkSoft, lineHeight: 1.5, maxWidth: '52ch' }}>Only fields you changed are listed. Everything else stays exactly as it is.</p>
-      </div>
+    <StepCard number={8} title="Review Changes" description="Confirm the exact field updates and linked Farecode impact before saving."
+    aside={<span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 999, border: `1px solid ${isPreview ? T.amberBorder : T.primaryLine}`, background: isPreview ? T.amberLight : T.primaryBg, color: isPreview ? T.amberDark : T.primary, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{isPreview ? 'Preview data' : `${rows.length} ${rows.length === 1 ? 'update' : 'updates'}`}</span>}>
 
-      {/* Summary */}
-      <div style={{ border: `1px solid ${T.line}`, borderRadius: 12, background: T.fill, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 20 }}>
-        <Stat value={rows.length} label={rows.length === 1 ? 'Field changed' : 'Fields changed'} />
-        <div style={{ width: 1, alignSelf: 'stretch', background: T.line }} />
-        {!!farecodes?.length &&
-        <>
-            <Stat value={farecodes.length} label="Farecodes affected" />
-            <div style={{ width: 1, alignSelf: 'stretch', background: T.line }} />
-          </>
-        }
-        <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: T.inkFaint, marginBottom: 3, whiteSpace: 'nowrap' }}>Faretype</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, fontFamily: "'SF Mono', Menlo, monospace", whiteSpace: 'nowrap' }}>{code || '—'}</div>
+      {/* Save impact summary */}
+      <div style={{ padding: 13, border: `1px solid ${T.line}`, borderRadius: 10, background: T.fill }}>
+        <GroupHeading title="Save impact" helper="A compact summary of the record and downstream scope affected by this save." />
+        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr .8fr .9fr', gap: 8, marginTop: 12 }}>
+          <ImpactStat value={code || '—'} label="Faretype" mono />
+          <ImpactStat value={rows.length} label={isPreview ? 'Preview rows' : 'Fields changing'} />
+          <ImpactStat value={farecodes?.length || 0} label="Linked farecodes" />
         </div>
       </div>
 
-      {!diff.length &&
-      <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 13px', background: T.amberLight, border: `1px solid ${T.amberBorder}`, borderRadius: 9 }}>
-          <span style={{ fontSize: 12.5, color: T.amberDark, lineHeight: 1.45 }}>No edits made in this session. Sample changes are shown so the review layout can be assessed.</span>
+      {isPreview &&
+      <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 12px', background: T.amberLight, border: `1px solid ${T.amberBorder}`, borderRadius: 9 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.amberDark} strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><line x1="12" y1="7.5" x2="12" y2="7.6" /></svg>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.amberDark, marginBottom: 2 }}>Previewing the review layout</div>
+            <div style={{ fontSize: 11.5, color: T.amberDark, lineHeight: 1.45 }}>No edits were made in this session, so representative changes are shown below.</div>
+          </div>
         </div>
       }
 
-      {/* Grouped diff */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* One review surface keeps section context without fragmenting each change into a separate card. */}
+      <div style={{ border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
+        <div style={{ padding: '12px 14px', background: T.fill, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>Proposed updates</div>
+            <div style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.4, marginTop: 2 }}>Current and after-save values are shown together for quick verification.</div>
+          </div>
+          <span style={{ padding: '2px 7px', borderRadius: 999, background: '#fff', border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{rows.length} total</span>
+        </div>
         {groups.map((g) =>
-        <div key={g.n} style={{ border: `1px solid ${T.line}`, borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
-            <div style={{ padding: '11px 16px', background: T.navFill, borderBottom: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontFamily: "'SF Mono', Menlo, monospace", fontSize: 10.5, fontWeight: 700, color: T.inkFaint }}>{String(g.n).padStart(2, '0')}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{g.l}</span>
-              <span style={{ padding: '1px 7px', borderRadius: 999, background: '#fff', border: `1px solid ${T.line}`, fontSize: 11, fontWeight: 600, color: T.inkSoft }}>{g.items.length}</span>
+        <div key={g.n} style={{ borderTop: `1px solid ${T.line}` }}>
+            <div style={{ padding: '9px 12px', background: '#FBFCFE', borderBottom: `1px solid ${T.lineSoft}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 23, height: 19, borderRadius: 5, background: T.primary, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, flexShrink: 0 }}>{String(g.n).padStart(2, '0')}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink, minWidth: 0 }}>{g.l}</span>
+              <span style={{ padding: '1px 6px', borderRadius: 999, background: T.primaryBg, border: `1px solid ${T.primaryLine}`, fontSize: 10, fontWeight: 700, color: T.primary }}>{g.items.length}</span>
               <button onClick={() => onNav?.(g.n)}
-            style={{ marginLeft: 'auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontWeight: 600, color: T.inkSoft, textDecoration: 'underline', textUnderlineOffset: 3 }}
-            onMouseEnter={(e) => e.currentTarget.style.color = T.ink}
-            onMouseLeave={(e) => e.currentTarget.style.color = T.inkSoft}>Edit</button>
+              style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: '3px 0', cursor: 'pointer', fontSize: 11, fontWeight: 650, color: T.inkSoft }}
+              onMouseEnter={(e) => e.currentTarget.style.color = T.ink}
+              onMouseLeave={(e) => e.currentTarget.style.color = T.inkSoft}>
+                Edit section
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="18" y2="12" /><polyline points="13 7 18 12 13 17" /></svg>
+              </button>
             </div>
             {g.items.map((d, i) => <DiffRow key={i} d={d} first={i === 0} />)}
           </div>
@@ -768,25 +1082,36 @@ function S7({ diff, demo, farecodes, code, onNav }) {
       </div>
 
       {!!farecodes?.length &&
-      <div style={{ border: `1px solid ${T.line}`, borderRadius: 12, padding: '14px 16px' }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: T.inkFaint, marginBottom: 4 }}>Farecodes receiving these changes</div>
-          <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.5, marginBottom: 10 }}>Inherited values update on save. Overridden fields on a farecode are left untouched.</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {farecodes.map((f) =>
-          <span key={f} style={{ padding: '3px 9px', borderRadius: 6, background: T.fill, border: `1px solid ${T.line}`, fontSize: 11.5, fontFamily: "'SF Mono', Menlo, monospace", color: T.inkSoft }}>{f}</span>
-          )}
+      <div style={{ border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
+          <div style={{ padding: '11px 13px', background: T.fill, borderBottom: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', gap: 9 }}>
+            <span style={{ width: 28, height: 28, borderRadius: 7, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary, flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>Inheritance impact</div>
+              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 1 }}>{farecodes.length} linked {farecodes.length === 1 ? 'Farecode receives' : 'Farecodes receive'} inherited updates.</div>
+            </div>
+          </div>
+          <div style={{ padding: '12px 13px' }}>
+            <div style={{ fontSize: 11.5, color: T.inkSoft, lineHeight: 1.5, marginBottom: 10 }}>Inherited values update when you save. Farecode-level overrides remain protected and unchanged.</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {farecodes.map((f) =>
+            <span key={f} style={{ padding: '4px 8px', borderRadius: 6, background: T.fill, border: `1px solid ${T.line}`, fontSize: 11, fontFamily: "'SF Mono', Menlo, monospace", color: T.inkSoft }}>{f}</span>
+            )}
+            </div>
           </div>
         </div>
       }
-    </div>);
+    </StepCard>);
 
 }
 
 /* ── Section logic ──────────────────────────── */
 const SECTIONS = [
 { n: 1, l: 'Basics & Grouping' }, { n: 2, l: 'Policies & Eligibility' },
-{ n: 3, l: 'Channels & Access' }, { n: 4, l: 'Marketing & Messaging' },
-{ n: 5, l: 'Taxes & Privacy' }, { n: 6, l: 'Supplements' }, { n: 7, l: 'Review Changes' }];
+{ n: 3, l: 'Channel Access' }, { n: 4, l: 'Partner Access' },
+{ n: 5, l: 'Marketing' }, { n: 6, l: 'Taxes & Privacy' },
+{ n: 7, l: 'Supplements' }, { n: 8, l: 'Review Changes' }];
 
 
 function sComplete(n, f) {
@@ -807,17 +1132,18 @@ function calcCompletion(form, visited, mode) {
   if (visited.has(4)) done++;
   if (visited.has(5)) done++;
   if (visited.has(6)) done++;
-  if (mode === 'edit' && visited.has(7)) done++;
-  const total = mode === 'edit' ? 7 : 6;
+  if (visited.has(7)) done++;
+  if (mode === 'edit' && visited.has(8)) done++;
+  const total = mode === 'edit' ? 8 : 7;
   return Math.round(done / total * 100);
 }
 
 /* ── Panel Left Nav (new) ───────────────────── */
 function PanelNav({ active, onNav, form, errors, visited, pct, sections }) {
   return (
-    <div style={{ width: 248, flexShrink: 0, background: T.navFill, borderRight: `1px solid ${T.line}`, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: 196, flexShrink: 0, background: T.navFill, borderRight: `1px solid ${T.line}`, display: 'flex', flexDirection: 'column' }}>
       {/* Nav items */}
-      <div style={{ flex: 1, padding: '20px 0 0', overflowY: 'auto' }}>
+      <div style={{ flex: 1, padding: '16px 0 0', overflowY: 'auto' }}>
         {sections.map(({ n, l }) => {
           const isActive = active === n;
           const isDone = !isActive && sComplete(n, form) && (visited.has(n) || n <= 2);
@@ -829,23 +1155,23 @@ function PanelNav({ active, onNav, form, errors, visited, pct, sections }) {
           const lblWt = isActive ? 700 : 500;
           return (
             <div key={n} onClick={() => onNav(n)}
-            style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '11px 20px', cursor: 'pointer', position: 'relative', transition: 'background .15s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', position: 'relative', transition: 'background .12s' }}
             onMouseEnter={(e) => {if (!isActive) e.currentTarget.style.background = 'rgba(27,36,52,0.04)';}}
             onMouseLeave={(e) => {if (!isActive) e.currentTarget.style.background = 'transparent';}}>
               {/* Active left bar */}
               {isActive && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: T.primary, borderRadius: '0 2px 2px 0' }} />}
               {/* Circle */}
-              <div style={{ width: 30, height: 30, borderRadius: '50%', background: circBg, border: circBd, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', background: circBg, border: circBd, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}>
                 {isDone && !hasErr ?
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg> :
 
-                <span style={{ fontSize: 10.5, fontWeight: 800, color: numCol, letterSpacing: '-.3px' }}>{String(n).padStart(2, '0')}</span>
+                <span style={{ fontSize: 9, fontWeight: 800, color: numCol }}>{String(n).padStart(2, '0')}</span>
                 }
               </div>
               {/* Label */}
-              <span style={{ fontSize: 13, fontWeight: lblWt, color: lblCol, lineHeight: 1.3 }}>{l}</span>
+              <span style={{ fontSize: 12, fontWeight: lblWt, color: lblCol, lineHeight: 1.3 }}>{l}</span>
             </div>);
 
         })}
@@ -892,13 +1218,13 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const [fcOpen, setFcOpen] = useState(false);
   const [checkedFc, setCheckedFc] = useState(new Set(['FC-00201', 'FC-00202', 'FC-00203', 'FC-00204', 'FC-00205']));
   const [mounted, setMounted] = useState(false);
-  const sections = mode === 'edit' ? SECTIONS : SECTIONS.filter((s) => s.n !== 7);
+  const sections = mode === 'edit' ? SECTIONS : SECTIONS.filter((s) => s.n !== 8);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
-    const onKey = (e) => {if (e.key === 'Escape') handleClose();};
+    const onKey = (e) => {if (e.key === 'Escape' && !e.defaultPrevented) handleClose();};
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
@@ -943,7 +1269,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const handleNext = () => {
     if (active === 1 && !validateS1()) return;
     if (active === 2 && !validateS2()) return;
-    const lastStep = mode === 'edit' ? 7 : 6;
+    const lastStep = mode === 'edit' ? 8 : 7;
     if (active < lastStep) navTo(active + 1);else
     {if (validateAll()) onActivate(form);}
   };
@@ -951,7 +1277,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const handleBack = () => {if (active > 1) navTo(active - 1);};
 
   const pct = calcCompletion(form, visited, mode);
-  const isLast = active === (mode === 'edit' ? 7 : 6);
+  const isLast = active === (mode === 'edit' ? 8 : 7);
   const allReq = !!(form.faretypeCode && form.faretypeGroup && form.source && form.cancellationPolicy && form.depositPolicy);
 
   const renderSection = () => {
@@ -960,28 +1286,43 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
     if (active === 3) return <S3 form={form} set={set} />;
     if (active === 4) return <S4 form={form} set={set} />;
     if (active === 5) return <S5 form={form} set={set} />;
-    if (active === 6) return <S6 form={form} setForm={setForm} />;
-    if (active === 7) return <S7 diff={diffForm(JSON.parse(initRef.current), form)} demo={DEMO_DIFF} farecodes={mode === 'edit' ? [...checkedFc] : []} code={form.faretypeCode} onNav={navTo} />;
+    if (active === 6) return <S6 form={form} set={set} />;
+    if (active === 7) return <S7 form={form} setForm={setForm} />;
+    if (active === 8) return <S8 diff={diffForm(JSON.parse(initRef.current), form)} demo={DEMO_DIFF} farecodes={mode === 'edit' ? [...checkedFc] : []} code={form.faretypeCode} onNav={navTo} />;
   };
 
   return (
     <>
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 400, opacity: mounted ? 1 : 0, transition: 'opacity 220ms ease-out' }} />
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 780, maxWidth: '100%', background: '#fff', zIndex: 401, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 48px rgba(15,23,42,0.2)', transform: mounted ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 220ms ease-out' }}>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.32)', backdropFilter: 'blur(2px)', zIndex: 900, opacity: mounted ? 1 : 0, transition: 'opacity .25s' }} />
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 720, maxWidth: '100%', background: T.panel, zIndex: 901, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,.14)', transform: mounted ? 'translateX(0)' : 'translateX(100%)', transition: 'transform .3s cubic-bezier(.32,0,.67,0)' }}>
 
         {/* Header */}
-        <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', borderBottom: `1px solid ${T.line}`, flexShrink: 0, background: '#fff' }}>
-          <span style={{ fontSize: 15.5, fontWeight: 700, color: T.ink }}>
-            {mode === 'create' ? 'Configure New Faretype Template' : `Edit Faretype · ${editData?.code}`}
-          </span>
-          <button onClick={handleClose}
-          style={{ width: 32, height: 32, borderRadius: 7, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkFaint }}
-          onMouseEnter={(e) => {e.currentTarget.style.background = T.fill;e.currentTarget.style.color = T.ink;}}
-          onMouseLeave={(e) => {e.currentTarget.style.background = 'none';e.currentTarget.style.color = T.inkFaint;}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+        <div style={{ padding: '16px 24px 0', borderBottom: `1px solid ${T.line}`, flexShrink: 0, background: T.panel }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, gap: 12 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', minWidth: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
+                  {mode === 'create' ? <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></> : <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></>}
+                </svg>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 5 }}>
+                  {mode === 'create' ? 'Configure New Faretype Template' : `Edit Faretype · ${editData?.code}`}
+                </div>
+                <div style={{ fontSize: 12, color: T.inkFaint }}>
+                  {mode === 'create' ? 'Define reusable rules inherited by Farecodes.' : 'Update this Faretype template and its inherited rules.'}
+                </div>
+              </div>
+            </div>
+            <button onClick={handleClose} aria-label="Close Faretype drawer"
+            style={{ width: 32, height: 32, borderRadius: 7, border: `1.5px solid ${T.line}`, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft }}
+            onMouseEnter={(e) => {e.currentTarget.style.background = T.fill;e.currentTarget.style.color = T.ink;}}
+            onMouseLeave={(e) => {e.currentTarget.style.background = '#fff';e.currentTarget.style.color = T.inkSoft;}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Body */}
@@ -989,7 +1330,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
           <PanelNav active={active} onNav={navTo} form={form} errors={errors} visited={visited} pct={pct} sections={sections} />
 
           {/* Content */}
-          <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: '32px 36px', background: '#fff' }}>
+          <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: '26px 30px 94px', background: T.panel }}>
             {mode === 'edit' && active === 1 &&
             <div style={{ marginBottom: 22 }}>
                 <WarnBanner>
@@ -1012,25 +1353,23 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
         </div>
 
         {/* Footer */}
-        <div style={{ height: 68, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 24px', borderTop: `1px solid ${T.line}`, flexShrink: 0, background: '#fff' }}>
-          {/* Back + Next/Finish */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 22px', borderTop: `1px solid ${T.line}`, background: T.panel, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {!(mode === 'create' && isLast) &&
             <button onClick={handleBack} disabled={active === 1}
-            style={{ background: 'none', border: 'none', color: active === 1 ? '#C8D5E0' : T.inkSoft, fontSize: 11.5, cursor: active === 1 ? 'default' : 'pointer', fontWeight: 700, letterSpacing: '.7px', textTransform: 'uppercase', padding: '8px 16px' }}>
+            style={{ padding: '7px 14px', border: `1.5px solid ${T.line}`, borderRadius: 7, background: '#fff', color: active === 1 ? '#CBD5E1' : T.inkSoft, fontSize: 13, cursor: active === 1 ? 'default' : 'pointer', fontWeight: 500 }}>
               Back
             </button>
+            }
             <button onClick={handleNext}
             disabled={isLast && mode === 'create' && !allReq}
             title={isLast && !allReq && mode === 'create' ? 'Complete all required fields to activate' : ''}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: isLast && mode === 'create' && !allReq ? '#C8D5E0' : T.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: isLast && mode === 'create' && !allReq ? 'not-allowed' : 'pointer', letterSpacing: '.7px', textTransform: 'uppercase', transition: 'background .2s' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 15px', background: isLast && mode === 'create' && !allReq ? '#CBD5E1' : T.primary, color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: isLast && mode === 'create' && !allReq ? 'not-allowed' : 'pointer', boxShadow: isLast && mode === 'create' && !allReq ? 'none' : '0 1px 4px rgba(27,36,52,.2)', transition: 'opacity .12s' }}
             onMouseEnter={(e) => {if (!e.currentTarget.disabled) e.currentTarget.style.opacity = '.88';}}
             onMouseLeave={(e) => {e.currentTarget.style.opacity = '1';}}>
               {isLast ?
               mode === 'create' ? 'Activate Faretype' : 'Save Changes' :
               'Next Step'}
-              {!isLast &&
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-              }
             </button>
           </div>
         </div>
@@ -1185,15 +1524,13 @@ const FTYPE_DETAIL = {
     standby: false, upgrade: true, coupon: true,
     channels: [
     { k: 'MVAS B2C', on: true }, { k: 'MVAS B2B', on: true }, { k: 'Cruise Control', on: true },
-    { k: 'Trade API', on: false }, { k: 'CRM', on: true }, { k: 'Group', on: false }, { k: 'Internal', on: false }],
+    { k: 'Trade API', on: false }, { k: 'CRM', on: true }, { k: 'Group', on: false }],
 
     ccAccess: true, channelPartners: null, mktEmpty: true,
     waiveGov: false, waiveCruise: false, noFareDisplay: false,
     supps: [
-    { title: 'Complementary Onboard Supplement', type: 'comp', enabled: true, sName: 'Drinks Package', cabin: 'All', rule: 'Booking', max: 1, farePos: 1 },
-    { title: 'Complementary Onshore Supplement', type: 'comp', enabled: false },
-    { title: 'Paid Onboard Supplement', type: 'paid', enabled: false },
-    { title: 'Paid Onshore Supplement', type: 'paid', enabled: false }]
+    { title: 'Complementary Supplement', type: 'comp', enabled: true, sName: 'Drinks Package', cabin: 'All', rule: 'Booking', max: 1, farePos: ['Fare Position 1'] },
+    { title: 'Paid Supplement', type: 'paid', enabled: false }]
 
   },
   'FT-00102': {
@@ -1202,15 +1539,13 @@ const FTYPE_DETAIL = {
     standby: false, upgrade: false, coupon: false,
     channels: [
     { k: 'MVAS B2C', on: true }, { k: 'MVAS B2B', on: false }, { k: 'Cruise Control', on: true },
-    { k: 'Trade API', on: true }, { k: 'CRM', on: true }, { k: 'Group', on: false }, { k: 'Internal', on: false }],
+    { k: 'Trade API', on: true }, { k: 'CRM', on: true }, { k: 'Group', on: false }],
 
     ccAccess: true, channelPartners: null, mktEmpty: false, discountMsg: 'Save 20% — Non-refundable promo rate. Limited sailings.', offerPrimary: 'OFFER-2026-SPRING',
     waiveGov: false, waiveCruise: false, noFareDisplay: false,
     supps: [
-    { title: 'Complementary Onboard Supplement', type: 'comp', enabled: false },
-    { title: 'Complementary Onshore Supplement', type: 'comp', enabled: false },
-    { title: 'Paid Onboard Supplement', type: 'paid', enabled: false },
-    { title: 'Paid Onshore Supplement', type: 'paid', enabled: false }]
+    { title: 'Complementary Supplement', type: 'comp', enabled: false },
+    { title: 'Paid Supplement', type: 'paid', enabled: false }]
 
   }
 };
@@ -1222,15 +1557,13 @@ function getDtl(code) {
     standby: false, upgrade: true, coupon: true,
     channels: [
     { k: 'MVAS B2C', on: true }, { k: 'MVAS B2B', on: true }, { k: 'Cruise Control', on: true },
-    { k: 'Trade API', on: false }, { k: 'CRM', on: true }, { k: 'Group', on: false }, { k: 'Internal', on: false }],
+    { k: 'Trade API', on: false }, { k: 'CRM', on: true }, { k: 'Group', on: false }],
 
     ccAccess: true, channelPartners: null, mktEmpty: true,
     waiveGov: false, waiveCruise: false, noFareDisplay: false,
     supps: [
-    { title: 'Complementary Onboard Supplement', type: 'comp', enabled: false },
-    { title: 'Complementary Onshore Supplement', type: 'comp', enabled: false },
-    { title: 'Paid Onboard Supplement', type: 'paid', enabled: false },
-    { title: 'Paid Onshore Supplement', type: 'paid', enabled: false }]
+    { title: 'Complementary Supplement', type: 'comp', enabled: false },
+    { title: 'Paid Supplement', type: 'paid', enabled: false }]
 
   };
 }
@@ -1247,12 +1580,12 @@ function LockIc() {
 }
 function SCard({ num, title, children }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
-      <div style={{ padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: T.inkSoft, background: '#F1F5F9', padding: '3px 7px', borderRadius: 5, letterSpacing: '.3px' }}>{String(num).padStart(2, '0')}</span>
+    <div style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)' }}>
+      <div style={{ padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 9, background: T.fill, borderBottom: `1px solid ${T.lineSoft}` }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: T.primary, padding: '3px 7px', borderRadius: 5, letterSpacing: '.3px' }}>{String(num).padStart(2, '0')}</span>
         <span style={{ fontSize: 14.5, fontWeight: 700, color: T.ink }}>{title}</span>
       </div>
-      <div style={{ borderTop: '1px solid #F1F5F9', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>
+      <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>{children}</div>
     </div>);
 }
 function RField({ label, value, locked, mono }) {
@@ -1262,27 +1595,23 @@ function RField({ label, value, locked, mono }) {
         <span style={{ fontSize: 9.5, fontWeight: 700, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '.7px' }}>{label}</span>
         {locked && <LockIc />}
       </div>
-      <div style={{ padding: '9px 12px', background: '#F8FAFC', border: '1px solid #E8EDF3', borderRadius: 7, fontSize: 13, color: T.ink, fontFamily: mono ? "'SF Mono', Menlo, monospace" : 'inherit' }}>
+      <div style={{ padding: '9px 11px', background: '#fff', border: `1px solid ${T.line}`, borderRadius: 7, fontSize: 13, color: T.ink, fontFamily: mono ? "'SF Mono', Menlo, monospace" : 'inherit', minHeight: 36, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {value || <span style={{ color: T.inkFaint, fontStyle: 'italic' }}>—</span>}
       </div>
     </div>);
 }
-function FRow({ label, subtitle, on, locked }) {
+function FFlag({ label, on, locked }) {
   return (
-    <div style={{ border: '1px solid #E8EDF3', borderRadius: 8, padding: '11px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: T.ink }}>{label}</div>
-        {subtitle && <div style={{ fontSize: 11.5, color: T.teal, marginTop: 2 }}>{subtitle}</div>}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, padding: '10px 11px', background: on ? '#F0FDF4' : T.fill, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: T.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
         {locked && <LockIc />}
-        <span style={{ fontSize: 13, fontWeight: 700, color: on ? T.teal : T.inkSoft }}>{on ? 'Enabled' : 'Disabled'}</span>
       </div>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 700, color: on ? T.green : T.inkSoft }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: on ? T.green : T.inkFaint }} />{on ? 'Enabled' : 'Disabled'}
+      </span>
     </div>);
 }
-
-
-
 function DetailOverviewTab({ row, detail, policies }) {
   const vis = detail.channels.filter((c) => c.on).map((c) => c.k);
   const hid = detail.channels.filter((c) => !c.on).map((c) => c.k);
@@ -1293,11 +1622,9 @@ function DetailOverviewTab({ row, detail, policies }) {
 
       {/* 01 Basics & Grouping */}
       <SCard num={1} title="Basics & Grouping">
-        <div style={{ display: 'flex', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
           <RField label="Faretype Code" value={row.code} mono />
           <RField label="Farebasis Code" value={row.basis} mono />
-        </div>
-        <div style={{ display: 'flex', gap: 14 }}>
           <RField label="Group" value={row.group} />
           <RField label="Source Channel" value={row.source} />
         </div>
@@ -1322,26 +1649,45 @@ function DetailOverviewTab({ row, detail, policies }) {
           <RField label="Max Occupancy" value={detail.maxOcc !== '—' ? detail.maxOcc : null} locked />
         </div>
         <RField label="Advanced Purchase" value={detail.advPurchase !== '—' ? `${detail.advPurchase} days` : null} locked />
-        <FRow label="Standby Eligible" subtitle="Allow standby booking." on={detail.standby} locked />
-        <FRow label="Upgrade Eligible" subtitle="Allow cabin upgrades." on={detail.upgrade} locked />
-        <FRow label="Coupon Eligible" subtitle="Allow coupon codes." on={detail.coupon} locked />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+          <FFlag label="Standby Eligible" on={detail.standby} locked />
+          <FFlag label="Upgrade Eligible" on={detail.upgrade} locked />
+          <FFlag label="Coupon Eligible" on={detail.coupon} locked />
+        </div>
       </SCard>
 
-      {/* 04 Channels & Access */}
-      <SCard num={4} title="Channels & Access">
-        <FRow label="Show in Cruise Control" subtitle="Internal CRM booking visibility." on={detail.ccAccess} locked />
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-            <span style={{ fontSize: 9.5, fontWeight: 700, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '.7px' }}>Distribution Channels</span>
+      {/* 04 Channel Access */}
+      <SCard num={4} title="Channel Access">
+        <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, background: T.panel, padding: '11px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>Cruise Control Access</span>
+              <LockIc />
+            </div>
+            <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 3 }}>Controls visibility in the internal CRM booking workspace.</div>
+          </div>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 999, flexShrink: 0, background: detail.ccAccess ? T.greenLight : T.fill, color: detail.ccAccess ? T.green : T.inkSoft, fontSize: 11.5, fontWeight: 700 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: detail.ccAccess ? T.green : T.inkFaint }} />{detail.ccAccess ? 'Enabled' : 'Disabled'}
+          </span>
+        </div>
+        <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, overflow: 'hidden', background: T.panel }}>
+          <div style={{ padding: '9px 12px', background: T.fill, borderBottom: `1px solid ${T.lineSoft}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.7px' }}>Distribution Channels</span>
             <LockIc />
           </div>
-          <div style={{ padding: '9px 12px', background: '#F8FAFC', border: '1px solid #E8EDF3', borderRadius: 7, fontSize: 13, color: T.ink }}>
-            {vis.length ? vis.join(', ') : <span style={{ color: T.inkFaint, fontStyle: 'italic' }}>None</span>}
-          </div>
-          <div style={{ marginTop: 7, fontSize: 12, color: T.inkSoft, lineHeight: 1.5 }}>
-            <span style={{ fontWeight: 600 }}>Visible:</span> <span style={{ color: T.teal }}>{vis.length ? vis.join(', ') : 'None'}</span>
-            <span style={{ margin: '0 6px', color: T.inkFaint }}>·</span>
-            <span style={{ fontWeight: 600 }}>Hidden:</span> {hid.length ? hid.join(', ') : 'None'}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+            <div style={{ padding: '11px 12px', borderRight: `1px solid ${T.lineSoft}` }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, marginBottom: 7 }}>Visible · {vis.length}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {vis.length ? vis.map((c) => <span key={c} style={{ padding: '3px 7px', borderRadius: 5, background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary, fontSize: 10.5, fontWeight: 600 }}>{c}</span>) : <span style={{ fontSize: 11.5, color: T.inkFaint }}>None</span>}
+              </div>
+            </div>
+            <div style={{ padding: '11px 12px' }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: T.inkSoft, marginBottom: 7 }}>Hidden · {hid.length}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {hid.length ? hid.map((c) => <span key={c} style={{ padding: '3px 7px', borderRadius: 5, background: T.fill, border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 10.5, fontWeight: 600 }}>{c}</span>) : <span style={{ fontSize: 11.5, color: T.inkFaint }}>None</span>}
+              </div>
+            </div>
           </div>
         </div>
       </SCard>
@@ -1350,18 +1696,24 @@ function DetailOverviewTab({ row, detail, policies }) {
       {activeSupps.length > 0 &&
         <SCard num={5} title="Supplements">
           {activeSupps.map((s, i) =>
-            <div key={i} style={{ border: '1px solid #E8EDF3', borderRadius: 8, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#FAFBFC', borderBottom: '1px solid #E8EDF3' }}>
+            <div key={i} style={{ border: `1px solid ${T.line}`, borderRadius: 9, overflow: 'hidden', background: T.panel }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 13px', background: T.fill, borderBottom: `1px solid ${T.lineSoft}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{s.title}</span>
-                  <span style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontWeight: 700, background: s.type === 'comp' ? T.tealLight : T.fill, color: s.type === 'comp' ? T.tealDark : T.inkSoft }}>{s.type === 'comp' ? 'Comp' : 'Paid'}</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: T.ink }}>{s.title}</span>
+                  <span style={{ padding: '2px 7px', borderRadius: 999, fontSize: 10.5, fontWeight: 700, background: s.type === 'comp' ? T.primaryBg : '#fff', border: `1px solid ${s.type === 'comp' ? T.primaryLine : T.line}`, color: s.type === 'comp' ? T.primary : T.inkSoft }}>{s.type === 'comp' ? 'Complimentary' : 'Paid'}</span>
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: T.teal }}>Enabled</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 999, background: T.greenLight, fontSize: 11.5, fontWeight: 700, color: T.green }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: T.green }} />Enabled</span>
               </div>
-              <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
-                {[['Name', s.sName], ['Cabin', s.cabin], ['Rule', s.rule], ['Max Count', s.max], ['Fare Position', s.farePos]].map(([l, v]) =>
-                  <div key={l}><DLbl>{l}</DLbl><div style={{ fontSize: 13, color: T.ink, marginTop: 3 }}>{v}</div></div>
-                )}
+              <div style={{ padding: '13px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: 14 }}>
+                  <div><DLbl>Supplement</DLbl><div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginTop: 4 }}>{s.sName || '—'}</div></div>
+                  <div><DLbl>Cabin Scope</DLbl><div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{s.cabin || '—'}</div></div>
+                  <div><DLbl>Applied</DLbl><div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{s.rule || '—'}</div></div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.lineSoft}` }}>
+                  <div style={{ padding: '8px 10px', borderRadius: 7, background: T.fill, border: `1px solid ${T.lineSoft}` }}><DLbl>Maximum Count</DLbl><div style={{ marginTop: 4, fontSize: 15, fontWeight: 700, color: T.ink }}>{s.max ?? '—'}</div></div>
+                  <div style={{ padding: '8px 10px', borderRadius: 7, background: T.fill, border: `1px solid ${T.lineSoft}` }}><DLbl>Fare Positions</DLbl><div style={{ marginTop: 4, fontSize: 15, fontWeight: 700, color: T.ink }}>{Array.isArray(s.farePos) ? s.farePos.join(', ') || '—' : s.farePos ?? '—'}</div></div>
+                </div>
               </div>
             </div>
           )}
@@ -1378,44 +1730,50 @@ const FC_SAMPLE = [
 
 function DetailFarecodesTab({ fcCount }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 12.5, color: T.inkSoft }}>Showing 3 of {fcCount} farecodes</span>
+    <div style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: T.fill, borderBottom: `1px solid ${T.line}` }}>
+        <span style={{ fontSize: 12.5, color: T.inkSoft }}><strong style={{ color: T.ink }}>3</strong> of {fcCount} farecodes</span>
         <button onClick={() => alert('Open add farecode panel')}
-        style={{ padding: '7px 14px', border: `1px solid ${T.line}`, borderRadius: 7, background: '#fff',
-          color: T.ink, fontSize: 12.5, cursor: 'pointer', fontWeight: 500 }}>+ Add Farecode</button>
+        style={{ padding: '7px 12px', border: 'none', borderRadius: 7, background: T.primary,
+          color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>+ Add Farecode</button>
       </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10 }}>
       {FC_SAMPLE.map((fc) =>
-      <div key={fc.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10,
-        padding: '14px 18px', boxShadow: '0 1px 3px rgba(15,23,42,.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 13, fontWeight: 700, color: T.teal, cursor: 'pointer' }}
+      <div key={fc.id} style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 9,
+        overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: T.fill, borderBottom: `1px solid ${T.lineSoft}` }}>
+            <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 13, fontWeight: 800, color: T.primary, cursor: 'pointer' }}
           onClick={() => alert(`Navigate to farecode: ${fc.id}`)}>
             {fc.id}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <StatusBadge status={fc.status} />
-              <span style={{ color: T.teal, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+              <span style={{ color: T.primary, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
             onClick={() => alert(`Navigate to farecode: ${fc.id}`)}>View →</span>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }}>
+          <div style={{ padding: '12px 14px 13px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: 12 }}>
             <div><DLbl>Ship</DLbl><div style={{ fontSize: 13, color: T.ink }}>{fc.ship}</div></div>
             <div><DLbl>Sailing</DLbl><div style={{ fontSize: 13, color: T.ink, fontFamily: "'SF Mono',Menlo,monospace" }}>{fc.sailing}</div></div>
+            <div><DLbl>Last Modified</DLbl><div style={{ fontSize: 13, color: T.inkSoft }}>{fc.mod}</div></div>
+          </div>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.lineSoft}` }}>
             <div>
               <DLbl>Cabin Categories</DLbl>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 3 }}>
                 {fc.cabins.map((c) =>
               <span key={c} style={{ padding: '2px 9px', borderRadius: 5, fontSize: 11.5, fontWeight: 500,
-                background: '#EEF2FF', color: '#4338CA' }}>{c}</span>
+                background: T.primaryBg, color: T.primary }}>{c}</span>
               )}
               </div>
             </div>
-            <div><DLbl>Last Modified</DLbl><div style={{ fontSize: 13, color: T.inkSoft }}>{fc.mod}</div></div>
+          </div>
           </div>
         </div>
       )}
-      <div style={{ textAlign: 'center', paddingTop: 6 }}>
-        <span style={{ color: T.teal, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+      </div>
+      <div style={{ textAlign: 'center', padding: '10px 0', borderTop: `1px solid ${T.line}`, background: T.fill }}>
+        <span style={{ color: T.primary, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
         onClick={() => alert('View all farecodes for FT-00101')}>
           View all {fcCount} farecodes →
         </span>
@@ -1425,33 +1783,43 @@ function DetailFarecodesTab({ fcCount }) {
 }
 
 const AUDIT_LOG = [
-{ type: 'teal', summary: 'Faretype activated', detail: 'Status: Draft → Active', time: '14 Jun 2026, 11:42 AM', user: 'jane.doe@' },
-{ type: 'amber', summary: 'Cancellation Policy updated', detail: 'Standard → Flexible', time: '12 Jun 2026, 3:15 PM', user: 'jane.doe@' },
-{ type: 'amber', summary: 'Channels updated', detail: 'Trade API: Disabled → Enabled', time: '10 Jun 2026, 9:08 AM', user: 'admin@' },
-{ type: 'amber', summary: 'Supplement configured', detail: 'Complementary Onboard enabled', time: '08 Jun 2026, 2:30 PM', user: 'jane.doe@' },
-{ type: 'teal', summary: 'Faretype created', detail: 'Draft record created', time: '07 Jun 2026, 10:00 AM', user: 'jane.doe@' }];
+{ type: 'success', summary: 'Faretype activated', detail: 'Status: Draft → Active', time: '14 Jun 2026, 11:42 AM', user: 'jane.doe@' },
+{ type: 'change', summary: 'Cancellation Policy updated', detail: 'Standard → Flexible', time: '12 Jun 2026, 3:15 PM', user: 'jane.doe@' },
+{ type: 'change', summary: 'Channels updated', detail: 'Trade API: Disabled → Enabled', time: '10 Jun 2026, 9:08 AM', user: 'admin@' },
+{ type: 'change', summary: 'Supplement configured', detail: 'Complementary Supplement enabled', time: '08 Jun 2026, 2:30 PM', user: 'jane.doe@' },
+{ type: 'success', summary: 'Faretype created', detail: 'Draft record created', time: '07 Jun 2026, 10:00 AM', user: 'jane.doe@' }];
 
 function DetailAuditTab() {
-  const dotC = { teal: T.teal, amber: T.amber, red: T.red };
   return (
-    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10,
-      boxShadow: '0 1px 3px rgba(15,23,42,.04)', overflow: 'hidden' }}>
-      {AUDIT_LOG.map((e, i) =>
-      <div key={i} style={{ display: 'flex', gap: 14, padding: '14px 18px',
-        borderBottom: i < AUDIT_LOG.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
-          <div style={{ paddingTop: 5, flexShrink: 0 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotC[e.type] }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T.ink, marginBottom: 3 }}>{e.summary}</div>
-            <div style={{ fontSize: 12, color: T.inkSoft }}>{e.detail}</div>
-          </div>
-          <div style={{ flexShrink: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 11.5, color: T.inkSoft, whiteSpace: 'nowrap' }}>{e.time}</div>
-            <div style={{ fontSize: 11.5, color: T.inkFaint, marginTop: 2 }}>{e.user}</div>
-          </div>
+    <div style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 10, boxShadow: '0 1px 2px rgba(15,23,42,.04)', overflow: 'hidden' }}>
+      <div style={{ padding: '10px 13px', background: T.fill, borderBottom: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>Activity History</span>
+          <span style={{ padding: '2px 7px', borderRadius: 999, background: '#fff', border: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 10.5, fontWeight: 700 }}>{AUDIT_LOG.length}</span>
         </div>
-      )}
+        <span style={{ fontSize: 10.5, color: T.inkFaint }}>Newest first</span>
+      </div>
+      <div style={{ padding: '2px 0' }}>
+        {AUDIT_LOG.map((e, i) => {
+          const positive = e.type === 'success';
+          return (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '34px minmax(0,1fr) auto', gap: 10, padding: '12px 14px', position: 'relative', borderBottom: i < AUDIT_LOG.length - 1 ? `1px solid ${T.lineSoft}` : 'none' }}>
+              <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                {i < AUDIT_LOG.length - 1 && <span style={{ position: 'absolute', top: 24, bottom: -18, width: 1, background: T.line }} />}
+                <span style={{ width: 24, height: 24, borderRadius: '50%', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: positive ? T.greenLight : T.primaryBg, border: `1px solid ${positive ? '#A7F3D0' : T.primaryLine}`, color: positive ? T.green : T.primary, fontSize: 11, fontWeight: 800 }}>{positive ? '✓' : '•'}</span>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, lineHeight: 1.3 }}>{e.summary}</div>
+                <span style={{ display: 'inline-flex', marginTop: 6, padding: '4px 7px', borderRadius: 5, background: T.fill, border: `1px solid ${T.lineSoft}`, color: T.inkSoft, fontSize: 11.5, lineHeight: 1.2 }}>{e.detail}</span>
+              </div>
+              <div style={{ textAlign: 'right', paddingTop: 1, minWidth: 138 }}>
+                <div style={{ fontSize: 11, color: T.inkSoft, whiteSpace: 'nowrap' }}>{e.time}</div>
+                <span style={{ display: 'inline-flex', marginTop: 6, padding: '2px 6px', borderRadius: 5, background: T.fill, color: T.inkFaint, fontSize: 10.5 }}>{e.user}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>);
 
 }
@@ -1709,20 +2077,34 @@ function FaretypeListScreen({ policies }) {
       }
 
       {pendingDeactivate &&
-      <Modal title="Deactivate this faretype?" icon={<IcWarn color={T.amber} />} onClose={cancelDeactivate}
+      <Modal width={460} title="Deactivate this faretype?" icon={<IcWarn color={T.red} />} onClose={cancelDeactivate}
       actions={<>
             <button style={polGhost} onClick={cancelDeactivate}>Cancel</button>
-            <button style={{ ...polBtn, background: T.red, color: '#fff' }} onClick={confirmDeactivate}>Deactivate</button>
+            <button style={{ ...polBtn, background: '#B91C1C', color: '#fff', padding: '9px 15px' }} onClick={confirmDeactivate}>Deactivate Faretype</button>
           </>}>
-
-          Deactivating <strong style={{ fontFamily: "'SF Mono',Menlo,monospace" }}>{pendingDeactivate.code}</strong> removes
-          it from Faretype pickers, so it can no longer be assigned to new bookings.
-          {pendingDeactivate.fc > 0 ?
-        <> It's currently linked to <strong>{pendingDeactivate.fc}</strong> Farecode{pendingDeactivate.fc === 1 ? '' : 's'}, which will keep working under their existing terms.</> :
-
-        <> It isn't linked to any Farecodes yet.</>
-        }
-          {' '}You can reactivate it at any time.
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 13, color: T.inkSoft }}>
+              You’re about to deactivate <strong style={{ fontFamily: "'SF Mono',Menlo,monospace", color: T.ink }}>{pendingDeactivate.code}</strong>.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '92px 1fr', gap: 12, padding: '11px 12px', borderRadius: 8, background: T.redLight, border: '1px solid #FECACA' }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: '#991B1B', textTransform: 'uppercase', letterSpacing: '.65px' }}>Immediate impact</span>
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>New assignments stop</div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>This Faretype is removed from pickers and cannot be assigned to new bookings.</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '92px 1fr', gap: 12, padding: '11px 12px', borderRadius: 8, background: T.fill, border: `1px solid ${T.line}` }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px' }}>Existing use</span>
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>{pendingDeactivate.fc > 0 ? `${pendingDeactivate.fc} linked Farecode${pendingDeactivate.fc === 1 ? '' : 's'} continue` : 'No linked Farecodes'}</div>
+                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{pendingDeactivate.fc > 0 ? 'Existing Farecodes and bookings keep working under their current terms.' : 'There are no existing Farecode assignments to preserve.'}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 8, background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary, fontSize: 11.5, fontWeight: 600 }}>
+              <span style={{ width: 18, height: 18, borderRadius: '50%', background: T.primary, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>↺</span>
+              This action is reversible. You can reactivate the Faretype later.
+            </div>
+          </div>
         </Modal>
       }
     </>);

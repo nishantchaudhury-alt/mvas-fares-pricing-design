@@ -7,14 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:#F1F5F9;color:#0F172A}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:#F1F5F9;color:#0F172A;line-height:1.4;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 #root{height:100vh;overflow:hidden}
 button,input,select,textarea{font-family:inherit}
+input::placeholder,textarea::placeholder{color:#64748B;opacity:1}
 a{text-decoration:none;color:#1B2434}a:hover{color:#475569}
 .pscroll::-webkit-scrollbar{width:5px}.pscroll::-webkit-scrollbar-track{background:transparent}.pscroll::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 .hscroll::-webkit-scrollbar{height:4px}.hscroll::-webkit-scrollbar-track{background:transparent}.hscroll::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 .fi:focus{outline:none;border-color:#1B2434 !important;box-shadow:0 0 0 3px rgba(27,36,52,.1)}
 .price-input:focus{outline:none;border-color:#1B2434 !important}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role="button"]:focus-visible,[role="switch"]:focus-visible,[role="combobox"]:focus-visible{outline:2px solid #fff !important;outline-offset:2px;box-shadow:0 0 0 4px #1B2434 !important}
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -22,22 +24,22 @@ a{text-decoration:none;color:#1B2434}a:hover{color:#475569}
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel" src="dc-shell.jsx?v=10"></script>
-<script type="text/babel" src="ui-list.jsx?v=10"></script>
-<script type="text/babel" src="dc-group-panel.jsx?v=10"></script>
-<script type="text/babel" src="dc-parent-panel.jsx?v=10"></script>
+<script type="text/babel" src="dc-shell.jsx?v=14"></script>
+<script type="text/babel" src="ui-list.jsx?v=11"></script>
+<script type="text/babel" src="dc-group-panel.jsx?v=11"></script>
+<script type="text/babel" src="dc-parent-panel.jsx?v=11"></script>
 <script type="text/babel" src="dc-farecode.jsx?v=10"></script>
-<script type="text/babel" src="dc-booking.jsx?v=10"></script>
-<script type="text/babel" src="pol-data.jsx?v=10"></script>
-<script type="text/babel" src="pol-forms.jsx?v=10"></script>
-<script type="text/babel" src="pol-chrome.jsx?v=11"></script>
-<script type="text/babel" src="pol-rows.jsx?v=10"></script>
-<script type="text/babel" src="pol-drawer.jsx?v=10"></script>
-<script type="text/babel" src="pol-detail.jsx?v=10"></script>
-<script type="text/babel" src="pol-list.jsx?v=11"></script>
-<script type="text/babel" src="fc-farecode.jsx?v=12"></script>
-<script type="text/babel" src="ft-faretype.jsx?v=10"></script>
-<script type="text/babel" src="sp-supplements.jsx?v=10"></script>
+<script type="text/babel" src="dc-booking.jsx?v=11"></script>
+<script type="text/babel" src="pol-data.jsx?v=11"></script>
+<script type="text/babel" src="pol-forms.jsx?v=14"></script>
+<script type="text/babel" src="pol-chrome.jsx?v=12"></script>
+<script type="text/babel" src="pol-rows.jsx?v=15"></script>
+<script type="text/babel" src="pol-drawer.jsx?v=18"></script>
+<script type="text/babel" src="pol-detail.jsx?v=16"></script>
+<script type="text/babel" src="pol-list.jsx?v=14"></script>
+<script type="text/babel" src="fc-farecode.jsx?v=46"></script>
+<script type="text/babel" src="ft-faretype.jsx?v=37"></script>
+<script type="text/babel" src="sp-supplements.jsx?v=12"></script>
 <script type="text/babel">
 const { useState: useSApp } = React;
 

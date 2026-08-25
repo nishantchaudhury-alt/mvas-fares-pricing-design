@@ -133,20 +133,20 @@ function DCGroupPanel({ kind, group, allGroups, onClose, onSave, onOpenParent, o
               {!isDep && (
                 <Field label="Refundable" error={errors.isRefundable} helper="Turning this OFF requires every band to be PCT_CABIN_FARE or FULL_DEPOSIT before parent policies can be saved.">
                   <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <Toggle on={form.isRefundable} onChange={v => set('isRefundable', v)}/>
+                    <Toggle on={form.isRefundable} onChange={v => set('isRefundable', v)} label="Refundable group"/>
                     <span style={{ fontSize:13, color:T.inkSoft }}>{form.isRefundable ? 'Refundable' : 'Non-Refundable'}</span>
                   </div>
                 </Field>
               )}
               <Field label="Active" error={errors.isActive} helper="Turning OFF removes this group from assignment pickers. Farecodes already pointing at a parent inside it are unaffected.">
                 <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                  <Toggle on={form.isActive} onChange={v => set('isActive', v)}/>
+                  <Toggle on={form.isActive} onChange={v => set('isActive', v)} label="Active group"/>
                   <span style={{ fontSize:13, color:T.inkSoft }}>{form.isActive ? 'Active' : 'Inactive'}</span>
                 </div>
               </Field>
               <Field label="Default Group" helper="Only one group can be the default. Turning this ON unsets the current default.">
                 <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                  <Toggle on={form.isDefault} onChange={requestDefault}/>
+                  <Toggle on={form.isDefault} onChange={requestDefault} label="Default group"/>
                   <span style={{ fontSize:13, color:T.inkSoft }}>{form.isDefault ? 'Default for new Farecodes' : 'Not the default'}</span>
                 </div>
               </Field>

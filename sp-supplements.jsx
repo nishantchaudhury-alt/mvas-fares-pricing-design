@@ -9,11 +9,11 @@ const { useState, useRef, useEffect } = React;
 
 /* ── Tokens ─────────────────────────────────── */
 const T = {
-  ink: '#0F172A', inkSoft: '#475569', inkFaint: '#94A3B8', inkLabel: '#64748B',
+  ink: '#0F172A', inkSoft: '#475569', inkFaint: '#5B6B82', inkLabel: '#5B6B82',
   bg: '#F1F5F9', panel: '#FFFFFF', fill: '#F8FAFC',
   line: '#E2E8F0', lineSoft: '#EEF2F6', primary: '#1B2434', primaryBg: '#EEF2F6',
-  teal: '#10B981', tealDark: '#059669', tealLight: '#ECFDF5',
-  amber: '#F59E0B', amberDark: '#D97706', amberLight: '#FFFBEB',
+  teal: '#047857', tealDark: '#047857', tealLight: '#ECFDF5',
+  amber: '#92400E', amberDark: '#92400E', amberLight: '#FFFBEB',
   red: '#DC2626', redLight: '#FEF2F2'
 };
 
@@ -163,19 +163,24 @@ function iS(err, dis) {
   return { width: '100%', padding: '9px 12px', border: `1.5px solid ${err ? T.red : dis ? '#E8EDF3' : '#D8DFE8'}`, borderRadius: 7, fontSize: 13, color: dis ? T.inkFaint : T.ink, background: dis ? '#F3F4F6' : '#fff', outline: 'none', cursor: dis ? 'not-allowed' : undefined };
 }
 function Field({ label, required, helper, error, children }) {
+  const uid = React.useId().replace(/:/g, '');
+  const controlId = `sp-field-${uid}`;
+  const labelId = `${controlId}-label`, helpId = `${controlId}-help`, errorId = `${controlId}-error`;
+  const describedBy = error ? errorId : helper ? helpId : undefined;
+  const bound = bindFieldControl(children, { id:controlId, label, describedBy, invalid:!!error, required:!!required });
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      {label && <label style={{ fontSize: 10.5, fontWeight: 700, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px' }}>{label}{required && <span style={{ color: T.red, marginLeft: 3 }}>*</span>}</label>}
-      {children}
-      {error && <span style={{ fontSize: 11, color: T.red }}>{error}</span>}
-      {!error && helper && <span style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.4 }}>{helper}</span>}
+    <div role={label ? 'group' : undefined} aria-labelledby={label ? labelId : undefined} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {label && <label id={labelId} htmlFor={bound.bound ? bound.controlId : undefined} style={{ fontSize: 10.5, fontWeight: 700, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px' }}>{label}{required && <span aria-hidden="true" style={{ color: T.red, marginLeft: 3 }}>*</span>}</label>}
+      {bound.node}
+      {error && <span id={errorId} role="alert" style={{ fontSize: 11, color: T.red }}>{error}</span>}
+      {!error && helper && <span id={helpId} style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.4 }}>{helper}</span>}
     </div>);
 
 }
-function Sel({ value, onChange, opts, err }) {
+function Sel({ value, onChange, opts, err, inputId, ariaLabel, ariaDescribedBy, ariaInvalid, ariaRequired }) {
   return (
     <div style={{ position: 'relative' }}>
-      <select className="fi" value={value} onChange={(e) => onChange(e.target.value)}
+      <select id={inputId} className="fi" value={value} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel} aria-describedby={ariaDescribedBy} aria-invalid={ariaInvalid || !!err} aria-required={ariaRequired}
       style={{ ...iS(err), appearance: 'none', cursor: 'pointer', paddingRight: 30, color: value ? T.ink : T.inkFaint }}>
         {opts.map(([v, l]) => <option key={v} value={v}>{l !== undefined ? l : v}</option>)}
       </select>

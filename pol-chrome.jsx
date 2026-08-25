@@ -8,7 +8,7 @@ const SB = {
   active: '#C1502F',    // retain the existing red/terracotta active navigation treatment
   accent: '#E2724F',    // retain the existing lighter red/terracotta sub-item treatment
   text: '#98A6BC',       // inactive item label/icon
-  textDim: '#66738C',    // placeholder sub-items not yet wired to a screen
+  textDim: '#8290A5',    // inactive placeholder items; remains readable on the navy surface
   hover: 'rgba(255,255,255,.06)',
 };
 
@@ -123,7 +123,7 @@ function PolDialogs({ dlg, setDlg, onDiscardFlow, onDiscardEdit, onDeactivateGro
       return (
         <div style={{ position:'fixed', bottom:22, left:'50%', transform:'translateX(-50%)', zIndex:1300, display:'flex', alignItems:'center', gap:12, padding:'11px 14px', background:T.primary, color:'#fff', borderRadius:9, boxShadow:'0 10px 30px rgba(15,23,42,.3)', fontSize:12.5 }}>
           <span style={{ display:'flex', color:'#6EE7B7' }}><IcCheck size={13}/></span>{dlg.text}
-          <button onClick={close} style={{ background:'none', border:'none', color:'#94A3B8', cursor:'pointer', display:'flex', padding:0, marginLeft:4 }}><IcX size={11}/></button>
+          <button type="button" aria-label="Dismiss notification" onClick={close} style={{ background:'none', border:'none', color:'#94A3B8', cursor:'pointer', display:'flex', padding:0, marginLeft:4 }}><IcX size={11}/></button>
         </div>
       );
     case 'discardFlow':
