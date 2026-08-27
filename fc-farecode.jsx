@@ -1476,11 +1476,13 @@ function S8Supp({ form, setForm }) {
   );
 }
 
-function PricingEditorExpandedModal({ pricing, setPricing, columns, setColumns, errors, onClose }) {
+function PricingEditorExpandedModal({ pricing:sourcePricing, setPricing:commitPricing, columns:sourceColumns, setColumns:commitColumns, errors, onClose }) {
   const [newColumn, setNewColumn] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(GUEST_ROWS[0].grp);
   const [addError, setAddError] = useState('');
   const [pendingRemove, setPendingRemove] = useState(null);
+  const [pricing, setPricing] = useState(() => JSON.parse(JSON.stringify(sourcePricing)));
+  const [columns, setColumns] = useState(() => sourceColumns.map(column => ({ ...column })));
   const dialogRef = useRef(null);
   const closeBtnRef = useRef(null);
   const addInputRef = useRef(null);
@@ -1496,6 +1498,12 @@ function PricingEditorExpandedModal({ pricing, setPricing, columns, setColumns, 
   const guestCol = 132;
   const totalCol = 150;
   const pGrid = `${firstCol}px repeat(${columns.length}, minmax(${guestCol}px,1fr)) ${totalCol}px`;
+  const hasChanges = JSON.stringify(pricing)!==JSON.stringify(sourcePricing) || JSON.stringify(columns)!==JSON.stringify(sourceColumns);
+  const applyChanges = () => {
+    commitPricing(JSON.parse(JSON.stringify(pricing)));
+    commitColumns(columns.map(column => ({ ...column })));
+    onClose();
+  };
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -1617,6 +1625,13 @@ function PricingEditorExpandedModal({ pricing, setPricing, columns, setColumns, 
                 })}
               </div>
             </div>
+          </div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, padding:'12px 22px', borderTop:`1px solid ${T.line}`, background:'#fff', flexShrink:0 }}>
+          <div style={{ fontSize:11.5, color:T.inkFaint, lineHeight:1.4 }}>Pricing updates remain a draft until you apply them.</div>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <button type="button" onClick={onClose} style={{ padding:'8px 14px', border:`1px solid ${T.line}`, borderRadius:7, background:'#fff', color:T.inkSoft, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>Cancel</button>
+            <button type="button" onClick={applyChanges} disabled={!hasChanges} style={{ padding:'8px 14px', border:`1px solid ${hasChanges?T.primary:'#CBD5E1'}`, borderRadius:7, background:hasChanges?T.primary:'#CBD5E1', color:'#fff', fontSize:12.5, fontWeight:650, cursor:hasChanges?'pointer':'not-allowed' }}>Apply changes</button>
           </div>
         </div>
         {pendingRemove && <div style={{ position:'absolute', inset:0, zIndex:30, background:'rgba(15,23,42,.44)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }} onMouseDown={() => setPendingRemove(null)}>
