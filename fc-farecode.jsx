@@ -63,19 +63,19 @@ const cloneSupplements = list => (list || []).map(item => ({
 }));
 const FT_DATA = [
   { code:'FT-00101', basis:'CORE-RETAIL', group:'Core',
-    vals:{ cancellationPolicy:'Standard Cancellation', depositPolicy:'5 Night Standard Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:4, standbyEligible:false, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false,
+    vals:{ cancellationPolicy:'Standard Cancellation', depositPolicy:'5 Night Standard Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:4, standbyEligible:false, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:[], waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false,
       supp:[
         { ...mkSupp('complimentary', 'Complementary Supplement', 'comp'), enabled:true, name:'Drinks Package', cabin:'', rule:'Booking', maxCount:1, farePos:['Fare Position 1'] },
         mkSupp('paid', 'Paid Supplement', 'paid'),
       ] }},
   { code:'FT-00102', basis:'NR-PROMO', group:'Non-Refundable',
-    vals:{ cancellationPolicy:'Non-Refundable', depositPolicy:'5 Night Promo Deposit', residency:'US Only', minAge:21, minOccupancy:2, maxOccupancy:4, standbyEligible:false, upgradeEligible:false, couponEligible:false, advancedPurchase:30, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:false, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'OFFER-2026-SPRING', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
+    vals:{ cancellationPolicy:'Non-Refundable', depositPolicy:'5 Night Promo Deposit', residency:'US Only', minAge:21, minOccupancy:2, maxOccupancy:4, standbyEligible:false, upgradeEligible:false, couponEligible:false, advancedPurchase:30, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:false, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'OFFER-2026-SPRING', offerSecondary:'', offerTertiary:[], waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
   { code:'FT-00103', basis:'INT-AGENCY', group:'Interline',
-    vals:{ cancellationPolicy:'Standard — Suites Enhanced', depositPolicy:'7 Night Trade Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:3, standbyEligible:true, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:false, chMVASB2C:false, chMVASB2B:false, chCC:false, chTradeAPI:true, chCRM:true, chGroup:true, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
+    vals:{ cancellationPolicy:'Standard — Suites Enhanced', depositPolicy:'7 Night Trade Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:3, standbyEligible:true, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:false, chMVASB2C:false, chMVASB2B:false, chCC:false, chTradeAPI:true, chCRM:true, chGroup:true, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:[], waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
 ];
 const CHANNEL_PARTNERS = ['Virtuoso', 'AMEX Travel', 'Ensemble', 'Signature Travel', 'Travel Leaders', 'Nexion', 'Avoya Travel'];
 const OVRD_KEYS = ['cancellationPolicy','depositPolicy','minOccupancy','maxOccupancy','advancedPurchase','standbyEligible','upgradeEligible','couponEligible','cruiseControlAccess','channelVisibility','includeDiscount','discountMessage','offerPrimary','offerSecondary','offerTertiary','waiveGovTaxes','waiveCruiseExp','noFareDisplay'];
-const DEFAULT_FORM  = () => ({ ship:'', sailing:'', sailings:[], faretype:'', cancellationPolicy:'', depositPolicy:'', residency:'Any', minAge:18, minOccupancy:'', maxOccupancy:'', advancedPurchase:'', standbyEligible:false, upgradeEligible:true, couponEligible:true, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false, supp:defaultSupplements() });
+const DEFAULT_FORM  = () => ({ ship:'', sailing:'', sailings:[], faretype:'', cancellationPolicy:'', depositPolicy:'', residency:'Any', minAge:18, minOccupancy:'', maxOccupancy:'', advancedPurchase:'', standbyEligible:false, upgradeEligible:true, couponEligible:true, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:[], waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false, supp:defaultSupplements() });
 const DEFAULT_OVRD  = () => Object.fromEntries(OVRD_KEYS.map(k => [k,'inherited']));
 const GUEST_ROWS = [
   { grp:'Occupancy 1–2', rows:[{ k:'single',l:'Single Guest' },{ k:'dbl1',l:'Double Guest 1' },{ k:'dbl2',l:'Double Guest 2' }] },
@@ -651,7 +651,7 @@ function OverviewReadOnly({ form, overrides, pricing, pricingColumns }) {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
           <ROField label="Primary Offer"   value={form.offerPrimary  ||'None'} status={getO('offerPrimary')}/>
           <ROField label="Secondary Offer" value={form.offerSecondary||'None'} status={getO('offerSecondary')}/>
-          <ROField label="Tertiary Offer"  value={form.offerTertiary ||'None'} status={getO('offerTertiary')}/>
+          <ROField label="Tertiary Offers" value={(Array.isArray(form.offerTertiary) ? form.offerTertiary.join(', ') : form.offerTertiary) || 'None'} status={getO('offerTertiary')}/>
         </div>
       </ROSection>
 
@@ -1106,10 +1106,11 @@ function S6({ form, set, overrides, toggleOverride }) {
   const getS  = k => hasFT?(overrides[k]||'inherited'):'free';
   const isD   = k => hasFT && getS(k)!=='overridden';
   const OFFERS = [['','None'],['OFFER-2026-SPRING','OFFER-2026-SPRING'],['OFFER-2026-SUMMER','OFFER-2026-SUMMER'],['OFFER-CASINO-Q2','OFFER-CASINO-Q2']];
+  const MULTI_OFFERS = OFFERS.filter(([value]) => value).map(([value]) => value);
   const SLOTS = [
     { k:'offerPrimary',   n:'01', l:'Primary offer',   h:'First promotion evaluated for this Farecode.' },
     { k:'offerSecondary', n:'02', l:'Secondary offer', h:'Fallback when the primary offer is unavailable.' },
-    { k:'offerTertiary',  n:'03', l:'Tertiary offer',  h:'Final fallback in the offer sequence.' },
+    { k:'offerTertiary',  n:'03', l:'Tertiary offers', h:'Final fallbacks in the offer sequence. Select one or more offers.' },
   ];
   const slotCardStyle = k => ({
     padding:'12px',
@@ -1164,7 +1165,7 @@ function S6({ form, set, overrides, toggleOverride }) {
         <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
           <div style={{ marginBottom:10 }}>
             <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Offer Priority</div>
-            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Offers are evaluated in sequence. Leave a slot set to None when no fallback is needed.</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>Offers are evaluated in sequence. Primary and Secondary accept one offer; Tertiary can include multiple fallbacks.</div>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {SLOTS.map(slot => (
@@ -1175,8 +1176,11 @@ function S6({ form, set, overrides, toggleOverride }) {
                     <div style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{slot.l}</div>
                     <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.4, marginTop:2 }}>{slot.h}</div>
                     <div style={{ marginTop:10 }}>
-                      <OField label="Offer" status={getS(slot.k)} onOverride={() => toggleOverride(slot.k)} onRevert={() => toggleOverride(slot.k)}>
-                        <Sel ariaLabel={slot.l} value={form[slot.k]} onChange={v => set(slot.k,v)} dis={isD(slot.k)} opts={OFFERS}/>
+                      <OField label={slot.k==='offerTertiary'?'Offers':'Offer'} status={getS(slot.k)} helper={slot.k==='offerTertiary'?'Leave empty when no tertiary fallback is needed.':undefined} onOverride={() => toggleOverride(slot.k)} onRevert={() => toggleOverride(slot.k)}>
+                        {slot.k==='offerTertiary' ?
+                          <MultiChip values={Array.isArray(form[slot.k]) ? form[slot.k] : form[slot.k] ? [form[slot.k]] : []} onChange={v => set(slot.k,v)} opts={MULTI_OFFERS} placeholder="Select one or more offers…" ariaLabel="Tertiary offers" disabled={isD(slot.k)}/> :
+                          <Sel ariaLabel={slot.l} value={form[slot.k]} onChange={v => set(slot.k,v)} dis={isD(slot.k)} opts={OFFERS}/>
+                        }
                       </OField>
                     </div>
                   </div>
@@ -1775,6 +1779,156 @@ const CHIP_S = { 'Interior':{ bg:'#EEF2FF',color:'#3730A3' }, 'Ocean View':{ bg:
 const STATUS_S = { Active:{ bg:'#ECFDF5',color:'#065F46',dot:'#10B981' }, Draft:{ bg:'#FFFBEB',color:'#92400E',dot:'#F59E0B' }, Inactive:{ bg:'#F8FAFC',color:'#475569',dot:'#94A3B8' } };
 
 const SECTS = [{ n:1,l:'Ship & Sailings' },{ n:2,l:'Policies' },{ n:3,l:'Eligibility' },{ n:4,l:'Channel Access' },{ n:5,l:'Partner Access' },{ n:6,l:'Marketing' },{ n:7,l:'Taxes & Privacy' },{ n:8,l:'Supplements' },{ n:9,l:'Pricing' }];
+const REVIEW_SECT = { n:10, l:'Review Changes' };
+
+const FC_REVIEW_FIELDS = {
+  ship:[1,'Ship'], sailings:[1,'Sailings'], faretype:[1,'Parent Faretype'],
+  cancellationPolicy:[2,'Cancellation Policy'], depositPolicy:[2,'Deposit Policy'],
+  residency:[3,'Residency'], minAge:[3,'Minimum Age'], minOccupancy:[3,'Minimum Occupancy'], maxOccupancy:[3,'Maximum Occupancy'], advancedPurchase:[3,'Advanced Purchase'],
+  standbyEligible:[3,'Standby Eligible'], upgradeEligible:[3,'Upgrade Eligible'], couponEligible:[3,'Coupon Eligible'],
+  cruiseControlAccess:[4,'Cruise Control Access'], chMVASB2C:[4,'MVAS B2C'], chMVASB2B:[4,'MVAS B2B'], chCC:[4,'Cruise Control'], chTradeAPI:[4,'Trade API'], chCRM:[4,'CRM'], chGroup:[4,'Group Desk'],
+  channelPartners:[5,'Partner Access'],
+  includeDiscount:[6,'Discount Message'], discountMessage:[6,'Message Copy'], offerPrimary:[6,'Primary Offer'], offerSecondary:[6,'Secondary Offer'], offerTertiary:[6,'Tertiary Offers'],
+  waiveGovTaxes:[7,'Waive Government Taxes'], waiveCruiseExp:[7,'Waive Cruise Expenses'], noFareDisplay:[7,'Hide Fare Amounts'],
+};
+const FC_REVIEW_SUPP_FIELDS = { enabled:'Status', name:'Supplement Name', cabins:'Cabin Categories', rule:'Rule', maxCount:'Max Count', farePos:'Fare Positions' };
+
+function fcReviewValue(value) {
+  if (value === true) return 'Enabled';
+  if (value === false) return 'Disabled';
+  if (Array.isArray(value)) return value.length ? value.join(', ') : 'None';
+  if (value === '' || value === null || value === undefined) return '—';
+  return String(value);
+}
+const fcReviewSuppName = supplement => supplement.name || supplement.title || 'Untitled supplement';
+const fcReviewSuppValue = (key, value) => key === 'rule' ? fcSuppRuleLabel(value) : fcReviewValue(value);
+const cloneFarecodeReviewState = ({ form, overrides, pricing, pricingColumns }) => JSON.parse(JSON.stringify({ form, overrides, pricing, pricingColumns }));
+
+function diffFarecodeState(before, after) {
+  if (!before) return [];
+  const changes = [];
+  Object.entries(FC_REVIEW_FIELDS).forEach(([key, [section, label]]) => {
+    const from = before.form?.[key], to = after.form?.[key];
+    if (JSON.stringify(from) !== JSON.stringify(to)) changes.push({ section, label, from:fcReviewValue(from), to:fcReviewValue(to) });
+  });
+
+  const beforeSupplements = new Map((before.form?.supp || []).map(supplement => [supplement.id, supplement]));
+  (after.form?.supp || []).forEach(supplement => {
+    const previous = beforeSupplements.get(supplement.id);
+    if (!previous) {
+      changes.push({ section:8, label:`${fcReviewSuppName(supplement)} · ${fcSuppTypeLabel(supplement.type)}`, from:'Not present', to:'Added' });
+      return;
+    }
+    Object.entries(FC_REVIEW_SUPP_FIELDS).forEach(([key, label]) => {
+      const from = key === 'cabins' ? fcSuppCabinValues(previous) : previous[key];
+      const to = key === 'cabins' ? fcSuppCabinValues(supplement) : supplement[key];
+      if (JSON.stringify(from) !== JSON.stringify(to)) changes.push({ section:8, label:`${fcReviewSuppName(supplement)} · ${label}`, from:fcReviewSuppValue(key, from), to:fcReviewSuppValue(key, to) });
+    });
+  });
+  const currentSupplementIds = new Set((after.form?.supp || []).map(supplement => supplement.id));
+  (before.form?.supp || []).forEach(supplement => {
+    if (!currentSupplementIds.has(supplement.id)) changes.push({ section:8, label:`${fcReviewSuppName(supplement)} · ${fcSuppTypeLabel(supplement.type)}`, from:'Present', to:'Removed' });
+  });
+
+  Object.keys(after.overrides || {}).forEach(key => {
+    if (before.overrides?.[key] === after.overrides?.[key] || !FC_REVIEW_FIELDS[key]) return;
+    const [section, fieldLabel] = FC_REVIEW_FIELDS[key];
+    changes.push({ section, label:`${fieldLabel} · Assignment`, from:before.overrides?.[key] === 'overridden' ? 'Farecode override' : 'Inherited', to:after.overrides?.[key] === 'overridden' ? 'Farecode override' : 'Inherited' });
+  });
+
+  const beforeColumns = new Map((before.pricingColumns || []).map(column => [column.key, column]));
+  const afterColumns = new Map((after.pricingColumns || []).map(column => [column.key, column]));
+  (after.pricingColumns || []).forEach(column => {
+    if (!beforeColumns.has(column.key)) changes.push({ section:9, label:`${column.group} · ${column.label}`, from:'Not present', to:'Column added' });
+  });
+  (before.pricingColumns || []).forEach(column => {
+    if (!afterColumns.has(column.key)) changes.push({ section:9, label:`${column.group} · ${column.label}`, from:'Present', to:'Column removed' });
+  });
+  const cabins = new Set([...Object.keys(before.pricing || {}), ...Object.keys(after.pricing || {})]);
+  cabins.forEach(cabin => {
+    const columnKeys = new Set([...Object.keys(before.pricing?.[cabin] || {}), ...Object.keys(after.pricing?.[cabin] || {})]);
+    columnKeys.forEach(key => {
+      const from = before.pricing?.[cabin]?.[key] || '';
+      const to = after.pricing?.[cabin]?.[key] || '';
+      if (from === to) return;
+      const column = afterColumns.get(key) || beforeColumns.get(key) || { group:'Pricing', label:key };
+      changes.push({ section:9, label:`${cabin} · ${column.group} · ${column.label}`, from:fcReviewValue(from), to:fcReviewValue(to) });
+    });
+  });
+  return changes;
+}
+
+function FCReviewValue({ label, value, after }) {
+  return (
+    <div style={{ minWidth:0 }}>
+      <div style={{ fontSize:9.5, fontWeight:750, color:after?T.primary:T.inkFaint, letterSpacing:'.65px', textTransform:'uppercase', marginBottom:5 }}>{label}</div>
+      <div style={{ minHeight:34, display:'flex', alignItems:'center', padding:'7px 9px', borderRadius:7, border:`1px solid ${after?T.primaryLine:T.line}`, background:after?T.primaryBg:T.fill, color:after?T.primary:T.inkSoft, fontSize:11.5, fontWeight:after?650:500, lineHeight:1.35, fontFamily:"'SF Mono',Menlo,monospace", wordBreak:'break-word' }}>{value}</div>
+    </div>
+  );
+}
+
+function FCReviewRow({ change, first }) {
+  return (
+    <div style={{ padding:'12px 14px 14px', borderTop:first?'none':`1px solid ${T.lineSoft}` }}>
+      <div style={{ fontSize:12.5, fontWeight:650, color:T.ink, lineHeight:1.35 }}>{change.label}</div>
+      <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) 24px minmax(0,1fr)', gap:7, alignItems:'end', marginTop:9 }}>
+        <FCReviewValue label="Current" value={change.from}/>
+        <div aria-hidden="true" style={{ width:24, height:24, marginBottom:5, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="18" y2="12"/><polyline points="13 7 18 12 13 17"/></svg>
+        </div>
+        <FCReviewValue label="After save" value={change.to} after/>
+      </div>
+    </div>
+  );
+}
+
+function FarecodeReviewStep({ changes, onNav }) {
+  const groups = SECTS.map(section => ({ ...section, items:changes.filter(change => change.section === section.n) })).filter(section => section.items.length);
+  return (
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>10</span>
+        <div style={{ flex:1, minWidth:0 }}>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Review Changes</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Confirm the exact Farecode updates before saving.</p>
+        </div>
+        <span style={{ display:'inline-flex', alignItems:'center', padding:'3px 9px', borderRadius:999, border:`1px solid ${T.primaryLine}`, background:T.primaryBg, color:T.primary, fontSize:10.5, fontWeight:700, whiteSpace:'nowrap' }}>{changes.length} {changes.length===1?'update':'updates'}</span>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:14, padding:'16px' }}>
+        {!changes.length ? (
+          <div style={{ padding:'28px 18px', textAlign:'center', border:`1px dashed ${T.line}`, borderRadius:10, background:T.fill }}>
+            <div style={{ width:34, height:34, margin:'0 auto 9px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div style={{ fontSize:13, fontWeight:700, color:T.ink }}>No changes to review</div>
+            <div style={{ fontSize:11.5, color:T.inkFaint, lineHeight:1.5, marginTop:4 }}>Return to a section to make an update. This Farecode will remain unchanged.</div>
+          </div>
+        ) : (
+          <div style={{ border:`1px solid ${T.line}`, borderRadius:10, overflow:'hidden', background:'#fff' }}>
+            <div style={{ padding:'12px 14px', background:T.fill, display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
+              <div>
+                <div style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>Proposed updates</div>
+                <div style={{ fontSize:11, color:T.inkFaint, lineHeight:1.4, marginTop:2 }}>Current and after-save values are paired for quick verification.</div>
+              </div>
+              <span style={{ padding:'2px 7px', borderRadius:999, background:'#fff', border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:700, whiteSpace:'nowrap' }}>{changes.length} total</span>
+            </div>
+            {groups.map(group => (
+              <div key={group.n} style={{ borderTop:`1px solid ${T.line}` }}>
+                <div style={{ padding:'9px 12px', background:'#FBFCFE', borderBottom:`1px solid ${T.lineSoft}`, display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ width:23, height:19, borderRadius:5, background:T.primary, color:'#fff', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:800, flexShrink:0 }}>{String(group.n).padStart(2,'0')}</span>
+                  <span style={{ fontSize:12.5, fontWeight:700, color:T.ink, minWidth:0 }}>{group.l}</span>
+                  <span style={{ padding:'1px 6px', borderRadius:999, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, fontSize:10, fontWeight:700, color:T.primary }}>{group.items.length}</span>
+                  <button type="button" onClick={() => onNav(group.n)} style={{ marginLeft:'auto', background:'none', border:'none', padding:'3px 0', cursor:'pointer', fontSize:11, fontWeight:650, color:T.inkSoft }}>Edit section</button>
+                </div>
+                {group.items.map((change, index) => <FCReviewRow key={`${group.n}-${index}`} change={change} first={index===0}/>)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 function sComplete(n, form, pricing) {
   if (n===1) return !!(form.ship && farecodeSailingValues(form).length && form.faretype);
   if (n===2) return !!(form.cancellationPolicy && form.depositPolicy);
@@ -1824,11 +1978,11 @@ function useDropdown() {
 }
 
 /* ── Section nav (edit mode) ── */
-function PanelNav({ active, onNav, form, pricing, errors, visited }) {
+function PanelNav({ active, onNav, form, pricing, errors, visited, sections=SECTS }) {
   return (
     <div style={{ width:196, flexShrink:0, background:T.navFill, borderRight:`1px solid ${T.line}`, display:'flex', flexDirection:'column' }}>
       <div style={{ flex:1, padding:'16px 0 0', overflowY:'auto' }}>
-        {SECTS.map(({ n,l }) => {
+        {sections.map(({ n,l }) => {
           const isAct=active===n, done=!isAct&&sComplete(n,form,pricing)&&(visited.has(n)||n<=2), hasErr=sHasErr(n,errors);
           return (
             <div key={n} onClick={() => onNav(n)} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', cursor:'pointer', position:'relative', transition:'background .12s' }}
@@ -1929,15 +2083,17 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   const [discardCb,   setDiscardCb]   = useState(null);
   const [mounted,     setMounted]     = useState(false);
   const snapRef = useRef(null);
+  const reviewBaselineRef = useRef(null);
 
   useEffect(() => {
-    snapRef.current = JSON.stringify(form) + JSON.stringify(pricing) + JSON.stringify(pricingColumns);
+    snapRef.current = JSON.stringify({ form, overrides, pricing, pricingColumns });
+    reviewBaselineRef.current = cloneFarecodeReviewState({ form, overrides, pricing, pricingColumns });
     requestAnimationFrame(() => setMounted(true));
   }, []);
 
   const set         = (k,v) => setForm(p => ({ ...p, [k]:v }));
   const navTo       = n => { setActive(n); setVisited(p => new Set([...p,n])); setErrors({}); };
-  const isDirty     = () => snapRef.current !== (JSON.stringify(form)+JSON.stringify(pricing)+JSON.stringify(pricingColumns));
+  const isDirty     = () => snapRef.current !== JSON.stringify({ form, overrides, pricing, pricingColumns });
   const onFTSelect  = ft => { setForm(p => ({ ...p, faretype:ft.code, ...ft.vals, supp:cloneSupplements(ft.vals.supp || defaultSupplements()) })); setOverrides(DEFAULT_OVRD()); };
   const toggleOvrd  = k  => setOverrides(p => ({ ...p, [k]:p[k]==='overridden'?'inherited':'overridden' }));
 
@@ -1947,7 +2103,11 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   };
   const handleClose     = () => guardDirty(onClose);
   const handleCancel    = () => guardDirty(() => { setIsEditing(false); setErrors({}); setForm(buildForm()); setOverrides(buildOvrd()); setPricing(buildPricing()); setPricingColumns(buildPricingColumns()); });
-  const handleEnterEdit = () => { snapRef.current = JSON.stringify(form)+JSON.stringify(pricing)+JSON.stringify(pricingColumns); setIsEditing(true); setActiveTab('overview'); };
+  const handleEnterEdit = () => {
+    snapRef.current = JSON.stringify({ form, overrides, pricing, pricingColumns });
+    reviewBaselineRef.current = cloneFarecodeReviewState({ form, overrides, pricing, pricingColumns });
+    setIsEditing(true); setActiveTab('overview'); setActive(1); setVisited(new Set([1]));
+  };
 
   const validate = full => {
     const e = {};
@@ -1984,7 +2144,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   };
   const handleNext = () => {
     if (!validateStep(active)) return;
-    if (active<SECTS.length) navTo(active+1);
+    if (active<sections.length) navTo(active+1);
   };
 
   const handleActivate = () => {
@@ -1998,7 +2158,8 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
-      snapRef.current = JSON.stringify(form)+JSON.stringify(pricing)+JSON.stringify(pricingColumns);
+      snapRef.current = JSON.stringify({ form, overrides, pricing, pricingColumns });
+      reviewBaselineRef.current = cloneFarecodeReviewState({ form, overrides, pricing, pricingColumns });
       setIsEditing(false); setErrors({});
     }, 1000);
   };
@@ -2006,7 +2167,9 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   const sectProps = { form, set, overrides, toggleOverride:toggleOvrd, errors, policies };
   const selFT = FT_DATA.find(ft => ft.code === form.faretype);
   const showSectionNav = isEditing && activeTab==='overview';
-  const isLast = active===SECTS.length;
+  const sections = mode==='view' && isEditing ? [...SECTS, REVIEW_SECT] : SECTS;
+  const reviewChanges = diffFarecodeState(reviewBaselineRef.current, { form, overrides, pricing, pricingColumns });
+  const isLast = active===sections.length;
 
   const content = (
     <>
@@ -2088,7 +2251,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
         <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
           {/* Section nav (edit/create mode, overview only) */}
           {showSectionNav && (
-            <PanelNav active={active} onNav={navTo} form={form} pricing={pricing} errors={errors} visited={visited}/>
+            <PanelNav active={active} onNav={navTo} form={form} pricing={pricing} errors={errors} visited={visited} sections={sections}/>
           )}
           {mode==='create' && !isEditing && null}
 
@@ -2113,6 +2276,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
                     {active===7 && <S7 {...sectProps}/>}
                     {active===8 && <S8Supp form={form} setForm={setForm}/>}
                     {active===9 && <S8 pricing={pricing} setPricing={setPricing} pricingColumns={pricingColumns} setPricingColumns={setPricingColumns} errors={errors} setErrors={setErrors}/>}
+                    {active===10 && <FarecodeReviewStep changes={reviewChanges} onNav={navTo}/>}
                   </div>
                 )}
               </>
