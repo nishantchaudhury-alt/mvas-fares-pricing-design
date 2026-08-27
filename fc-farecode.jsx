@@ -43,12 +43,24 @@ function sailDates(code) {
   end.setDate(end.getDate() + (SAIL_NIGHTS[code] || 7));
   return { start:fmtDay(start), end:fmtDay(end), nights:SAIL_NIGHTS[code] || 7 };
 }
-const mkSupp = (id, title, type) => ({ id, title, type, custom:false, enabled:false, name:'', cabin:'', rule:'Booking', maxCount:'', farePos:[] });
+const farecodeSailingValues = form => {
+  if (Array.isArray(form?.sailings)) return form.sailings;
+  return form?.sailing ? [form.sailing] : [];
+};
+const farecodeSailingLabel = form => {
+  const sailings = farecodeSailingValues(form);
+  return sailings.length ? sailings.join(', ') : '—';
+};
+const mkSupp = (id, title, type) => ({ id, title, type, custom:false, enabled:false, name:'', cabin:'', cabins:[], rule:'Booking', maxCount:'', farePos:[] });
 const defaultSupplements = () => [
   mkSupp('complimentary', 'Complementary Supplement', 'comp'),
   mkSupp('paid', 'Paid Supplement', 'paid'),
 ];
-const cloneSupplements = list => (list || []).map(item => ({ ...item, farePos:[...(item.farePos || [])] }));
+const cloneSupplements = list => (list || []).map(item => ({
+  ...item,
+  cabins:Array.isArray(item.cabins) ? [...item.cabins] : item.cabin && !['Any', 'All', 'Any cabin', 'All cabin categories'].includes(item.cabin) ? [item.cabin] : [],
+  farePos:[...(item.farePos || [])],
+}));
 const FT_DATA = [
   { code:'FT-00101', basis:'CORE-RETAIL', group:'Core',
     vals:{ cancellationPolicy:'Standard Cancellation', depositPolicy:'5 Night Standard Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:4, standbyEligible:false, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false,
@@ -63,7 +75,7 @@ const FT_DATA = [
 ];
 const CHANNEL_PARTNERS = ['Virtuoso', 'AMEX Travel', 'Ensemble', 'Signature Travel', 'Travel Leaders', 'Nexion', 'Avoya Travel'];
 const OVRD_KEYS = ['cancellationPolicy','depositPolicy','minOccupancy','maxOccupancy','advancedPurchase','standbyEligible','upgradeEligible','couponEligible','cruiseControlAccess','channelVisibility','includeDiscount','discountMessage','offerPrimary','offerSecondary','offerTertiary','waiveGovTaxes','waiveCruiseExp','noFareDisplay'];
-const DEFAULT_FORM  = () => ({ ship:'', sailing:'', faretype:'', cancellationPolicy:'', depositPolicy:'', residency:'Any', minAge:18, minOccupancy:'', maxOccupancy:'', advancedPurchase:'', standbyEligible:false, upgradeEligible:true, couponEligible:true, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false, supp:defaultSupplements() });
+const DEFAULT_FORM  = () => ({ ship:'', sailing:'', sailings:[], faretype:'', cancellationPolicy:'', depositPolicy:'', residency:'Any', minAge:18, minOccupancy:'', maxOccupancy:'', advancedPurchase:'', standbyEligible:false, upgradeEligible:true, couponEligible:true, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false, supp:defaultSupplements() });
 const DEFAULT_OVRD  = () => Object.fromEntries(OVRD_KEYS.map(k => [k,'inherited']));
 const GUEST_ROWS = [
   { grp:'Occupancy 1–2', rows:[{ k:'single',l:'Single Guest' },{ k:'dbl1',l:'Double Guest 1' },{ k:'dbl2',l:'Double Guest 2' }] },
@@ -71,10 +83,12 @@ const GUEST_ROWS = [
   { grp:'Extra child',   rows:[{ k:'child3',l:'3rd guest' },{ k:'child4',l:'4th guest' }] },
   { grp:'Extra infant',  rows:[{ k:'infant3',l:'3rd guest' },{ k:'infant4',l:'4th guest' }] },
 ];
-const GUEST_KEYS = GUEST_ROWS.flatMap(g => g.rows.map(r => r.k));
+const DEFAULT_PRICING_COLUMNS = GUEST_ROWS.flatMap(group => group.rows.map(row => ({ key:row.k, label:row.l, group:group.grp, custom:false })));
+const GUEST_KEYS = DEFAULT_PRICING_COLUMNS.map(column => column.key);
 const EMPTY_ROW = () => Object.fromEntries(GUEST_KEYS.map(k => [k,'']));
 const SYSTEM_PRICING_CABINS = ['Interior','Ocean View','Balcony','Suite'];
-const MAX_PRICING_COLUMNS = 8;
+const MAX_GUEST_COLUMNS = 14;
+const DEFAULT_COLUMN_CONFIG = () => DEFAULT_PRICING_COLUMNS.map(column => ({ ...column }));
 const DEFAULT_PRICING = () => Object.fromEntries(SYSTEM_PRICING_CABINS.map(cabin => [cabin, EMPTY_ROW()]));
 
 /* ── Mock data for the History tab ── */
@@ -237,7 +251,7 @@ function Sel({ value, onChange, opts, err, dis, ariaLabel='Select option', input
     </div>
   );
 }
-function MultiChip({ values, onChange, opts, placeholder, inputId, ariaLabel, ariaDescribedBy, ariaInvalid, ariaRequired }) {
+function MultiChip({ values, onChange, opts, placeholder, inputId, ariaLabel, ariaDescribedBy, ariaInvalid, ariaRequired, disabled=false }) {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -281,12 +295,13 @@ function MultiChip({ values, onChange, opts, placeholder, inputId, ariaLabel, ar
   useEffect(() => { setActiveIndex(0); }, [q, values.length]);
 
   const choose = option => {
-    if (!option) return;
+    if (!option || disabled) return;
     onChange([...values, option]);
     setQ('');
     requestAnimationFrame(() => inputRef.current?.focus());
   };
   const onKeyDown = e => {
+    if (disabled) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActiveIndex(i => filtered.length ? (i + 1) % filtered.length : 0); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setOpen(true); setActiveIndex(i => filtered.length ? (i - 1 + filtered.length) % filtered.length : 0); }
     else if (e.key === 'Enter' && open && filtered[activeIndex]) { e.preventDefault(); choose(filtered[activeIndex]); }
@@ -295,19 +310,20 @@ function MultiChip({ values, onChange, opts, placeholder, inputId, ariaLabel, ar
   };
 
   return (
-    <div ref={rootRef} style={{ position:'relative' }}>
-      <div ref={triggerRef} onClick={() => { setOpen(true); inputRef.current?.focus(); }}
-      style={{ minHeight:42, padding:'5px 8px', border:`1.5px solid ${open ? T.primary : '#D8DFE8'}`, borderRadius:7, display:'flex', flexWrap:'wrap', gap:5, cursor:'text', alignItems:'center', background:'#fff', boxShadow:open ? '0 0 0 3px rgba(27,36,52,.1)' : 'none', transition:'border-color .15s, box-shadow .15s' }}>
+    <div ref={rootRef} aria-disabled={disabled || undefined} style={{ position:'relative' }}>
+      <div ref={triggerRef} onClick={() => { if (!disabled) { setOpen(true); inputRef.current?.focus(); } }}
+      style={{ minHeight:42, padding:'5px 8px', border:`1.5px solid ${open ? T.primary : ariaInvalid ? T.red : disabled ? '#E8EDF3' : '#D8DFE8'}`, borderRadius:7, display:'flex', flexWrap:'wrap', gap:5, cursor:disabled?'not-allowed':'text', alignItems:'center', background:disabled?'#F3F4F6':'#fff', boxShadow:open ? '0 0 0 3px rgba(27,36,52,.1)' : 'none', transition:'border-color .15s, box-shadow .15s' }}>
         {values.map(v => (
           <span key={v} style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 7px', borderRadius:6, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary, fontSize:11.5, fontWeight:600 }}>
             {v}
-            <button type="button" aria-label={`Remove ${v}`} onClick={e => { e.stopPropagation(); onChange(values.filter(x => x !== v)); }}
+            {!disabled && <button type="button" aria-label={`Remove ${v}`} onClick={e => { e.stopPropagation(); onChange(values.filter(x => x !== v)); }}
             style={{ width:14, height:14, padding:0, display:'inline-flex', alignItems:'center', justifyContent:'center', border:'none', background:'none', cursor:'pointer', color:T.inkFaint, fontSize:14, lineHeight:1 }}>×</button>
+            }
           </span>
         ))}
         <input id={inputId} ref={inputRef} role="combobox" aria-label={ariaLabel || placeholder || 'Search options'} aria-describedby={ariaDescribedBy} aria-invalid={ariaInvalid} aria-required={ariaRequired} aria-haspopup="listbox" aria-controls={menuId} aria-expanded={open} aria-activedescendant={open && filtered[activeIndex] ? `${menuId}-option-${activeIndex}` : undefined}
-        value={q} onChange={e => setQ(e.target.value)} onFocus={() => setOpen(true)} onKeyDown={onKeyDown} placeholder={values.length ? '' : placeholder}
-        style={{ border:'none', outline:'none', fontSize:13, color:T.ink, flex:1, minWidth:100, background:'transparent', padding:4 }}/>
+        disabled={disabled} value={q} onChange={e => setQ(e.target.value)} onFocus={() => !disabled && setOpen(true)} onKeyDown={onKeyDown} placeholder={values.length ? '' : placeholder}
+        style={{ border:'none', outline:'none', fontSize:13, color:disabled?T.inkFaint:T.ink, flex:1, minWidth:100, background:'transparent', padding:4, cursor:disabled?'not-allowed':undefined }}/>
       </div>
       {open && menuPos && ReactDOM.createPortal(
         <div ref={menuRef} id={menuId} role="listbox" aria-label={`${placeholder || 'Search'} options`} className="pscroll" style={{ position:'fixed', left:menuPos.left, top:menuPos.top, bottom:menuPos.bottom, width:menuPos.width, maxHeight:menuPos.maxHeight, overflowY:'auto', zIndex:2200, padding:4, background:T.panel, border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 8px 24px rgba(15,23,42,.14)' }}>
@@ -424,50 +440,61 @@ function IcExpand({ size=15 }) {
   );
 }
 
-function PricingReadOnlyTable({ pricing, expanded=false }) {
+function PricingMatrixHeader({ grid, columns=DEFAULT_PRICING_COLUMNS, expanded=false, onRemoveColumn }) {
+  let nextColumn = 2;
+  const groupedColumns = GUEST_ROWS.map(group => ({ label:group.grp, columns:columns.filter(column => column.group===group.grp) })).filter(group => group.columns.length);
+  const totalColumn = columns.length + 2;
+  return (
+    <div role="rowgroup" style={{ display:'grid', gridTemplateColumns:grid, gridTemplateRows:'auto auto', background:'#F7F9FC', borderBottom:`1px solid ${T.line}`, position:'sticky', top:0, zIndex:2 }}>
+      <div role="columnheader" style={{ gridColumn:'1', gridRow:'1 / span 2', position:'sticky', left:0, zIndex:4, display:'flex', alignItems:'center', padding:expanded?'11px 16px':'8px 10px', background:'#F7F9FC', borderRight:`1px solid ${T.line}`, fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', whiteSpace:'nowrap' }}>Cabin Category</div>
+      {groupedColumns.map(group => {
+        const start = nextColumn;
+        nextColumn += group.columns.length;
+        return <div key={group.label} role="columnheader" style={{ gridColumn:`${start} / span ${group.columns.length}`, gridRow:'1', padding:expanded?'8px 12px':'6px 8px', borderLeft:`1px solid ${T.lineSoft}`, borderBottom:`1px solid ${T.lineSoft}`, fontSize:9.5, fontWeight:800, color:T.inkFaint, textTransform:'uppercase', letterSpacing:'.6px', textAlign:'center', whiteSpace:'nowrap' }}>{group.label}</div>;
+      })}
+      {columns.map((column, index) => (
+        <div key={column.key} role="columnheader" title={`${column.group} · ${column.label}`} style={{ gridColumn:String(index+2), gridRow:'2', padding:expanded?'7px 8px':'6px 8px', borderLeft:`1px solid ${T.lineSoft}`, fontSize:expanded?10.5:10, fontWeight:700, color:T.inkSoft, textAlign:'right', whiteSpace:'nowrap', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'flex-end', gap:5 }}>
+          <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis' }}>{column.label}</span>
+          {column.custom && onRemoveColumn && <button type="button" onClick={() => onRemoveColumn(column)} aria-label={`Remove ${column.label} from ${column.group}`} title="Remove custom column" style={{ width:20, height:20, flexShrink:0, display:'inline-flex', alignItems:'center', justifyContent:'center', border:'none', borderRadius:4, background:'transparent', color:T.inkFaint, cursor:'pointer' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>}
+        </div>
+      ))}
+      <div role="columnheader" style={{ gridColumn:String(totalColumn), gridRow:'1 / span 2', display:'flex', alignItems:'center', justifyContent:'flex-end', padding:expanded?'11px 14px':'8px 10px', borderLeft:`1px solid ${T.line}`, background:T.fill, fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', textAlign:'right', whiteSpace:'nowrap' }}>Cabin · Double</div>
+    </div>
+  );
+}
+
+function PricingReadOnlyTable({ pricing, columns=DEFAULT_PRICING_COLUMNS, expanded=false }) {
   const cabins = Object.keys(pricing);
   const fmtCur = n => new Intl.NumberFormat('en-US',{ minimumFractionDigits:2, maximumFractionDigits:2 }).format(n);
   const parseCur = v => parseFloat(String(v||'').replace(/[^0-9.]/g,'')) || 0;
   const val = (cab,k) => parseCur(pricing[cab][k]);
-  const isPriced = cab => GUEST_KEYS.some(k => val(cab,k) > 0);
-  const firstCol = expanded ? 180 : 128;
-  const cabinCol = expanded ? 150 : 76;
-  const pGrid = `${firstCol}px repeat(${cabins.length}, minmax(${cabinCol}px,1fr))`;
+  const isPriced = cab => columns.some(column => val(cab,column.key) > 0);
+  const firstCol = expanded ? 170 : 118;
+  const guestCol = expanded ? 132 : 104;
+  const totalCol = expanded ? 150 : 126;
+  const pGrid = `${firstCol}px repeat(${columns.length}, minmax(${guestCol}px,1fr)) ${totalCol}px`;
   const cellPad = expanded ? '13px 16px' : '9px 10px';
   const labelPad = expanded ? '13px 18px' : '9px 12px';
   const valueSize = expanded ? 13.5 : 12.5;
 
   return (
-    <div className="hscroll" style={{ border:`1px solid ${T.line}`, borderRadius:9, overflowX:'auto', background:'#fff' }}>
-      <div style={{ minWidth:cabins.length*cabinCol+firstCol }}>
-        <div style={{ display:'grid', gridTemplateColumns:pGrid, background:'#F7F9FC', borderBottom:`1px solid ${T.line}`, position:'sticky', top:0, zIndex:1 }}>
-          <div style={{ padding:expanded?'11px 18px':'8px 12px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px' }}>Guest Type</div>
-          {cabins.map(cabin => (
-            <div key={cabin} style={{ padding:expanded?'11px 16px':'8px 10px', fontSize:expanded?11:10.5, fontWeight:700, color:isPriced(cabin)?T.ink:T.inkFaint, textAlign:'right', borderLeft:`1px solid ${T.lineSoft}`, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }} title={cabin}>{cabin}</div>
-          ))}
-        </div>
-        {GUEST_ROWS.map((g, gi) => (
-          <div key={g.grp}>
-            <div style={{ display:'grid', gridTemplateColumns:pGrid, background:'#FAFBFD', borderBottom:`1px solid ${T.lineSoft}`, borderTop:gi>0?`1px solid ${T.lineSoft}`:'none' }}>
-              <div style={{ padding:expanded?'8px 18px':'6px 12px', fontSize:9.5, fontWeight:700, color:T.inkFaint, textTransform:'uppercase', letterSpacing:'.6px', gridColumn:`span ${cabins.length+1}` }}>{g.grp}</div>
-            </div>
-            {g.rows.map((r, ri) => (
-              <div key={r.k} style={{ display:'grid', gridTemplateColumns:pGrid, alignItems:'center', borderBottom:ri<g.rows.length-1?`1px solid ${T.lineSoft}`:'none', background:'#fff' }}>
-                <div style={{ padding:labelPad, fontSize:expanded?13.5:12.5, color:T.ink, whiteSpace:'nowrap' }}>{r.l}</div>
-                {cabins.map(cabin => (
-                  <div key={cabin} style={{ padding:cellPad, fontSize:valueSize, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:val(cabin,r.k)>0?T.ink:T.inkFaint, borderLeft:`1px solid ${T.lineSoft}` }}>
-                    {val(cabin,r.k)>0?fmtCur(val(cabin,r.k)):'—'}
+    <div className="hscroll" role="table" aria-label="Pricing by cabin category and guest position" style={{ border:`1px solid ${T.line}`, borderRadius:9, overflowX:'auto', background:'#fff' }}>
+      <div style={{ minWidth:firstCol+columns.length*guestCol+totalCol }}>
+        <PricingMatrixHeader grid={pGrid} columns={columns} expanded={expanded}/>
+        <div role="rowgroup">
+          {cabins.map((cabin, index) => {
+            const total = val(cabin,'dbl1')+val(cabin,'dbl2');
+            return (
+              <div key={cabin} role="row" style={{ display:'grid', gridTemplateColumns:pGrid, alignItems:'stretch', borderBottom:index<cabins.length-1?`1px solid ${T.lineSoft}`:'none', background:'#fff' }}>
+                <div role="rowheader" style={{ position:'sticky', left:0, zIndex:1, display:'flex', alignItems:'center', padding:labelPad, background:'#fff', borderRight:`1px solid ${T.line}`, fontSize:expanded?13.5:12.5, fontWeight:700, color:isPriced(cabin)?T.ink:T.inkFaint, whiteSpace:'nowrap' }}>{cabin}</div>
+                {columns.map(column => (
+                  <div key={column.key} role="cell" style={{ padding:cellPad, fontSize:valueSize, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:val(cabin,column.key)>0?T.ink:T.inkFaint, borderLeft:`1px solid ${T.lineSoft}` }}>
+                    {val(cabin,column.key)>0?fmtCur(val(cabin,column.key)):'—'}
                   </div>
                 ))}
+                <div role="cell" style={{ padding:cellPad, fontSize:valueSize, fontWeight:700, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:total>0?T.ink:T.inkFaint, borderLeft:`1px solid ${T.line}`, background:T.fill }}>{total>0?fmtCur(total):'—'}</div>
               </div>
-            ))}
-          </div>
-        ))}
-        <div style={{ display:'grid', gridTemplateColumns:pGrid, alignItems:'center', borderTop:`1px solid ${T.line}`, background:T.fill }}>
-          <div style={{ padding:expanded?'13px 18px':'10px 12px', fontSize:11, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px' }}>Cabin · Double</div>
-          {cabins.map(cabin => {
-            const total = val(cabin,'dbl1')+val(cabin,'dbl2');
-            return <div key={cabin} style={{ padding:expanded?'13px 16px':'10px', fontSize:valueSize, fontWeight:700, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:total>0?T.ink:T.inkFaint, borderLeft:`1px solid ${T.lineSoft}` }}>{total>0?fmtCur(total):'—'}</div>;
+            );
           })}
         </div>
       </div>
@@ -475,7 +502,7 @@ function PricingReadOnlyTable({ pricing, expanded=false }) {
   );
 }
 
-function PricingExpandedModal({ pricing, leadIn, onClose }) {
+function PricingExpandedModal({ pricing, columns, leadIn, onClose }) {
   const dialogRef = useRef(null);
   const closeBtnRef = useRef(null);
   useEffect(() => {
@@ -511,7 +538,7 @@ function PricingExpandedModal({ pricing, leadIn, onClose }) {
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:20, padding:'20px 24px', borderBottom:`1px solid ${T.line}`, flexShrink:0 }}>
           <div>
             <div id="pricing-modal-title" style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Pricing matrix</div>
-            <div style={{ fontSize:12.5, color:T.inkSoft }}>Fare per guest in USD, by guest position and cabin category.</div>
+            <div style={{ fontSize:12.5, color:T.inkSoft }}>Fare per guest in USD, by cabin category and guest position.</div>
           </div>
           <button ref={closeBtnRef} onClick={onClose} aria-label="Close expanded pricing view" title="Close"
             style={{ width:34, height:34, borderRadius:8, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}
@@ -521,7 +548,7 @@ function PricingExpandedModal({ pricing, leadIn, onClose }) {
           </button>
         </div>
         <div className="pscroll" style={{ padding:24, overflow:'auto', minHeight:0 }}>
-          <PricingReadOnlyTable pricing={pricing} expanded/>
+          <PricingReadOnlyTable pricing={pricing} columns={columns} expanded/>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:16, marginTop:14, padding:'12px 16px', background:T.fill, borderRadius:8, border:`1px solid ${T.lineSoft}` }}>
             <span style={{ fontSize:12.5, color:T.inkSoft }}>Lead-in cabin fare <span style={{ color:T.inkFaint }}>· lowest category, 2 guests</span></span>
             <span style={{ fontSize:16, fontWeight:700, color:T.ink, fontFamily:"'SF Mono',Menlo,monospace" }}>{leadIn}</span>
@@ -534,7 +561,7 @@ function PricingExpandedModal({ pricing, leadIn, onClose }) {
 }
 
 /* ── Read-only overview (all 8 sections) ── */
-function OverviewReadOnly({ form, overrides, pricing }) {
+function OverviewReadOnly({ form, overrides, pricing, pricingColumns }) {
   const [pricingExpanded, setPricingExpanded] = useState(false);
   const expandBtnRef = useRef(null);
   const selFT = FT_DATA.find(ft => ft.code === form.faretype);
@@ -547,11 +574,13 @@ function OverviewReadOnly({ form, overrides, pricing }) {
   const vis = CHS.filter(c => form[c.k]).map(c => c.l);
   const hid = CHS.filter(c => !form[c.k]).map(c => c.l);
   const enabledSupplements = (form.supp || []).filter(supp => supp.enabled);
+  const selectedSailings = farecodeSailingValues(form);
+  const sailingWindows = selectedSailings.map(sailDates);
   function fmtCur(n) { return new Intl.NumberFormat('en-US',{ minimumFractionDigits:2, maximumFractionDigits:2 }).format(n); }
   function parseCur(v) { return parseFloat(String(v||'').replace(/[^0-9.]/g,'')) || 0; }
   const CABINS = Object.keys(pricing);
   const val = (cab,k) => parseCur(pricing[cab][k]);
-  const isPriced = cab => GUEST_KEYS.some(k => val(cab,k) > 0);
+  const isPriced = cab => pricingColumns.some(column => val(cab,column.key) > 0);
   const leadIn = Math.min(...CABINS.filter(isPriced).map(c => val(c,'dbl1')+val(c,'dbl2')).concat([Infinity]));
   const leadInLabel = isFinite(leadIn)&&leadIn>0?`$${fmtCur(leadIn)}`:'—';
   const closeExpandedPricing = () => {
@@ -561,13 +590,13 @@ function OverviewReadOnly({ form, overrides, pricing }) {
 
   return (
     <div>
-      {/* 1. Ship & Sailing */}
-      <ROSection n={1} title="Ship & Sailing">
+      {/* 1. Ship & Sailings */}
+      <ROSection n={1} title="Ship & Sailings">
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4, minmax(0, 1fr))', gap:10 }}>
           <ROField label="Ship"    value={form.ship}/>
-          <ROField label="Sailing" value={form.sailing} mono/>
-          <ROField label="Start Date" value={sailDates(form.sailing).start}/>
-          <ROField label="End Date"   value={sailDates(form.sailing).end}/>
+          <ROField label="Sailings" value={farecodeSailingLabel(form)} mono/>
+          <ROField label="Departure Dates" value={sailingWindows.length ? sailingWindows.map(window => window.start).join(', ') : '—'}/>
+          <ROField label="Return Dates" value={sailingWindows.length ? sailingWindows.map(window => window.end).join(', ') : '—'}/>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:8, background:T.primaryBg, border:`1px solid ${T.primaryLine}` }}>
           <span style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px', flexShrink:0 }}>Faretype Source</span>
@@ -644,7 +673,7 @@ function OverviewReadOnly({ form, overrides, pricing }) {
               <span style={{ display:'inline-flex', alignItems:'center', gap:5, color:T.green, fontSize:10.5, fontWeight:700 }}><span style={{ width:5, height:5, borderRadius:'50%', background:T.green }}/>Included</span>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0,1fr))', gap:10, padding:'11px' }}>
-              <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Cabin scope</div><div style={{ fontSize:12, color:T.ink, marginTop:4 }}>{supp.cabin || 'Any cabin'}</div></div>
+              <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Cabin scope</div><div style={{ fontSize:12, color:T.ink, marginTop:4 }}>{fcSuppCabinLabel(supp)}</div></div>
               <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Application</div><div style={{ fontSize:12, color:T.ink, marginTop:4 }}>{fcSuppRuleLabel(supp.rule)}{supp.maxCount ? ` · Max ${supp.maxCount}` : ''}</div></div>
               <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Fare positions</div><div style={{ fontSize:12, color:T.ink, marginTop:4 }}>{supp.farePos?.length ? supp.farePos.join(', ') : 'All positions'}</div></div>
             </div>
@@ -657,7 +686,7 @@ function OverviewReadOnly({ form, overrides, pricing }) {
         )}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'9px 11px', borderRadius:8, background:T.primaryBg, border:`1px solid ${T.primaryLine}` }}>
           <span style={{ fontSize:11.5, color:T.inkSoft }}>Sailing scope</span>
-          <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:11.5, fontWeight:700, color:T.primary }}>{form.sailing || '—'}</span>
+          <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:11.5, fontWeight:700, color:T.primary }}>{farecodeSailingLabel(form)}</span>
         </div>
       </ROSection>
 
@@ -670,14 +699,14 @@ function OverviewReadOnly({ form, overrides, pricing }) {
           <IcExpand/>
         </button>
       }>
-        <div style={{ fontSize:12.5, color:T.inkSoft, lineHeight:1.45, marginTop:-4 }}>Fare <strong style={{ color:T.ink, fontWeight:600 }}>per guest</strong> in USD, by guest position and cabin category.</div>
-        <PricingReadOnlyTable pricing={pricing}/>
+        <div style={{ fontSize:12.5, color:T.inkSoft, lineHeight:1.45, marginTop:-4 }}>Fare <strong style={{ color:T.ink, fontWeight:600 }}>per guest</strong> in USD, by cabin category and guest position.</div>
+        <PricingReadOnlyTable pricing={pricing} columns={pricingColumns}/>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, padding:'10px 14px', background:T.fill, borderRadius:8, border:`1px solid ${T.lineSoft}` }}>
           <span style={{ fontSize:12, color:T.inkSoft }}>Lead-in cabin fare <span style={{ color:T.inkFaint }}>· lowest category, 2 guests</span></span>
           <span style={{ fontSize:15, fontWeight:700, color:T.ink, fontFamily:"'SF Mono',Menlo,monospace" }}>{leadInLabel}</span>
         </div>
       </ROSection>
-      {pricingExpanded && <PricingExpandedModal pricing={pricing} leadIn={leadInLabel} onClose={closeExpandedPricing}/>}
+      {pricingExpanded && <PricingExpandedModal pricing={pricing} columns={pricingColumns} leadIn={leadInLabel} onClose={closeExpandedPricing}/>}
     </div>
   );
 }
@@ -704,8 +733,8 @@ function S1({ form, set, mode, errors, onFaretypeSelect }) {
       <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}`, borderRadius:'10px 10px 0 0' }}>
         <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>01</span>
         <div>
-          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Ship &amp; Sailing</h2>
-          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Define the voyage context and the parent Faretype for this Farecode.</p>
+          <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Ship &amp; Sailings</h2>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Choose the ship, one or more departures, and the parent Faretype for this Farecode.</p>
         </div>
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
@@ -713,7 +742,7 @@ function S1({ form, set, mode, errors, onFaretypeSelect }) {
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:10 }}>
             <div>
               <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Sailing Context</div>
-              <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>The ship and departure that this Farecode prices.</div>
+              <div style={{ fontSize:11.5, color:T.inkFaint, marginTop:3 }}>The ship and departures that this Farecode prices.</div>
             </div>
             {locked && (
               <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 7px', borderRadius:5, background:T.fill, border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:600, whiteSpace:'nowrap' }}>
@@ -721,12 +750,15 @@ function S1({ form, set, mode, errors, onFaretypeSelect }) {
               </span>
             )}
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <Field label="Ship" required error={errors.ship}>
-              <Sel ariaLabel="Ship" value={form.ship} onChange={v => { set('ship',v); set('sailing',''); }} dis={locked} err={errors.ship} opts={[['','Select ship…'],...Object.keys(SHIPS_DATA).map(s=>[s,s])]}/>
+              <Sel ariaLabel="Ship" value={form.ship} onChange={v => { set('ship',v); set('sailing',''); set('sailings',[]); }} dis={locked} err={errors.ship} opts={[['','Select ship…'],...Object.keys(SHIPS_DATA).map(s=>[s,s])]}/>
             </Field>
-            <Field label="Sailing" required error={errors.sailing}>
-              <Sel ariaLabel="Sailing" value={form.sailing} onChange={v => set('sailing',v)} dis={locked||!form.ship} err={errors.sailing} opts={[['','Select sailing…'],...sailings.map(s=>[s,s])]}/>
+            <Field label="Sailings" required helper="Select one or more departures for this Farecode." error={errors.sailing}>
+              <MultiChip values={farecodeSailingValues(form)}
+                onChange={values => { set('sailings', values); set('sailing', values[0] || ''); }}
+                opts={sailings} placeholder={form.ship ? 'Select sailings…' : 'Select a ship first'}
+                ariaLabel="Sailings" ariaInvalid={!!errors.sailing} ariaRequired="true" disabled={locked || !form.ship} />
             </Field>
           </div>
         </div>
@@ -1236,12 +1268,21 @@ function S7({ form, set, overrides, toggleOverride }) {
 }
 
 /* ── Section 8 · Supplements ── */
-const FC_SUPP_CABIN = [['', 'Any'], ['Interior', 'Interior'], ['Ocean View', 'Ocean View'], ['Balcony', 'Balcony'], ['Suite', 'Suite']];
+const FC_SUPP_CABIN = ['Interior', 'Ocean View', 'Balcony', 'Suite'];
 const FC_SUPP_RULE = [['Booking', 'Per booking'], ['Cabin', 'Per cabin'], ['Guest', 'Per guest']];
 const FC_SUPP_FPOS = ['Fare Position 1', 'Fare Position 2', 'Fare Position 3', 'Fare Position 4'];
 const FC_SUPP_TYPES = ['comp', 'paid'];
 const fcSuppTypeLabel = type => type === 'comp' ? 'Complementary' : 'Paid';
 const fcSuppRuleLabel = rule => ({ Booking:'Per booking', Cabin:'Per cabin', Guest:'Per guest' })[rule] || rule;
+const fcSuppCabinValues = supp => {
+  if (Array.isArray(supp?.cabins)) return supp.cabins;
+  if (supp?.cabin && !['Any', 'All', 'Any cabin', 'All cabin categories'].includes(supp.cabin)) return [supp.cabin];
+  return [];
+};
+const fcSuppCabinLabel = supp => {
+  const cabins = fcSuppCabinValues(supp);
+  return cabins.length ? cabins.join(', ') : 'All cabin categories';
+};
 let fcSuppSeq = 0;
 const mkCustomFarecodeSupp = type => ({ ...mkSupp(`fc-sup-custom-${++fcSuppSeq}`, `${fcSuppTypeLabel(type)} Supplement`, type), enabled:true, custom:true });
 
@@ -1256,20 +1297,21 @@ function FCSuppBadge({ type }) {
 
 function fcSuppRecap(supp) {
   const positions = Array.isArray(supp.farePos) ? supp.farePos.join(', ') : supp.farePos;
-  return [supp.cabin || 'Any cabin', fcSuppRuleLabel(supp.rule), supp.maxCount && `Max ${supp.maxCount}`, positions].filter(Boolean).join(' · ');
+  return [fcSuppCabinLabel(supp), fcSuppRuleLabel(supp.rule), supp.maxCount && `Max ${supp.maxCount}`, positions].filter(Boolean).join(' · ');
 }
 
 function FCSuppDetail({ supp, sailing, onUpdate, onAdd }) {
   const setValue = (key, value) => onUpdate({ ...supp, [key]:value });
   return (
     <div style={{ padding:'14px 13px 15px', background:'#FBFCFE', borderRadius:'0 0 9px 9px', display:'flex', flexDirection:'column', gap:12 }}>
+      <Field label="Supplement Name" required>
+        <input className="fi" style={iS()} value={supp.name} onChange={e => setValue('name', e.target.value)} placeholder="e.g. Drinks Package" />
+      </Field>
+      <Field label="Cabin Categories" helper="Select one or more. Leave empty to include all cabin categories.">
+        <MultiChip values={fcSuppCabinValues(supp)} onChange={value => setValue('cabins', value)} opts={FC_SUPP_CABIN}
+          placeholder="All cabin categories" ariaLabel="Cabin categories" />
+      </Field>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-        <Field label="Supplement Name" required>
-          <input className="fi" style={iS()} value={supp.name} onChange={e => setValue('name', e.target.value)} placeholder="e.g. Drinks Package" />
-        </Field>
-        <Field label="Cabin Category">
-          <Sel ariaLabel="Cabin category" value={supp.cabin} onChange={value => setValue('cabin', value)} opts={FC_SUPP_CABIN} />
-        </Field>
         <Field label="Rule" helper="Counting and application method.">
           <Sel ariaLabel="Supplement rule" value={supp.rule} onChange={value => setValue('rule', value)} opts={FC_SUPP_RULE} />
         </Field>
@@ -1285,9 +1327,9 @@ function FCSuppDetail({ supp, sailing, onUpdate, onAdd }) {
         <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Sailing scope</div>
         <div style={{ display:'flex', alignItems:'center', gap:7, marginTop:5, color:T.ink }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.2" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:11.5, fontWeight:700 }}>{sailing || 'Choose a sailing in Ship & Sailing'}</span>
+          <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:11.5, fontWeight:700 }}>{sailing || 'Choose sailings in Ship & Sailings'}</span>
         </div>
-        <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.4, marginTop:4 }}>Farecodes are sailing-specific, so this supplement automatically follows the selected departure.</div>
+        <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.4, marginTop:4 }}>This supplement automatically applies across the selected departures.</div>
       </div>
       <div style={{ display:'flex', justifyContent:'flex-end', paddingTop:2 }}>
         <button type="button" onClick={onAdd}
@@ -1421,7 +1463,7 @@ function S8Supp({ form, setForm }) {
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {FC_SUPP_TYPES.map(type => <FCSuppGroup key={type} type={type}
               entries={form.supp.map((supp, index) => ({ supp, index })).filter(({ supp }) => supp.type === type)}
-              open={open} sailing={form.sailing} onMark={mark} onUpdate={updateSupp} onSetEnabled={setEnabled}
+              open={open} sailing={farecodeSailingLabel(form)} onMark={mark} onUpdate={updateSupp} onSetEnabled={setEnabled}
               onRemove={removeSupp} onAdd={addSuppAfter} />)}
           </div>
         </div>
@@ -1430,8 +1472,9 @@ function S8Supp({ form, setForm }) {
   );
 }
 
-function PricingEditorExpandedModal({ pricing, setPricing, errors, onClose, onColumnRemoved }) {
+function PricingEditorExpandedModal({ pricing, setPricing, columns, setColumns, errors, onClose }) {
   const [newColumn, setNewColumn] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState(GUEST_ROWS[0].grp);
   const [addError, setAddError] = useState('');
   const [pendingRemove, setPendingRemove] = useState(null);
   const dialogRef = useRef(null);
@@ -1439,13 +1482,16 @@ function PricingEditorExpandedModal({ pricing, setPricing, errors, onClose, onCo
   const addInputRef = useRef(null);
   const removeCancelRef = useRef(null);
   const cabins = Object.keys(pricing);
-  const atLimit = cabins.length >= MAX_PRICING_COLUMNS;
+  const atLimit = columns.length >= MAX_GUEST_COLUMNS;
   const fmtCur = n => new Intl.NumberFormat('en-US',{ minimumFractionDigits:2, maximumFractionDigits:2 }).format(n);
   const parseCur = v => parseFloat(String(v||'').replace(/[^0-9.]/g,'')) || 0;
   const val = (cabin,key) => parseCur(pricing[cabin][key]);
   const updatePrice = (cabin,key,value) => setPricing(p => ({ ...p, [cabin]:{ ...p[cabin], [key]:value } }));
   const formatPrice = (cabin,key) => { const n=val(cabin,key); if (n>0) updatePrice(cabin,key,fmtCur(n)); };
-  const pGrid = `180px repeat(${cabins.length}, minmax(150px,1fr))`;
+  const firstCol = 190;
+  const guestCol = 132;
+  const totalCol = 150;
+  const pGrid = `${firstCol}px repeat(${columns.length}, minmax(${guestCol}px,1fr)) ${totalCol}px`;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -1484,18 +1530,36 @@ function PricingEditorExpandedModal({ pricing, setPricing, errors, onClose, onCo
   }, [pendingRemove]);
 
   const addColumn = () => {
-    const name = newColumn.trim().replace(/\s+/g,' ');
-    if (!name) { setAddError('Enter a category name.'); addInputRef.current?.focus(); return; }
-    if (name.length>24) { setAddError('Use 24 characters or fewer.'); addInputRef.current?.focus(); return; }
-    if (cabins.some(c => c.toLowerCase()===name.toLowerCase())) { setAddError('That category already exists.'); addInputRef.current?.focus(); return; }
-    if (atLimit) { setAddError(`A maximum of ${MAX_PRICING_COLUMNS} categories is supported.`); return; }
-    setPricing(p => ({ ...p, [name]:EMPTY_ROW() }));
+    const label = newColumn.trim().replace(/\s+/g,' ');
+    if (!label) { setAddError('Enter a guest-position label.'); addInputRef.current?.focus(); return; }
+    if (label.length>24) { setAddError('Use 24 characters or fewer.'); addInputRef.current?.focus(); return; }
+    if (columns.some(column => column.group===selectedGroup && column.label.toLowerCase()===label.toLowerCase())) { setAddError(`“${label}” already exists in ${selectedGroup}.`); addInputRef.current?.focus(); return; }
+    if (atLimit) { setAddError(`A maximum of ${MAX_GUEST_COLUMNS} guest-position columns is supported.`); return; }
+    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'guest';
+    const groupSlug = selectedGroup.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+    const baseKey = `custom_${groupSlug}_${slug}`;
+    let key = baseKey;
+    let suffix = 2;
+    while (columns.some(column => column.key===key)) key = `${baseKey}_${suffix++}`;
+    const nextColumn = { key, label, group:selectedGroup, custom:true };
+    setColumns(current => {
+      const next = [...current];
+      let insertAt = -1;
+      current.forEach((column,index) => { if (column.group===selectedGroup) insertAt=index; });
+      next.splice(insertAt+1,0,nextColumn);
+      return next;
+    });
+    setPricing(current => Object.fromEntries(Object.entries(current).map(([cabin,row]) => [cabin,{ ...row, [key]:'' }])));
     setNewColumn(''); setAddError('');
     requestAnimationFrame(() => addInputRef.current?.focus());
   };
-  const removeColumn = name => {
-    setPricing(p => Object.fromEntries(Object.entries(p).filter(([key]) => key!==name)));
-    onColumnRemoved?.(name);
+  const removeColumn = column => {
+    setColumns(current => current.filter(item => item.key!==column.key));
+    setPricing(current => Object.fromEntries(Object.entries(current).map(([cabin,row]) => {
+      const nextRow = { ...row };
+      delete nextRow[column.key];
+      return [cabin,nextRow];
+    })));
     setPendingRemove(null);
   };
 
@@ -1504,52 +1568,57 @@ function PricingEditorExpandedModal({ pricing, setPricing, errors, onClose, onCo
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="pricing-editor-modal-title" tabIndex="-1" onMouseDown={e => e.stopPropagation()}
         style={{ position:'relative', width:'min(1360px, calc(100vw - 48px))', maxHeight:'calc(100vh - 48px)', background:'#fff', borderRadius:14, boxShadow:'0 28px 80px rgba(15,23,42,.32)', display:'flex', flexDirection:'column', outline:'none', overflow:'hidden' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:20, padding:'18px 22px', borderBottom:`1px solid ${T.line}`, flexShrink:0 }}>
-          <div><div id="pricing-editor-modal-title" style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Edit pricing matrix</div><div style={{ fontSize:12.5, color:T.inkSoft }}>Set fares per guest and manage custom cabin categories.</div></div>
+          <div><div id="pricing-editor-modal-title" style={{ fontSize:18, fontWeight:700, color:T.ink, marginBottom:4 }}>Edit pricing matrix</div><div style={{ fontSize:12.5, color:T.inkSoft }}>Set fares for fixed cabin categories and add guest-position columns where needed.</div></div>
           <button ref={closeBtnRef} onClick={onClose} aria-label="Close expanded pricing editor" title="Close" style={{ width:34, height:34, borderRadius:8, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
         <div style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'14px 22px', background:T.fill, borderBottom:`1px solid ${T.line}`, flexShrink:0 }}>
-          <div style={{ flex:'0 1 390px' }}>
-            <div style={{ display:'flex', gap:8 }}>
-              <input ref={addInputRef} value={newColumn} disabled={atLimit} maxLength={24} onChange={e => { setNewColumn(e.target.value); if(addError)setAddError(''); }} onKeyDown={e => { if(e.key==='Enter')addColumn(); }} placeholder="New category name, e.g. Veranda" aria-label="New pricing category name" style={{ ...iS(!!addError,atLimit), padding:'8px 11px' }}/>
-              <button onClick={addColumn} disabled={atLimit} style={{ padding:'8px 14px', border:'none', borderRadius:7, background:atLimit?'#CBD5E1':T.primary, color:'#fff', fontSize:12.5, fontWeight:600, cursor:atLimit?'not-allowed':'pointer', whiteSpace:'nowrap' }}>+ Add column</button>
-            </div>
-            {addError && <div style={{ fontSize:11, color:T.red, marginTop:4 }}>{addError}</div>}
+          <div style={{ minWidth:150 }}>
+            <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px', marginBottom:5 }}>Occupancy group</div>
+            <Sel value={selectedGroup} onChange={value => { setSelectedGroup(value); setAddError(''); }} opts={GUEST_ROWS.map(group => [group.grp,group.grp])} dis={atLimit} ariaLabel="Occupancy group for new guest-position column"/>
           </div>
-          <div style={{ marginLeft:'auto', fontSize:11.5, color:T.inkFaint, paddingTop:9 }}>{cabins.length} of {MAX_PRICING_COLUMNS} categories · custom columns can be removed</div>
+          <div style={{ flex:'0 1 310px' }}>
+            <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px', marginBottom:5 }}>Guest-position label</div>
+            <div style={{ display:'flex', gap:8 }}>
+              <input ref={addInputRef} value={newColumn} disabled={atLimit} maxLength={24} onChange={e => { setNewColumn(e.target.value); if(addError)setAddError(''); }} onKeyDown={e => { if(e.key==='Enter')addColumn(); }} placeholder="e.g. Triple Guest" aria-label="New guest-position column label" style={{ ...iS(!!addError,atLimit), padding:'8px 11px' }}/>
+              <button type="button" onClick={addColumn} disabled={atLimit} style={{ padding:'8px 14px', border:'none', borderRadius:7, background:atLimit?'#CBD5E1':T.primary, color:'#fff', fontSize:12.5, fontWeight:600, cursor:atLimit?'not-allowed':'pointer', whiteSpace:'nowrap' }}>Add column</button>
+            </div>
+            {addError && <div role="alert" style={{ fontSize:11, color:T.red, marginTop:4 }}>{addError}</div>}
+          </div>
+          <div style={{ marginLeft:'auto', maxWidth:250, fontSize:11.5, color:T.inkFaint, lineHeight:1.4, paddingTop:21 }}>{columns.length} of {MAX_GUEST_COLUMNS} guest-position columns · cabin categories are fixed</div>
         </div>
         <div className="pscroll" style={{ padding:22, overflow:'auto', minHeight:0 }}>
-          <div className="hscroll" style={{ border:`1px solid ${T.line}`, borderRadius:9, overflowX:'auto', background:'#fff' }}>
-            <div style={{ minWidth:cabins.length*150+180 }}>
-              <div style={{ display:'grid', gridTemplateColumns:pGrid, background:'#F7F9FC', borderBottom:`1px solid ${T.line}`, position:'sticky', top:0, zIndex:2 }}>
-                <div style={{ padding:'11px 16px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px' }}>Guest Type</div>
-                {cabins.map(cabin => { const custom=!SYSTEM_PRICING_CABINS.includes(cabin); return (
-                  <div key={cabin} style={{ padding:'7px 10px', borderLeft:`1px solid ${T.lineSoft}`, display:'flex', alignItems:'center', justifyContent:'flex-end', gap:7, minWidth:0, background:errors.pricing?.[cabin]?'#FFFBEB':'transparent' }}>
-                    {errors.pricing?.[cabin] && <span title="Add at least one price" style={{ color:T.amber, fontSize:12 }}>!</span>}
-                    <span title={cabin} style={{ fontSize:11, fontWeight:700, color:T.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{cabin}</span>
-                    {custom && <button onClick={() => setPendingRemove(cabin)} aria-label={`Remove ${cabin} column`} title={`Remove ${cabin}`} style={{ width:24, height:24, borderRadius:5, border:'none', background:'transparent', color:T.inkFaint, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6m3 0V4h8v2"/></svg></button>}
-                  </div>
-                ); })}
-              </div>
-              {GUEST_ROWS.map((group,gi) => <div key={group.grp}>
-                <div style={{ display:'grid', gridTemplateColumns:pGrid, background:'#FAFBFD', borderBottom:`1px solid ${T.lineSoft}`, borderTop:gi?`1px solid ${T.lineSoft}`:'none' }}><div style={{ padding:'8px 16px', fontSize:9.5, fontWeight:700, color:T.inkFaint, textTransform:'uppercase', letterSpacing:'.6px', gridColumn:`span ${cabins.length+1}` }}>{group.grp}</div></div>
-                {group.rows.map(row => <div key={row.k} style={{ display:'grid', gridTemplateColumns:pGrid, alignItems:'center', background:'#fff' }}>
-                  <div style={{ padding:'10px 16px', fontSize:13, color:T.ink, whiteSpace:'nowrap' }}>{row.l}</div>
-                  {cabins.map(cabin => <div key={cabin} style={{ padding:'5px 7px', borderLeft:`1px solid ${T.lineSoft}` }}><input value={pricing[cabin][row.k]} onChange={e => updatePrice(cabin,row.k,e.target.value)} onBlur={() => formatPrice(cabin,row.k)} placeholder="—" aria-label={`${cabin} ${row.l} price`} className="price-input" style={{ width:'100%', padding:'8px 10px', border:`1.5px solid ${T.line}`, borderRadius:6, fontSize:13, color:T.ink, background:'#fff', outline:'none', textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace" }}/></div>)}
-                </div>)}
-              </div>)}
-              <div style={{ display:'grid', gridTemplateColumns:pGrid, alignItems:'center', borderTop:`1px solid ${T.line}`, background:T.fill }}>
-                <div style={{ padding:'12px 16px', fontSize:11, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px' }}>Cabin · Double</div>
-                {cabins.map(cabin => { const total=val(cabin,'dbl1')+val(cabin,'dbl2'); return <div key={cabin} style={{ padding:'12px 16px', fontSize:13, fontWeight:700, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:total?T.ink:T.inkFaint, borderLeft:`1px solid ${T.lineSoft}` }}>{total?fmtCur(total):'—'}</div>; })}
+          <div className="hscroll" role="table" aria-label="Editable pricing by cabin category and guest position" style={{ border:`1px solid ${T.line}`, borderRadius:9, overflowX:'auto', background:'#fff' }}>
+            <div style={{ minWidth:firstCol+columns.length*guestCol+totalCol }}>
+              <PricingMatrixHeader grid={pGrid} columns={columns} expanded onRemoveColumn={setPendingRemove}/>
+              <div role="rowgroup">
+                {cabins.map((cabin,index) => {
+                  const hasError = !!errors.pricing?.[cabin];
+                  const total = val(cabin,'dbl1')+val(cabin,'dbl2');
+                  return (
+                    <div key={cabin} role="row" style={{ display:'grid', gridTemplateColumns:pGrid, alignItems:'stretch', borderBottom:index<cabins.length-1?`1px solid ${T.lineSoft}`:'none', background:'#fff' }}>
+                      <div role="rowheader" style={{ position:'sticky', left:0, zIndex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 12px', background:hasError?T.amberLight:'#fff', borderRight:`1px solid ${T.line}`, minWidth:0 }}>
+                        {hasError && <span title="Add at least one price" style={{ color:T.amber, fontSize:12, fontWeight:800, flexShrink:0 }}>!</span>}
+                        <span title={cabin} style={{ flex:1, minWidth:0, fontSize:12.5, fontWeight:700, color:T.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{cabin}</span>
+                      </div>
+                      {columns.map(column => (
+                        <div key={column.key} role="cell" style={{ padding:'5px 7px', borderLeft:`1px solid ${T.lineSoft}` }}>
+                          <input value={pricing[cabin][column.key] || ''} onChange={e => updatePrice(cabin,column.key,e.target.value)} onBlur={() => formatPrice(cabin,column.key)} placeholder="—" aria-label={`${cabin} ${column.group} ${column.label} price`} className="price-input" style={{ width:'100%', padding:'8px 10px', border:`1.5px solid ${T.line}`, borderRadius:6, fontSize:13, color:T.ink, background:'#fff', outline:'none', textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace" }}/>
+                        </div>
+                      ))}
+                      <div role="cell" style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', padding:'10px 14px', fontSize:13, fontWeight:700, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:total?T.ink:T.inkFaint, borderLeft:`1px solid ${T.line}`, background:T.fill }}>{total?fmtCur(total):'—'}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
         </div>
         {pendingRemove && <div style={{ position:'absolute', inset:0, zIndex:30, background:'rgba(15,23,42,.44)', display:'flex', alignItems:'center', justifyContent:'center', padding:24 }} onMouseDown={() => setPendingRemove(null)}>
           <div role="alertdialog" aria-modal="true" aria-labelledby="remove-pricing-column-title" onMouseDown={e => e.stopPropagation()} style={{ width:390, background:'#fff', borderRadius:12, padding:24, boxShadow:'0 20px 50px rgba(15,23,42,.25)' }}>
-            <div id="remove-pricing-column-title" style={{ fontSize:16, fontWeight:700, color:T.ink, marginBottom:7 }}>Remove “{pendingRemove}”?</div>
-            <div style={{ fontSize:13, color:T.inkSoft, lineHeight:1.55, marginBottom:20 }}>This removes the custom category and every price entered in it. The removal is final after you save the farecode.</div>
+            <div id="remove-pricing-column-title" style={{ fontSize:16, fontWeight:700, color:T.ink, marginBottom:7 }}>Remove “{pendingRemove.label}”?</div>
+            <div style={{ fontSize:13, color:T.inkSoft, lineHeight:1.55, marginBottom:20 }}>This removes the custom guest-position column from {pendingRemove.group} and deletes every price entered in it. The removal is final after you save the Farecode.</div>
             <div style={{ display:'flex', justifyContent:'flex-end', gap:8 }}><button ref={removeCancelRef} onClick={() => setPendingRemove(null)} style={{ padding:'8px 14px', border:`1px solid ${T.line}`, borderRadius:7, background:'#fff', color:T.inkSoft, fontSize:12.5, fontWeight:600, cursor:'pointer' }}>Cancel</button><button onClick={() => removeColumn(pendingRemove)} style={{ padding:'8px 14px', border:'none', borderRadius:7, background:T.red, color:'#fff', fontSize:12.5, fontWeight:600, cursor:'pointer' }}>Remove column</button></div>
           </div>
         </div>}
@@ -1558,7 +1627,7 @@ function PricingEditorExpandedModal({ pricing, setPricing, errors, onClose, onCo
   );
 }
 
-function S8({ pricing, setPricing, errors, setErrors }) {
+function S8({ pricing, setPricing, pricingColumns, setPricingColumns, errors, setErrors }) {
   const CABINS = Object.keys(pricing);
   const [expanded, setExpanded] = useState(false);
   const [copyOpen, setCopyOpen] = useState(null);
@@ -1572,21 +1641,15 @@ function S8({ pricing, setPricing, errors, setErrors }) {
   function fmtCur(n) { return new Intl.NumberFormat('en-US',{ minimumFractionDigits:2, maximumFractionDigits:2 }).format(n); }
   function parseCur(v) { return parseFloat(String(v||'').replace(/[^0-9.]/g,'')) || 0; }
   const val = (cab,k) => parseCur(pricing[cab][k]);
-  const isPriced = cab => GUEST_KEYS.some(k => val(cab,k) > 0);
+  const isPriced = cab => pricingColumns.some(column => val(cab,column.key) > 0);
   function upd(cabin, k, v) { setPricing(p => ({ ...p, [cabin]:{ ...p[cabin], [k]:v } })); }
   function blur(cabin, k) { const n = parseCur(pricing[cabin][k]); if (n>0) upd(cabin,k,fmtCur(n)); }
   function copyCol(from, to) { setPricing(p => ({ ...p, [to]:{ ...p[from] } })); setCopyOpen(null); }
   function closeExpanded() { setExpanded(false); requestAnimationFrame(() => expandBtnRef.current?.focus()); }
-  function clearRemovedError(name) {
-    setErrors?.(p => {
-      if (!p.pricing?.[name]) return p;
-      const pricingErrors={ ...p.pricing }; delete pricingErrors[name];
-      const next={ ...p };
-      if (Object.keys(pricingErrors).length) next.pricing=pricingErrors; else delete next.pricing;
-      return next;
-    });
-  }
-  const PGRID = `120px repeat(${CABINS.length}, minmax(106px,1fr))`;
+  const FIRST_COL = 150;
+  const GUEST_COL = 106;
+  const TOTAL_COL = 126;
+  const PGRID = `${FIRST_COL}px repeat(${pricingColumns.length}, minmax(${GUEST_COL}px,1fr)) ${TOTAL_COL}px`;
   const nPriced = CABINS.filter(isPriced).length;
   const completionPct = CABINS.length ? Math.round((nPriced / CABINS.length) * 100) : 0;
   const isComplete = CABINS.length > 0 && nPriced === CABINS.length;
@@ -1637,61 +1700,43 @@ function S8({ pricing, setPricing, errors, setErrors }) {
             <span style={{ fontSize:10.5, color:T.inkFaint, whiteSpace:'nowrap' }}>Per guest</span>
           </div>
 
-          <div className="hscroll" role="region" aria-label="Fare pricing matrix" style={{ border:`1px solid ${T.line}`, borderRadius:8, overflowX:'auto', background:'#fff' }}>
-            <div style={{ minWidth:CABINS.length*106+120 }}>
-              {/* Column header: cabin categories + copy action */}
-              <div style={{ display:'grid', gridTemplateColumns:PGRID, background:'#F7F9FC', borderBottom:`1px solid ${T.line}` }}>
-                <div style={{ position:'sticky', left:0, zIndex:3, padding:'8px 10px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', background:'#F7F9FC', borderRight:`1px solid ${T.line}` }}>Guest Type</div>
-                {CABINS.map(cabin => {
+          <div className="hscroll" role="table" aria-label="Editable fare pricing by cabin category and guest position" style={{ border:`1px solid ${T.line}`, borderRadius:8, overflowX:'auto', background:'#fff' }}>
+            <div style={{ minWidth:FIRST_COL+pricingColumns.length*GUEST_COL+TOTAL_COL }}>
+              <PricingMatrixHeader grid={PGRID} columns={pricingColumns}/>
+              <div role="rowgroup">
+                {CABINS.map((cabin,index) => {
                   const hasErr = errors.pricing?.[cabin];
                   const others = CABINS.filter(c => c !== cabin);
+                  const total = val(cabin,'dbl1')+val(cabin,'dbl2');
                   return (
-                    <div key={cabin} style={{ padding:'5px 8px', borderLeft:`1px solid ${T.lineSoft}`, display:'flex', alignItems:'center', justifyContent:'flex-end', gap:5, position:'relative', background:hasErr?T.amberLight:'transparent' }} ref={copyOpen===cabin?copyRef:null}>
-                      {hasErr && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.amber} strokeWidth="2.5" style={{ flexShrink:0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>}
-                      <span style={{ fontSize:10.5, fontWeight:700, color:T.ink, lineHeight:1.3, textAlign:'right' }}>{cabin}</span>
-                      <button onClick={() => setCopyOpen(copyOpen===cabin?null:cabin)} aria-label={`Copy ${cabin} fares to another category`} title={`Copy ${cabin} fares to another category`}
-                        style={{ width:20, height:20, borderRadius:4, border:`1px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkFaint, flexShrink:0 }}
-                        onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; }}
-                        onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color=T.inkFaint; }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      </button>
-                      {copyOpen===cabin && (
-                        <div style={{ position:'absolute', right:4, top:'100%', marginTop:3, background:'#fff', border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 8px 20px rgba(0,0,0,.1)', zIndex:500, minWidth:150, overflow:'hidden' }}>
-                          <div style={{ padding:'6px 12px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', borderBottom:`1px solid ${T.lineSoft}` }}>Copy to…</div>
-                          {others.map(to => (
-                            <div key={to} onClick={() => copyCol(cabin,to)} style={{ padding:'8px 12px', fontSize:12.5, color:T.ink, cursor:'pointer', whiteSpace:'nowrap' }} onMouseEnter={e => e.currentTarget.style.background=T.fill} onMouseLeave={e => e.currentTarget.style.background='transparent'}>{to}</div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Grouped guest-position rows */}
-              {GUEST_ROWS.map((g, gi) => (
-                <div key={g.grp}>
-                  <div style={{ display:'grid', gridTemplateColumns:PGRID, background:'#FAFBFD', borderBottom:`1px solid ${T.lineSoft}`, borderTop:gi>0?`1px solid ${T.lineSoft}`:'none' }}>
-                    <div style={{ padding:'6px 10px', fontSize:9.5, fontWeight:700, color:T.inkFaint, textTransform:'uppercase', letterSpacing:'.6px', gridColumn:`span ${CABINS.length+1}` }}>{g.grp}</div>
-                  </div>
-                  {g.rows.map(r => (
-                    <div key={r.k} style={{ display:'grid', gridTemplateColumns:PGRID, alignItems:'center', background:'#fff' }}>
-                      <div style={{ position:'sticky', left:0, zIndex:1, padding:'7px 10px', fontSize:12.5, color:T.ink, whiteSpace:'nowrap', background:'#fff', borderRight:`1px solid ${T.line}` }}>{r.l}</div>
-                      {CABINS.map(cabin => (
-                        <div key={cabin} style={{ padding:'4px', borderLeft:`1px solid ${T.lineSoft}` }}>
-                          <input type="text" value={pricing[cabin][r.k]} onChange={e => upd(cabin,r.k,e.target.value)} onBlur={() => blur(cabin,r.k)} placeholder="—" className="price-input" aria-label={`${cabin} ${r.l} fare`}
+                    <div key={cabin} role="row" style={{ display:'grid', gridTemplateColumns:PGRID, alignItems:'stretch', borderBottom:index<CABINS.length-1?`1px solid ${T.lineSoft}`:'none', background:'#fff' }}>
+                      <div role="rowheader" ref={copyOpen===cabin?copyRef:null} style={{ position:'sticky', left:0, zIndex:copyOpen===cabin?5:1, display:'flex', alignItems:'center', gap:6, padding:'5px 8px', background:hasErr?T.amberLight:'#fff', borderRight:`1px solid ${T.line}`, minWidth:0 }}>
+                        {hasErr && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.amber} strokeWidth="2.5" style={{ flexShrink:0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>}
+                        <span title={cabin} style={{ flex:1, minWidth:0, fontSize:11.5, fontWeight:700, color:T.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{cabin}</span>
+                        <button onClick={() => setCopyOpen(copyOpen===cabin?null:cabin)} aria-label={`Copy ${cabin} fares to another category`} title={`Copy ${cabin} fares to another category`}
+                          style={{ width:22, height:22, borderRadius:4, border:`1px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkFaint, flexShrink:0 }}
+                          onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; }}
+                          onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color=T.inkFaint; }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                        {copyOpen===cabin && (
+                          <div style={{ position:'absolute', left:8, top:'100%', marginTop:3, background:'#fff', border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 8px 20px rgba(0,0,0,.1)', zIndex:500, minWidth:150, overflow:'hidden' }}>
+                            <div style={{ padding:'6px 12px', fontSize:10, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', borderBottom:`1px solid ${T.lineSoft}` }}>Copy to…</div>
+                            {others.map(to => (
+                              <button key={to} onClick={() => copyCol(cabin,to)} style={{ display:'block', width:'100%', padding:'8px 12px', border:'none', background:'transparent', fontSize:12.5, color:T.ink, cursor:'pointer', whiteSpace:'nowrap', textAlign:'left' }} onMouseEnter={e => e.currentTarget.style.background=T.fill} onMouseLeave={e => e.currentTarget.style.background='transparent'}>{to}</button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {pricingColumns.map(column => (
+                        <div key={column.key} role="cell" style={{ padding:'4px', borderLeft:`1px solid ${T.lineSoft}` }}>
+                          <input type="text" value={pricing[cabin][column.key] || ''} onChange={e => upd(cabin,column.key,e.target.value)} onBlur={() => blur(cabin,column.key)} placeholder="—" className="price-input" aria-label={`${cabin} ${column.group} ${column.label} fare`}
                             style={{ width:'100%', padding:'6px 7px', border:`1.5px solid ${T.line}`, borderRadius:6, fontSize:12, color:T.ink, background:'#fff', outline:'none', textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace" }}/>
                         </div>
                       ))}
+                      <div role="cell" style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', padding:'8px 10px', fontSize:12.5, fontWeight:700, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:total>0?T.ink:T.inkFaint, borderLeft:`1px solid ${T.line}`, background:T.fill }}>{total>0?fmtCur(total):'—'}</div>
                     </div>
-                  ))}
-                </div>
-              ))}
-              {/* Footer: double-occupancy cabin fare */}
-              <div style={{ display:'grid', gridTemplateColumns:PGRID, alignItems:'center', borderTop:`1px solid ${T.line}`, background:T.fill }}>
-                <div style={{ position:'sticky', left:0, zIndex:1, padding:'9px 10px', fontSize:11, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.5px', background:T.fill, borderRight:`1px solid ${T.line}` }}>Cabin · Double</div>
-                {CABINS.map(cabin => {
-                  const t = val(cabin,'dbl1')+val(cabin,'dbl2');
-                  return <div key={cabin} style={{ padding:'9px 10px', fontSize:12.5, fontWeight:700, textAlign:'right', fontFamily:"'SF Mono',Menlo,monospace", color:t>0?T.ink:T.inkFaint, borderLeft:`1px solid ${T.lineSoft}` }}>{t>0?fmtCur(t):'—'}</div>;
+                  );
                 })}
               </div>
             </div>
@@ -1701,11 +1746,11 @@ function S8({ pricing, setPricing, errors, setErrors }) {
         <div style={{ display:'flex', alignItems:'flex-start', gap:8, padding:'10px 11px', borderRadius:8, background:hasPricingErrors?T.amberLight:isComplete?T.greenLight:T.fill, border:`1px solid ${hasPricingErrors?T.amberBorder:isComplete?'#A7F3D0':T.line}` }}>
           {hasPricingErrors ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.amber} strokeWidth="2.5" style={{ flexShrink:0, marginTop:1 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg> : isComplete ? <span style={{ color:T.green, fontSize:13, fontWeight:800, flexShrink:0 }}>✓</span> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.primary} strokeWidth="2.2" style={{ flexShrink:0, marginTop:1 }}><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>}
           <div style={{ fontSize:11.5, color:hasPricingErrors?T.amberDark:isComplete?T.green:T.inkSoft, lineHeight:1.45 }}>
-            {hasPricingErrors ? 'Add at least one fare to every highlighted cabin category before activating.' : isComplete ? 'Every cabin category has a fare and is ready for activation.' : 'Use Expand matrix to add custom cabin categories or work in a larger view.'}
+            {hasPricingErrors ? 'Add at least one fare to every highlighted cabin category before activating.' : isComplete ? 'Every cabin category has a fare and is ready for activation.' : 'Use Expand matrix to add guest-position columns or work in a larger view.'}
           </div>
         </div>
       </div>
-      {expanded && <PricingEditorExpandedModal pricing={pricing} setPricing={setPricing} errors={errors} onClose={closeExpanded} onColumnRemoved={clearRemovedError}/>}
+      {expanded && <PricingEditorExpandedModal pricing={pricing} setPricing={setPricing} columns={pricingColumns} setColumns={setPricingColumns} errors={errors} onClose={closeExpanded}/>}
     </div>
   );
 }
@@ -1729,9 +1774,9 @@ const PAGE_SIZE   = 10;
 const CHIP_S = { 'Interior':{ bg:'#EEF2FF',color:'#3730A3' }, 'Ocean View':{ bg:'#ECFEFF',color:'#0E7490' }, 'Balcony':{ bg:'#F0FDF4',color:'#166534' }, 'Veranda':{ bg:'#FFF7ED',color:'#C2410C' }, 'Suite':{ bg:'#FDF4FF',color:'#7E22CE' }, 'Penthouse':{ bg:'#FFF1F2',color:'#9F1239' } };
 const STATUS_S = { Active:{ bg:'#ECFDF5',color:'#065F46',dot:'#10B981' }, Draft:{ bg:'#FFFBEB',color:'#92400E',dot:'#F59E0B' }, Inactive:{ bg:'#F8FAFC',color:'#475569',dot:'#94A3B8' } };
 
-const SECTS = [{ n:1,l:'Ship & Sailing' },{ n:2,l:'Policies' },{ n:3,l:'Eligibility' },{ n:4,l:'Channel Access' },{ n:5,l:'Partner Access' },{ n:6,l:'Marketing' },{ n:7,l:'Taxes & Privacy' },{ n:8,l:'Supplements' },{ n:9,l:'Pricing' }];
+const SECTS = [{ n:1,l:'Ship & Sailings' },{ n:2,l:'Policies' },{ n:3,l:'Eligibility' },{ n:4,l:'Channel Access' },{ n:5,l:'Partner Access' },{ n:6,l:'Marketing' },{ n:7,l:'Taxes & Privacy' },{ n:8,l:'Supplements' },{ n:9,l:'Pricing' }];
 function sComplete(n, form, pricing) {
-  if (n===1) return !!(form.ship && form.sailing && form.faretype);
+  if (n===1) return !!(form.ship && farecodeSailingValues(form).length && form.faretype);
   if (n===2) return !!(form.cancellationPolicy && form.depositPolicy);
   if (n>=3 && n<=8) return !!form.faretype;
   if (n===9) return Object.values(pricing).some(r => Object.values(r).some(v => v!==''));
@@ -1851,7 +1896,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   const buildForm = () => {
     if (mode==='view' && viewRow) {
       const ft = FT_DATA.find(f => f.code===viewRow.faretype);
-      return { ...DEFAULT_FORM(), ship:viewRow.ship, sailing:viewRow.sailing, faretype:viewRow.faretype, ...(ft?.vals||{}), supp:cloneSupplements(ft?.vals?.supp || defaultSupplements()) };
+      return { ...DEFAULT_FORM(), ship:viewRow.ship, sailing:viewRow.sailing, sailings:[viewRow.sailing], faretype:viewRow.faretype, ...(ft?.vals||{}), supp:cloneSupplements(ft?.vals?.supp || defaultSupplements()) };
     }
     return DEFAULT_FORM();
   };
@@ -1868,12 +1913,14 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
     };
     return DEFAULT_PRICING();
   };
+  const buildPricingColumns = () => DEFAULT_COLUMN_CONFIG();
 
   const [isEditing,   setIsEditing]   = useState(mode==='create' || !!initialEdit);
   const [activeTab,   setActiveTab]   = useState('overview');
   const [form,        setForm]        = useState(buildForm);
   const [overrides,   setOverrides]   = useState(buildOvrd);
   const [pricing,     setPricing]     = useState(buildPricing);
+  const [pricingColumns, setPricingColumns] = useState(buildPricingColumns);
   const [active,      setActive]      = useState(1);
   const [visited,     setVisited]     = useState(new Set([1]));
   const [errors,      setErrors]      = useState({});
@@ -1884,13 +1931,13 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   const snapRef = useRef(null);
 
   useEffect(() => {
-    snapRef.current = JSON.stringify(form) + JSON.stringify(pricing);
+    snapRef.current = JSON.stringify(form) + JSON.stringify(pricing) + JSON.stringify(pricingColumns);
     requestAnimationFrame(() => setMounted(true));
   }, []);
 
   const set         = (k,v) => setForm(p => ({ ...p, [k]:v }));
   const navTo       = n => { setActive(n); setVisited(p => new Set([...p,n])); setErrors({}); };
-  const isDirty     = () => snapRef.current !== (JSON.stringify(form)+JSON.stringify(pricing));
+  const isDirty     = () => snapRef.current !== (JSON.stringify(form)+JSON.stringify(pricing)+JSON.stringify(pricingColumns));
   const onFTSelect  = ft => { setForm(p => ({ ...p, faretype:ft.code, ...ft.vals, supp:cloneSupplements(ft.vals.supp || defaultSupplements()) })); setOverrides(DEFAULT_OVRD()); };
   const toggleOvrd  = k  => setOverrides(p => ({ ...p, [k]:p[k]==='overridden'?'inherited':'overridden' }));
 
@@ -1899,13 +1946,13 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
     else cb();
   };
   const handleClose     = () => guardDirty(onClose);
-  const handleCancel    = () => guardDirty(() => { setIsEditing(false); setErrors({}); setForm(buildForm()); setOverrides(buildOvrd()); setPricing(buildPricing()); });
-  const handleEnterEdit = () => { snapRef.current = JSON.stringify(form)+JSON.stringify(pricing); setIsEditing(true); setActiveTab('overview'); };
+  const handleCancel    = () => guardDirty(() => { setIsEditing(false); setErrors({}); setForm(buildForm()); setOverrides(buildOvrd()); setPricing(buildPricing()); setPricingColumns(buildPricingColumns()); });
+  const handleEnterEdit = () => { snapRef.current = JSON.stringify(form)+JSON.stringify(pricing)+JSON.stringify(pricingColumns); setIsEditing(true); setActiveTab('overview'); };
 
   const validate = full => {
     const e = {};
     if (!form.ship)    e.ship    = 'Required';
-    if (!form.sailing) e.sailing = 'Required';
+    if (!farecodeSailingValues(form).length) e.sailing = 'Select at least one sailing';
     if (!form.faretype) e.faretype = 'Required';
     if (full) {
       if (!form.cancellationPolicy) e.cancellationPolicy = 'Required';
@@ -1921,7 +1968,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
     const e = {};
     if (n===1) {
       if (!form.ship)     e.ship = 'Required';
-      if (!form.sailing)  e.sailing = 'Required';
+      if (!farecodeSailingValues(form).length) e.sailing = 'Select at least one sailing';
       if (!form.faretype) e.faretype = 'Required';
     }
     if (n===2) {
@@ -1951,7 +1998,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
-      snapRef.current = JSON.stringify(form)+JSON.stringify(pricing);
+      snapRef.current = JSON.stringify(form)+JSON.stringify(pricing)+JSON.stringify(pricingColumns);
       setIsEditing(false); setErrors({});
     }, 1000);
   };
@@ -1997,7 +2044,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
                     <span>jane.doe@mvas.com</span>
                   </div>
                 )}
-                {mode==='create' && <div style={{ fontSize:12, color:T.inkFaint }}>Set sailing-specific pricing and booking rules inherited from a Faretype.</div>}
+                {mode==='create' && <div style={{ fontSize:12, color:T.inkFaint }}>Set pricing and booking rules across selected sailings, inherited from a Faretype.</div>}
               </div>
             </div>
 
@@ -2052,7 +2099,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
               <>
                 {/* Read-only overview */}
                 {mode==='view' && !isEditing && (
-                  <OverviewReadOnly form={form} overrides={overrides} pricing={pricing}/>
+                  <OverviewReadOnly form={form} overrides={overrides} pricing={pricing} pricingColumns={pricingColumns}/>
                 )}
                 {/* Edit sections (create or view-edit) */}
                 {isEditing && (
@@ -2065,7 +2112,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
                     {active===6 && <S6 {...sectProps}/>}
                     {active===7 && <S7 {...sectProps}/>}
                     {active===8 && <S8Supp form={form} setForm={setForm}/>}
-                    {active===9 && <S8 pricing={pricing} setPricing={setPricing} errors={errors} setErrors={setErrors}/>}
+                    {active===9 && <S8 pricing={pricing} setPricing={setPricing} pricingColumns={pricingColumns} setPricingColumns={setPricingColumns} errors={errors} setErrors={setErrors}/>}
                   </div>
                 )}
               </>

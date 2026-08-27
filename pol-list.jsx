@@ -35,13 +35,15 @@ function PoliciesList({ policies, setPolicies, onNav }) {
 
   /* ── filtering / search ── */
   const term = q.trim().toLowerCase();
+  const tablePolicies = policies.filter(g => g.status !== 'Draft');
+  const tableParents = g => g.parents.filter(p => p.status !== 'Draft');
   const hits = g => {
     if (!term) return true;
     if (`${g.code} ${g.name}`.toLowerCase().includes(term)) return true;
-    return g.parents.some(p => `${p.code} ${p.name}`.toLowerCase().includes(term)
+    return tableParents(g).some(p => `${p.code} ${p.name}`.toLowerCase().includes(term)
       || kidsOf(p).some((r, i) => `${childCode(p.code, i)} ${childSummary(g.type, r)}`.toLowerCase().includes(term)));
   };
-  const rows = policies.filter(g => {
+  const rows = tablePolicies.filter(g => {
     if (typeF !== 'all' && g.type !== typeF) return false;
     return hits(g);
   });
@@ -54,7 +56,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const shown = id => searchOpen ? searchOpen.has(id) : isOpen(id);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE));
   const pageRows = rows.slice((page - 1) * PAGE, page * PAGE);
-  const expandedCount = policies.filter(g => shown(g.id)).length;
+  const expandedCount = tablePolicies.filter(g => shown(g.id)).length;
 
   /* ── coverage ── */
   const coverOk = (type, kids) => kids.length > 0 && validateRows(kids).issues.length === 0;
@@ -206,6 +208,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
     const out = [];
     pageRows.forEach(g => {
       const meta = POL_META[g.type], open = shown(g.id);
+      const parents = tableParents(g);
       const accent = g.type === 'deposit' ? T.teal : T.amber;
       const accentTd = open ? { boxShadow:`inset 3px 0 0 ${accent}` } : null;
       out.push(
@@ -221,7 +224,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
               <span style={{ fontWeight:650, fontSize:14, lineHeight:1.2, letterSpacing:'-.1px' }}>{g.name}</span>
             </div>
             <div style={metaLine}>
-              <span>{g.parents.length} {g.parents.length === 1 ? 'policy' : 'policies'} · {g.parents.filter(p => p.status === 'Active').length} active</span>
+              <span>{parents.length} {parents.length === 1 ? 'policy' : 'policies'} · {parents.filter(p => p.status === 'Active').length} active</span>
               {g.type === 'cancel' && <span style={{ color:g.isRefundable === false ? '#B45309' : T.inkFaint }}>· {g.isRefundable === false ? 'Non-refundable' : 'Refundable'}</span>}
             </div>
           </td>
@@ -232,9 +235,9 @@ function PoliciesList({ policies, setPolicies, onNav }) {
         </tr>
       );
       if (!open) return;
-      g.parents.forEach((p, pi) => {
+      parents.forEach((p, pi) => {
         const kids = kidsOf(p), pOpen = shown(p.id);
-        const ok = coverOk(g.type, kids), lastP = pi === g.parents.length - 1;
+        const ok = coverOk(g.type, kids), lastP = pi === parents.length - 1;
         const closesBlock = lastP && (!pOpen || kids.length === 0);
         out.push(
           <tr key={p.id} onClick={() => setDetail({ groupId:g.id, parentId:p.id })} style={{ background:'#F7F9FC', borderBottom:`1px solid ${closesBlock ? T.line : T.lineSoft}`, cursor:'pointer' }}
@@ -322,7 +325,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
                   style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'7px 16px', borderRadius:6, border:'none', fontSize:12.5, fontWeight:600, cursor:'pointer', background:typeF === t ? T.primary : 'transparent', color:typeF === t ? '#fff' : T.inkSoft }}>
                   <span style={{ width:7, height:7, borderRadius:'50%', background:typeF === t ? '#fff' : POL_META[t].badgeColor, opacity:typeF === t ? .9 : 1 }}/>
                   {POL_META[t].label} Policies
-                  <span style={{ fontSize:11, fontWeight:700, padding:'1px 6px', borderRadius:999, background:typeF === t ? 'rgba(255,255,255,.2)' : T.fill, color:typeF === t ? '#fff' : T.inkFaint }}>{policies.filter(g => g.type === t).length}</span>
+                  <span style={{ fontSize:11, fontWeight:700, padding:'1px 6px', borderRadius:999, background:typeF === t ? 'rgba(255,255,255,.2)' : T.fill, color:typeF === t ? '#fff' : T.inkFaint }}>{tablePolicies.filter(g => g.type === t).length}</span>
                 </button>
               ))}
             </div>
@@ -332,7 +335,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
                 <input aria-label="Filter policies" value={q} onChange={e => { setQ(e.target.value); setPage(1); }} placeholder="Filter by policy code, name…" style={{ border:'none', outline:'none', background:'transparent', fontSize:13, color:T.ink, width:'100%' }}/>
                 {q && <button type="button" aria-label="Clear policy search" onClick={() => setQ('')} style={{ background:'none', border:'none', cursor:'pointer', color:T.inkFaint, display:'flex', padding:0 }}><IcX size={11}/></button>}
               </div>
-              <span style={{ fontSize:11, color:T.inkFaint, marginLeft:'auto' }}>{sel.size > 0 ? `${sel.size} selected · ` : ''}{rows.length} of {policies.filter(g => g.type === typeF).length} {POL_META[typeF].label.toLowerCase()} policies</span>
+              <span style={{ fontSize:11, color:T.inkFaint, marginLeft:'auto' }}>{sel.size > 0 ? `${sel.size} selected · ` : ''}{rows.length} of {tablePolicies.filter(g => g.type === typeF).length} {POL_META[typeF].label.toLowerCase()} policies</span>
             </div>
           </div>
 

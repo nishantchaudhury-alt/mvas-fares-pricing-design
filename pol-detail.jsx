@@ -367,7 +367,6 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
             <PolMetricTile label={g.type === 'deposit' ? 'Configured lines' : 'Configured bands'} value={String(kids.length)} helper={<CoverPill ok={v.issues.length === 0 && kids.length > 0} label={kids.length === 0 ? 'None configured' : v.issues.length === 0 ? 'Coverage complete' : 'Coverage needs attention'}/>}/>
             <PolMetricTile label="Referenced by" value={String(p.usedIn || 0)} helper="Faretype / Farecode records"/>
-            <PolMetricTile full label="Last modified" value={p.mod} helper={p.editor}/>
           </div>
         </div>
       </PolDetailCard>

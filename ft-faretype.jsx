@@ -43,7 +43,7 @@ const STATUS_S = {
 };
 
 /* ── Default form ───────────────────────────── */
-const mkSupp = (id, title, type) => ({ id, title, type, custom: false, enabled: false, name: '', cabin: '', rule: 'Booking', maxCount: '', farePos: [], applicableSailings: [] });
+const mkSupp = (id, title, type) => ({ id, title, type, custom: false, enabled: false, name: '', cabin: '', cabins: [], rule: 'Booking', maxCount: '', farePos: [], applicableSailings: [] });
 const DEFAULT_FORM = () => ({
   faretypeCode: '', fareBasisCode: '', faretypeGroup: '', source: '',
   cancellationPolicy: '', depositPolicy: '',
@@ -699,7 +699,7 @@ function S6({ form, set }) {
 }
 
 /* ── Section 7 ──────────────────────────────── */
-const SUPP_CABIN = [['', 'Any'], ['Interior', 'Interior'], ['Ocean View', 'Ocean View'], ['Balcony', 'Balcony'], ['Suite', 'Suite']];
+const SUPP_CABIN = ['Interior', 'Ocean View', 'Balcony', 'Suite'];
 /* Labels say how the supplement is counted, not just what it is counted against. */
 const SUPP_RULE = [['Booking', 'Per booking'], ['Cabin', 'Per cabin'], ['Guest', 'Per guest']];
 const SUPP_FPOS = ['Fare Position 1', 'Fare Position 2', 'Fare Position 3', 'Fare Position 4'];
@@ -707,6 +707,15 @@ const SUPP_TYPES = [['comp', 'Complementary'], ['paid', 'Paid']];
 const SUPP_SAILINGS = ['IS-2026-09-01', 'IS-2026-10-15', 'IS-2026-11-20', 'IS-2026-12-05'];
 const typeLabel = (t) => t === 'comp' ? 'Complementary' : 'Paid';
 const ruleLabel = (r) => ({ Booking: 'Per booking', Cabin: 'Per cabin', Guest: 'Per guest' })[r] || r;
+const suppCabinValues = (supp) => {
+  if (Array.isArray(supp?.cabins)) return supp.cabins;
+  if (supp?.cabin && !['Any', 'All', 'Any cabin', 'All cabin categories'].includes(supp.cabin)) return [supp.cabin];
+  return [];
+};
+const suppCabinLabel = (supp) => {
+  const cabins = suppCabinValues(supp);
+  return cabins.length ? cabins.join(', ') : 'All cabin categories';
+};
 
 /* Custom rows get a session-unique id so the review diff can track them across renders. */
 let suppSeq = 0;
@@ -727,7 +736,7 @@ function SuppBadge({ type, muted }) {
 function suppRecap(s) {
   const n = s.applicableSailings?.length || 0;
   const farePositions = Array.isArray(s.farePos) ? s.farePos.join(', ') : s.farePos;
-  return [s.cabin || 'Any cabin', ruleLabel(s.rule), s.maxCount && `Max ${s.maxCount}`, farePositions,
+  return [suppCabinLabel(s), ruleLabel(s.rule), s.maxCount && `Max ${s.maxCount}`, farePositions,
   n ? `${n} sailing${n > 1 ? 's' : ''}` : null].
   filter(Boolean).join(' · ');
 }
@@ -736,13 +745,14 @@ function SuppDetail({ supp, onUpdate, onAdd }) {
   const s = (k, v) => onUpdate({ ...supp, [k]: v });
   return (
     <div style={{ padding: '14px 13px 15px', background: '#FBFCFE', borderRadius: '0 0 9px 9px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Field label="Supplement Name" required>
+        <input className="fi" style={iS()} value={supp.name} onChange={(e) => s('name', e.target.value)} placeholder="e.g. Drinks Package" />
+      </Field>
+      <Field label="Cabin Categories" helper="Select one or more. Leave empty to include all cabin categories.">
+        <MultiChip values={suppCabinValues(supp)} onChange={(v) => s('cabins', v)} opts={SUPP_CABIN}
+        placeholder="All cabin categories" ariaLabel="Cabin categories" />
+      </Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Supplement Name" required>
-          <input className="fi" style={iS()} value={supp.name} onChange={(e) => s('name', e.target.value)} placeholder="e.g. Drinks Package" />
-        </Field>
-        <Field label="Cabin Category">
-          <Sel ariaLabel="Cabin category" value={supp.cabin} onChange={(v) => s('cabin', v)} opts={SUPP_CABIN} />
-        </Field>
         <Field label="Rule" helper="Counting & application method.">
           <Sel ariaLabel="Supplement rule" value={supp.rule} onChange={(v) => s('rule', v)} opts={SUPP_RULE} />
         </Field>
@@ -944,7 +954,7 @@ const FIELD_META = {
   offerPrimary: [5, 'Primary Offer'], offerSecondary: [5, 'Secondary Offer'], offerTertiary: [5, 'Tertiary Offers'],
   waiveGovTaxes: [6, 'Waive Government Taxes'], waiveCruiseExp: [6, 'Waive Cruise Expenses'], noFareDisplay: [6, 'No Fare Display']
 };
-const SUPP_FIELDS = { enabled: 'Status', title: 'Title', type: 'Type', name: 'Supplement Name', cabin: 'Cabin Category', rule: 'Rule', maxCount: 'Max Count', farePos: 'Fare Positions', applicableSailings: 'Applicable Sailings' };
+const SUPP_FIELDS = { enabled: 'Status', title: 'Title', type: 'Type', name: 'Supplement Name', cabin: 'Cabin Category', cabins: 'Cabin Categories', rule: 'Rule', maxCount: 'Max Count', farePos: 'Fare Positions', applicableSailings: 'Applicable Sailings' };
 
 function fmtVal(v) {
   if (v === true) return 'Enabled';
@@ -1016,32 +1026,13 @@ function DiffRow({ d, first }) {
 
 }
 
-function ImpactStat({ value, label, mono }) {
-  return (
-    <div style={{ minWidth: 0, padding: '10px 11px', background: '#fff', border: `1px solid ${T.line}`, borderRadius: 8 }}>
-      <div style={{ fontSize: 9.5, fontWeight: 750, letterSpacing: '.6px', textTransform: 'uppercase', color: T.inkFaint, marginBottom: 5, whiteSpace: 'nowrap' }}>{label}</div>
-      <div style={{ fontSize: mono ? 12.5 : 18, fontWeight: 700, color: T.ink, lineHeight: 1.2, fontFamily: mono ? "'SF Mono', Menlo, monospace" : 'inherit', fontVariantNumeric: 'tabular-nums', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
-    </div>);
-
-}
-
-function S8({ diff, demo, farecodes, code, onNav }) {
+function S8({ diff, demo, farecodes, onNav }) {
   const isPreview = !diff.length;
   const rows = diff.length ? diff : demo;
   const groups = SECTIONS.filter((s) => s.n <= 7).map((s) => ({ ...s, items: rows.filter((r) => r.sec === s.n) })).filter((g) => g.items.length);
   return (
     <StepCard number={8} title="Review Changes" description="Confirm the exact field updates and linked Farecode impact before saving."
     aside={<span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 999, border: `1px solid ${isPreview ? T.amberBorder : T.primaryLine}`, background: isPreview ? T.amberLight : T.primaryBg, color: isPreview ? T.amberDark : T.primary, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{isPreview ? 'Preview data' : `${rows.length} ${rows.length === 1 ? 'update' : 'updates'}`}</span>}>
-
-      {/* Save impact summary */}
-      <div style={{ padding: 13, border: `1px solid ${T.line}`, borderRadius: 10, background: T.fill }}>
-        <GroupHeading title="Save impact" helper="A compact summary of the record and downstream scope affected by this save." />
-        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr .8fr .9fr', gap: 8, marginTop: 12 }}>
-          <ImpactStat value={code || '—'} label="Faretype" mono />
-          <ImpactStat value={rows.length} label={isPreview ? 'Preview rows' : 'Fields changing'} />
-          <ImpactStat value={farecodes?.length || 0} label="Linked farecodes" />
-        </div>
-      </div>
 
       {isPreview &&
       <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '10px 12px', background: T.amberLight, border: `1px solid ${T.amberBorder}`, borderRadius: 9 }}>
@@ -1288,7 +1279,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
     if (active === 5) return <S5 form={form} set={set} />;
     if (active === 6) return <S6 form={form} set={set} />;
     if (active === 7) return <S7 form={form} setForm={setForm} />;
-    if (active === 8) return <S8 diff={diffForm(JSON.parse(initRef.current), form)} demo={DEMO_DIFF} farecodes={mode === 'edit' ? [...checkedFc] : []} code={form.faretypeCode} onNav={navTo} />;
+    if (active === 8) return <S8 diff={diffForm(JSON.parse(initRef.current), form)} demo={DEMO_DIFF} farecodes={mode === 'edit' ? [...checkedFc] : []} onNav={navTo} />;
   };
 
   return (
@@ -1707,7 +1698,7 @@ function DetailOverviewTab({ row, detail, policies }) {
               <div style={{ padding: '13px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: 14 }}>
                   <div><DLbl>Supplement</DLbl><div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginTop: 4 }}>{s.sName || '—'}</div></div>
-                  <div><DLbl>Cabin Scope</DLbl><div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{s.cabin || '—'}</div></div>
+                  <div><DLbl>Cabin Scope</DLbl><div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{suppCabinLabel(s)}</div></div>
                   <div><DLbl>Applied</DLbl><div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4 }}>{s.rule || '—'}</div></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.lineSoft}` }}>
