@@ -43,9 +43,19 @@ function sailDates(code) {
   end.setDate(end.getDate() + (SAIL_NIGHTS[code] || 7));
   return { start:fmtDay(start), end:fmtDay(end), nights:SAIL_NIGHTS[code] || 7 };
 }
+const mkSupp = (id, title, type) => ({ id, title, type, custom:false, enabled:false, name:'', cabin:'', rule:'Booking', maxCount:'', farePos:[] });
+const defaultSupplements = () => [
+  mkSupp('complimentary', 'Complementary Supplement', 'comp'),
+  mkSupp('paid', 'Paid Supplement', 'paid'),
+];
+const cloneSupplements = list => (list || []).map(item => ({ ...item, farePos:[...(item.farePos || [])] }));
 const FT_DATA = [
   { code:'FT-00101', basis:'CORE-RETAIL', group:'Core',
-    vals:{ cancellationPolicy:'Standard Cancellation', depositPolicy:'5 Night Standard Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:4, standbyEligible:false, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
+    vals:{ cancellationPolicy:'Standard Cancellation', depositPolicy:'5 Night Standard Deposit', residency:'Any', minAge:18, minOccupancy:1, maxOccupancy:4, standbyEligible:false, upgradeEligible:true, couponEligible:true, advancedPurchase:'', cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false,
+      supp:[
+        { ...mkSupp('complimentary', 'Complementary Supplement', 'comp'), enabled:true, name:'Drinks Package', cabin:'', rule:'Booking', maxCount:1, farePos:['Fare Position 1'] },
+        mkSupp('paid', 'Paid Supplement', 'paid'),
+      ] }},
   { code:'FT-00102', basis:'NR-PROMO', group:'Non-Refundable',
     vals:{ cancellationPolicy:'Non-Refundable', depositPolicy:'5 Night Promo Deposit', residency:'US Only', minAge:21, minOccupancy:2, maxOccupancy:4, standbyEligible:false, upgradeEligible:false, couponEligible:false, advancedPurchase:30, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:false, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'OFFER-2026-SPRING', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false }},
   { code:'FT-00103', basis:'INT-AGENCY', group:'Interline',
@@ -53,7 +63,7 @@ const FT_DATA = [
 ];
 const CHANNEL_PARTNERS = ['Virtuoso', 'AMEX Travel', 'Ensemble', 'Signature Travel', 'Travel Leaders', 'Nexion', 'Avoya Travel'];
 const OVRD_KEYS = ['cancellationPolicy','depositPolicy','minOccupancy','maxOccupancy','advancedPurchase','standbyEligible','upgradeEligible','couponEligible','cruiseControlAccess','channelVisibility','includeDiscount','discountMessage','offerPrimary','offerSecondary','offerTertiary','waiveGovTaxes','waiveCruiseExp','noFareDisplay'];
-const DEFAULT_FORM  = () => ({ ship:'', sailing:'', faretype:'', cancellationPolicy:'', depositPolicy:'', residency:'Any', minAge:18, minOccupancy:'', maxOccupancy:'', advancedPurchase:'', standbyEligible:false, upgradeEligible:true, couponEligible:true, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false });
+const DEFAULT_FORM  = () => ({ ship:'', sailing:'', faretype:'', cancellationPolicy:'', depositPolicy:'', residency:'Any', minAge:18, minOccupancy:'', maxOccupancy:'', advancedPurchase:'', standbyEligible:false, upgradeEligible:true, couponEligible:true, cruiseControlAccess:true, chMVASB2C:true, chMVASB2B:true, chCC:true, chTradeAPI:false, chCRM:true, chGroup:false, channelPartners:[], includeDiscount:false, discountMessage:'', offerPrimary:'', offerSecondary:'', offerTertiary:'', waiveGovTaxes:false, waiveCruiseExp:false, noFareDisplay:false, supp:defaultSupplements() });
 const DEFAULT_OVRD  = () => Object.fromEntries(OVRD_KEYS.map(k => [k,'inherited']));
 const GUEST_ROWS = [
   { grp:'Occupancy 1–2', rows:[{ k:'single',l:'Single Guest' },{ k:'dbl1',l:'Double Guest 1' },{ k:'dbl2',l:'Double Guest 2' }] },
@@ -536,6 +546,7 @@ function OverviewReadOnly({ form, overrides, pricing }) {
   ];
   const vis = CHS.filter(c => form[c.k]).map(c => c.l);
   const hid = CHS.filter(c => !form[c.k]).map(c => c.l);
+  const enabledSupplements = (form.supp || []).filter(supp => supp.enabled);
   function fmtCur(n) { return new Intl.NumberFormat('en-US',{ minimumFractionDigits:2, maximumFractionDigits:2 }).format(n); }
   function parseCur(v) { return parseFloat(String(v||'').replace(/[^0-9.]/g,'')) || 0; }
   const CABINS = Object.keys(pricing);
@@ -623,8 +634,35 @@ function OverviewReadOnly({ form, overrides, pricing }) {
         <ROToggle label="Hide Fares on PDFs & Cruise Control" helper="Pricing hidden from confirmations." value={form.noFareDisplay}  status={getO('noFareDisplay')}/>
       </ROSection>
 
-      {/* 8. Pricing */}
-      <ROSection n={8} title="Pricing" action={
+      {/* 8. Supplements */}
+      <ROSection n={8} title="Supplements">
+        {enabledSupplements.length ? enabledSupplements.map((supp, index) => (
+          <div key={supp.id || index} style={{ border:`1px solid ${T.line}`, borderRadius:9, background:'#fff', overflow:'hidden' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 11px', background:T.fill, borderBottom:`1px solid ${T.lineSoft}` }}>
+              <FCSuppBadge type={supp.type}/>
+              <span style={{ minWidth:0, flex:1, fontSize:12.5, fontWeight:700, color:T.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{supp.name || `Configuration ${index+1}`}</span>
+              <span style={{ display:'inline-flex', alignItems:'center', gap:5, color:T.green, fontSize:10.5, fontWeight:700 }}><span style={{ width:5, height:5, borderRadius:'50%', background:T.green }}/>Included</span>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0,1fr))', gap:10, padding:'11px' }}>
+              <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Cabin scope</div><div style={{ fontSize:12, color:T.ink, marginTop:4 }}>{supp.cabin || 'Any cabin'}</div></div>
+              <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Application</div><div style={{ fontSize:12, color:T.ink, marginTop:4 }}>{fcSuppRuleLabel(supp.rule)}{supp.maxCount ? ` · Max ${supp.maxCount}` : ''}</div></div>
+              <div><div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Fare positions</div><div style={{ fontSize:12, color:T.ink, marginTop:4 }}>{supp.farePos?.length ? supp.farePos.join(', ') : 'All positions'}</div></div>
+            </div>
+          </div>
+        )) : (
+          <div style={{ padding:'18px 14px', borderRadius:8, background:T.fill, border:`1px solid ${T.line}`, textAlign:'center' }}>
+            <div style={{ fontSize:12.5, fontWeight:700, color:T.inkSoft }}>No supplements included</div>
+            <div style={{ fontSize:11, color:T.inkFaint, lineHeight:1.45, marginTop:4 }}>This Farecode has no complimentary or paid extras configured.</div>
+          </div>
+        )}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'9px 11px', borderRadius:8, background:T.primaryBg, border:`1px solid ${T.primaryLine}` }}>
+          <span style={{ fontSize:11.5, color:T.inkSoft }}>Sailing scope</span>
+          <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:11.5, fontWeight:700, color:T.primary }}>{form.sailing || '—'}</span>
+        </div>
+      </ROSection>
+
+      {/* 9. Pricing */}
+      <ROSection n={9} title="Pricing" action={
         <button ref={expandBtnRef} onClick={() => setPricingExpanded(true)} aria-label="Expand pricing table" title="Expand pricing table"
           style={{ width:30, height:30, borderRadius:7, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background .12s, color .12s, border-color .12s' }}
           onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; e.currentTarget.style.borderColor='#CBD5E1'; }}
@@ -639,7 +677,7 @@ function OverviewReadOnly({ form, overrides, pricing }) {
           <span style={{ fontSize:15, fontWeight:700, color:T.ink, fontFamily:"'SF Mono',Menlo,monospace" }}>{leadInLabel}</span>
         </div>
       </ROSection>
-      {pricingExpanded && <PricingExpandedModal pricing={pricing} leadIn={leadInLabel} onClose={closeExpandedPricing}/>} 
+      {pricingExpanded && <PricingExpandedModal pricing={pricing} leadIn={leadInLabel} onClose={closeExpandedPricing}/>}
     </div>
   );
 }
@@ -1196,6 +1234,202 @@ function S7({ form, set, overrides, toggleOverride }) {
     </div>
   );
 }
+
+/* ── Section 8 · Supplements ── */
+const FC_SUPP_CABIN = [['', 'Any'], ['Interior', 'Interior'], ['Ocean View', 'Ocean View'], ['Balcony', 'Balcony'], ['Suite', 'Suite']];
+const FC_SUPP_RULE = [['Booking', 'Per booking'], ['Cabin', 'Per cabin'], ['Guest', 'Per guest']];
+const FC_SUPP_FPOS = ['Fare Position 1', 'Fare Position 2', 'Fare Position 3', 'Fare Position 4'];
+const FC_SUPP_TYPES = ['comp', 'paid'];
+const fcSuppTypeLabel = type => type === 'comp' ? 'Complementary' : 'Paid';
+const fcSuppRuleLabel = rule => ({ Booking:'Per booking', Cabin:'Per cabin', Guest:'Per guest' })[rule] || rule;
+let fcSuppSeq = 0;
+const mkCustomFarecodeSupp = type => ({ ...mkSupp(`fc-sup-custom-${++fcSuppSeq}`, `${fcSuppTypeLabel(type)} Supplement`, type), enabled:true, custom:true });
+
+function FCSuppBadge({ type }) {
+  const comp = type === 'comp';
+  return (
+    <span style={{ padding:'2px 7px', borderRadius:999, background:comp?T.tealLight:T.primaryBg, color:comp?T.tealDark:T.inkSoft, fontSize:9.5, fontWeight:750, whiteSpace:'nowrap' }}>
+      {comp ? 'Comp' : 'Paid'}
+    </span>
+  );
+}
+
+function fcSuppRecap(supp) {
+  const positions = Array.isArray(supp.farePos) ? supp.farePos.join(', ') : supp.farePos;
+  return [supp.cabin || 'Any cabin', fcSuppRuleLabel(supp.rule), supp.maxCount && `Max ${supp.maxCount}`, positions].filter(Boolean).join(' · ');
+}
+
+function FCSuppDetail({ supp, sailing, onUpdate, onAdd }) {
+  const setValue = (key, value) => onUpdate({ ...supp, [key]:value });
+  return (
+    <div style={{ padding:'14px 13px 15px', background:'#FBFCFE', borderRadius:'0 0 9px 9px', display:'flex', flexDirection:'column', gap:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        <Field label="Supplement Name" required>
+          <input className="fi" style={iS()} value={supp.name} onChange={e => setValue('name', e.target.value)} placeholder="e.g. Drinks Package" />
+        </Field>
+        <Field label="Cabin Category">
+          <Sel ariaLabel="Cabin category" value={supp.cabin} onChange={value => setValue('cabin', value)} opts={FC_SUPP_CABIN} />
+        </Field>
+        <Field label="Rule" helper="Counting and application method.">
+          <Sel ariaLabel="Supplement rule" value={supp.rule} onChange={value => setValue('rule', value)} opts={FC_SUPP_RULE} />
+        </Field>
+        <Field label="Max Count">
+          <input className="fi" type="number" min="1" style={iS()} value={supp.maxCount} onChange={e => setValue('maxCount', e.target.value)} placeholder="1" />
+        </Field>
+      </div>
+      <Field label="Allocation to Fare Positions" helper="Select one or more fare positions.">
+        <MultiChip values={Array.isArray(supp.farePos) ? supp.farePos : supp.farePos ? [supp.farePos] : []}
+          onChange={value => setValue('farePos', value)} opts={FC_SUPP_FPOS} placeholder="Select fare positions…" ariaLabel="Fare position allocation" />
+      </Field>
+      <div style={{ padding:'10px 11px', borderRadius:8, background:T.fill, border:`1px solid ${T.line}` }}>
+        <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Sailing scope</div>
+        <div style={{ display:'flex', alignItems:'center', gap:7, marginTop:5, color:T.ink }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.2" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:11.5, fontWeight:700 }}>{sailing || 'Choose a sailing in Ship & Sailing'}</span>
+        </div>
+        <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.4, marginTop:4 }}>Farecodes are sailing-specific, so this supplement automatically follows the selected departure.</div>
+      </div>
+      <div style={{ display:'flex', justifyContent:'flex-end', paddingTop:2 }}>
+        <button type="button" onClick={onAdd}
+          style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:7, minHeight:34, padding:'7px 12px', borderRadius:8, border:`1px solid ${T.primary}`, background:T.primary, color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add supplement
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FCSuppCard({ supp, position, open, sailing, onToggleOpen, onUpdate, onSetEnabled, onRemove, onAdd }) {
+  const enabled = supp.enabled;
+  const incomplete = enabled && !supp.name;
+  const displayName = supp.name || `Configuration ${position}`;
+  return (
+    <div style={{ border:`1px solid ${open?'#CBD5E1':enabled?T.line:'#EAEFF4'}`, borderRadius:10, background:enabled?'#fff':'#FBFCFD', boxShadow:enabled?'0 1px 2px rgba(15,23,42,.04)':'none', overflow:'visible' }}>
+      <div role={enabled?'button':undefined} tabIndex={enabled?0:undefined} aria-expanded={enabled?open:undefined}
+        onClick={() => enabled && onToggleOpen()}
+        onKeyDown={e => { if (enabled && (e.key==='Enter' || e.key===' ')) { e.preventDefault(); onToggleOpen(); } }}
+        style={{ display:'flex', alignItems:open?'flex-start':'center', gap:7, padding:open?'10px 11px 9px 9px':'8px 10px 8px 8px', minHeight:open?52:42, cursor:enabled?'pointer':'default', borderRadius:open?'9px 9px 0 0':9 }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"
+          style={{ flexShrink:0, marginTop:open?4:0, opacity:enabled?1:0, transform:open?'rotate(90deg)':'none', transition:'transform .18s' }}><polyline points="9 6 15 12 9 18"/></svg>
+        <div style={{ minWidth:0, flex:1 }}>
+          <div style={{ fontSize:12.5, fontWeight:650, color:enabled?T.ink:T.inkSoft, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{displayName}</div>
+          {enabled && <div style={{ marginTop:open?3:1, fontSize:11, lineHeight:1.3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+            {incomplete ? <span style={{ color:T.amberDark, fontWeight:600 }}>Needs configuration</span> : <span style={{ color:T.inkSoft }}>{fcSuppRecap(supp)}</span>}
+          </div>}
+        </div>
+        <div onClick={e => e.stopPropagation()} style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0, marginTop:open?1:0 }}>
+          {supp.custom && <button type="button" onClick={onRemove} aria-label={`Remove ${displayName}`} title="Remove supplement"
+            style={{ width:24, height:24, display:'flex', alignItems:'center', justifyContent:'center', border:'none', borderRadius:5, background:'transparent', color:T.inkFaint, cursor:'pointer', padding:0 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>}
+          <Toggle on={enabled} onChange={onSetEnabled} label={`${displayName} included`} />
+        </div>
+      </div>
+      {open && enabled && <div style={{ borderTop:`1px solid ${T.lineSoft}` }}><FCSuppDetail supp={supp} sailing={sailing} onUpdate={onUpdate} onAdd={onAdd} /></div>}
+    </div>
+  );
+}
+
+function FCSuppGroup({ type, entries, open, sailing, onMark, onUpdate, onSetEnabled, onRemove, onAdd }) {
+  const label = fcSuppTypeLabel(type);
+  const included = entries.filter(({ supp }) => supp.enabled).length;
+  const helper = type === 'comp' ? 'Benefits included at no additional charge.' : 'Chargeable extras added to this Farecode.';
+  return (
+    <section aria-label={`${label} supplement configurations`} style={{ border:`1px solid ${T.line}`, borderRadius:10, background:'#fff', boxShadow:'0 1px 2px rgba(15,23,42,.04)', overflow:'visible' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:9, padding:'10px 12px', borderRadius:'10px 10px 0 0', borderBottom:`1px solid ${T.line}`, background:T.fill }}>
+        <FCSuppBadge type={type} />
+        <div style={{ minWidth:0, flex:1 }}>
+          <div style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{label} Supplement</div>
+          <div style={{ marginTop:1, fontSize:10.5, color:T.inkFaint, lineHeight:1.35 }}>{helper}</div>
+        </div>
+        <span style={{ padding:'2px 7px', borderRadius:999, background:included?T.tealLight:'#fff', border:`1px solid ${included?'#D1FAE5':T.line}`, color:included?T.tealDark:T.inkFaint, fontSize:9.5, fontWeight:750, whiteSpace:'nowrap' }}>{included} of {entries.length} included</span>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:6, padding:8, background:'#FBFCFE', borderRadius:'0 0 10px 10px' }}>
+        {entries.map(({ supp, index }, position) => <FCSuppCard key={supp.id} supp={supp} position={position+1} open={open.has(supp.id)} sailing={sailing}
+          onToggleOpen={() => onMark(supp.id, !open.has(supp.id))} onUpdate={value => onUpdate(index, value)}
+          onSetEnabled={value => onSetEnabled(index, value)} onRemove={() => onRemove(supp.id)} onAdd={() => onAdd(supp.id, type)} />)}
+      </div>
+    </section>
+  );
+}
+
+function S8Supp({ form, setForm }) {
+  const [open, setOpen] = useState(() => {
+    const firstEnabled = form.supp.find(supp => supp.enabled);
+    return new Set(firstEnabled ? [firstEnabled.id] : []);
+  });
+  const mark = (id, isOpen) => setOpen(new Set(isOpen ? [id] : []));
+  const updateSupp = (index, value) => setForm(previous => {
+    const supp = [...previous.supp];
+    supp[index] = value;
+    return { ...previous, supp };
+  });
+  const setEnabled = (index, value) => {
+    const id = form.supp[index].id;
+    setOpen(previous => value ? new Set([id]) : previous.has(id) ? new Set() : new Set(previous));
+    updateSupp(index, { ...form.supp[index], enabled:value });
+  };
+  const addSuppAfter = (currentId, type) => {
+    const nextSupp = mkCustomFarecodeSupp(type);
+    setForm(previous => {
+      const supp = [...previous.supp];
+      const currentIndex = supp.findIndex(item => item.id === currentId);
+      const lastTypeIndex = supp.reduce((last, item, index) => item.type === type ? index : last, -1);
+      const insertAt = currentIndex >= 0 ? currentIndex + 1 : lastTypeIndex >= 0 ? lastTypeIndex + 1 : supp.length;
+      supp.splice(insertAt, 0, nextSupp);
+      return { ...previous, supp };
+    });
+    setOpen(new Set([nextSupp.id]));
+  };
+  const removeSupp = id => {
+    setForm(previous => ({ ...previous, supp:previous.supp.filter(item => item.id !== id) }));
+    setOpen(previous => previous.has(id) ? new Set() : new Set(previous));
+  };
+  const activeCount = form.supp.filter(supp => supp.enabled).length;
+  return (
+    <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'visible' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}`, borderRadius:'10px 10px 0 0' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+          <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>08</span>
+          <div>
+            <h2 style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Supplements</h2>
+            <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Define which extras are included or charged on this Farecode.</p>
+          </div>
+        </div>
+        <span style={{ fontSize:10.5, fontWeight:700, whiteSpace:'nowrap', padding:'3px 9px', borderRadius:999, color:activeCount?T.tealDark:T.inkFaint, background:activeCount?T.tealLight:T.fill, border:`1px solid ${activeCount?'#D1FAE5':T.line}` }}>{activeCount} of {form.supp.length} included</span>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:14, padding:16 }}>
+        <div style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', borderRadius:8, background:T.primaryBg, border:`1px solid ${T.primaryLine}` }}>
+          <div style={{ width:26, height:26, borderRadius:6, background:'#fff', border:`1px solid ${T.primaryLine}`, color:T.primary, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>Faretype supplement source</div>
+            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.4, marginTop:2 }}>
+              {form.faretype ? <><span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontWeight:700, color:T.primary }}>{form.faretype}</span> supplied the starting configuration. Changes here apply only to this Farecode.</> : <>Choose a parent Faretype to load its supplement defaults.</>}
+            </div>
+          </div>
+        </div>
+        {!activeCount && <div style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', background:T.fill, border:`1px solid ${T.line}`, borderRadius:8, fontSize:11.5, color:T.inkSoft, lineHeight:1.45 }}>
+          <span aria-hidden="true" style={{ color:T.inkFaint, fontWeight:800 }}>i</span>
+          No supplements are included. Turn on a configuration to set its product, cabin scope, application rule, and fare positions.
+        </div>}
+        <div>
+          <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Available supplements</div>
+          <div style={{ fontSize:11.5, color:T.inkFaint, lineHeight:1.4, marginTop:3, marginBottom:9 }}>Enabled supplements become part of this Farecode configuration.</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {FC_SUPP_TYPES.map(type => <FCSuppGroup key={type} type={type}
+              entries={form.supp.map((supp, index) => ({ supp, index })).filter(({ supp }) => supp.type === type)}
+              open={open} sailing={form.sailing} onMark={mark} onUpdate={updateSupp} onSetEnabled={setEnabled}
+              onRemove={removeSupp} onAdd={addSuppAfter} />)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PricingEditorExpandedModal({ pricing, setPricing, errors, onClose, onColumnRemoved }) {
   const [newColumn, setNewColumn] = useState('');
   const [addError, setAddError] = useState('');
@@ -1362,7 +1596,7 @@ function S8({ pricing, setPricing, errors, setErrors }) {
     <div style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.05)', overflow:'hidden' }}>
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:14, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
         <div style={{ display:'flex', alignItems:'flex-start', gap:10, minWidth:0 }}>
-          <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>08</span>
+          <span style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>09</span>
           <div style={{ minWidth:0 }}>
             <h2 style={{ fontSize:15, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Pricing</h2>
             <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Set per-guest fares by cabin category and occupancy.</p>
@@ -1471,7 +1705,7 @@ function S8({ pricing, setPricing, errors, setErrors }) {
           </div>
         </div>
       </div>
-      {expanded && <PricingEditorExpandedModal pricing={pricing} setPricing={setPricing} errors={errors} onClose={closeExpanded} onColumnRemoved={clearRemovedError}/>} 
+      {expanded && <PricingEditorExpandedModal pricing={pricing} setPricing={setPricing} errors={errors} onClose={closeExpanded} onColumnRemoved={clearRemovedError}/>}
     </div>
   );
 }
@@ -1495,18 +1729,18 @@ const PAGE_SIZE   = 10;
 const CHIP_S = { 'Interior':{ bg:'#EEF2FF',color:'#3730A3' }, 'Ocean View':{ bg:'#ECFEFF',color:'#0E7490' }, 'Balcony':{ bg:'#F0FDF4',color:'#166534' }, 'Veranda':{ bg:'#FFF7ED',color:'#C2410C' }, 'Suite':{ bg:'#FDF4FF',color:'#7E22CE' }, 'Penthouse':{ bg:'#FFF1F2',color:'#9F1239' } };
 const STATUS_S = { Active:{ bg:'#ECFDF5',color:'#065F46',dot:'#10B981' }, Draft:{ bg:'#FFFBEB',color:'#92400E',dot:'#F59E0B' }, Inactive:{ bg:'#F8FAFC',color:'#475569',dot:'#94A3B8' } };
 
-const SECTS = [{ n:1,l:'Ship & Sailing' },{ n:2,l:'Policies' },{ n:3,l:'Eligibility' },{ n:4,l:'Channel Access' },{ n:5,l:'Partner Access' },{ n:6,l:'Marketing' },{ n:7,l:'Taxes & Privacy' },{ n:8,l:'Pricing' }];
+const SECTS = [{ n:1,l:'Ship & Sailing' },{ n:2,l:'Policies' },{ n:3,l:'Eligibility' },{ n:4,l:'Channel Access' },{ n:5,l:'Partner Access' },{ n:6,l:'Marketing' },{ n:7,l:'Taxes & Privacy' },{ n:8,l:'Supplements' },{ n:9,l:'Pricing' }];
 function sComplete(n, form, pricing) {
   if (n===1) return !!(form.ship && form.sailing && form.faretype);
   if (n===2) return !!(form.cancellationPolicy && form.depositPolicy);
-  if (n>=3 && n<=7) return !!form.faretype;
-  if (n===8) return Object.values(pricing).some(r => Object.values(r).some(v => v!==''));
+  if (n>=3 && n<=8) return !!form.faretype;
+  if (n===9) return Object.values(pricing).some(r => Object.values(r).some(v => v!==''));
   return false;
 }
 function sHasErr(n, errors) {
   if (n===1) return !!(errors.ship||errors.sailing||errors.faretype);
   if (n===2) return !!(errors.cancellationPolicy||errors.depositPolicy);
-  if (n===8) return !!errors.pricing;
+  if (n===9) return !!errors.pricing;
   return false;
 }
 
@@ -1617,7 +1851,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   const buildForm = () => {
     if (mode==='view' && viewRow) {
       const ft = FT_DATA.find(f => f.code===viewRow.faretype);
-      return { ...DEFAULT_FORM(), ship:viewRow.ship, sailing:viewRow.sailing, faretype:viewRow.faretype, ...(ft?.vals||{}) };
+      return { ...DEFAULT_FORM(), ship:viewRow.ship, sailing:viewRow.sailing, faretype:viewRow.faretype, ...(ft?.vals||{}), supp:cloneSupplements(ft?.vals?.supp || defaultSupplements()) };
     }
     return DEFAULT_FORM();
   };
@@ -1657,7 +1891,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
   const set         = (k,v) => setForm(p => ({ ...p, [k]:v }));
   const navTo       = n => { setActive(n); setVisited(p => new Set([...p,n])); setErrors({}); };
   const isDirty     = () => snapRef.current !== (JSON.stringify(form)+JSON.stringify(pricing));
-  const onFTSelect  = ft => { setForm(p => ({ ...p, faretype:ft.code, ...ft.vals })); setOverrides(DEFAULT_OVRD()); };
+  const onFTSelect  = ft => { setForm(p => ({ ...p, faretype:ft.code, ...ft.vals, supp:cloneSupplements(ft.vals.supp || defaultSupplements()) })); setOverrides(DEFAULT_OVRD()); };
   const toggleOvrd  = k  => setOverrides(p => ({ ...p, [k]:p[k]==='overridden'?'inherited':'overridden' }));
 
   const guardDirty = cb => {
@@ -1708,12 +1942,12 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
 
   const handleActivate = () => {
     const e = validate(true);
-    if (Object.keys(e).length) { setErrors(e); if (e.ship||e.sailing||e.faretype) setActive(1); else if (e.cancellationPolicy||e.depositPolicy) setActive(2); else if (e.pricing) setActive(8); return; }
+    if (Object.keys(e).length) { setErrors(e); if (e.ship||e.sailing||e.faretype) setActive(1); else if (e.cancellationPolicy||e.depositPolicy) setActive(2); else if (e.pricing) setActive(9); return; }
     setSaved(true); setTimeout(() => { setSaved(false); onClose(); }, 1500);
   };
   const handleSaveChanges = () => {
     const e = validate(true);
-    if (Object.keys(e).length) { setErrors(e); if (e.pricing) setActive(8); return; }
+    if (Object.keys(e).length) { setErrors(e); if (e.pricing) setActive(9); return; }
     setSaved(true);
     setTimeout(() => {
       setSaved(false);
@@ -1830,7 +2064,8 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies }
                     {active===5 && <PartnerAccessStep {...sectProps}/>}
                     {active===6 && <S6 {...sectProps}/>}
                     {active===7 && <S7 {...sectProps}/>}
-                    {active===8 && <S8 pricing={pricing} setPricing={setPricing} errors={errors} setErrors={setErrors}/>}
+                    {active===8 && <S8Supp form={form} setForm={setForm}/>}
+                    {active===9 && <S8 pricing={pricing} setPricing={setPricing} errors={errors} setErrors={setErrors}/>}
                   </div>
                 )}
               </>
