@@ -20,7 +20,7 @@ function Caret({ open, onClick, hidden, label = 'row' }) {
 const Stem = () => <span style={{ width:13, height:1, background:'#CBD5E1', flexShrink:0 }}/>;
 
 function StepPill({ n }) {
-  return <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'3px 9px', borderRadius:5, background:T.primary, color:'#fff', fontSize:10, fontWeight:700, letterSpacing:'.7px', textTransform:'uppercase' }}>Step {n} of 3</span>;
+  return <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'3px 9px', borderRadius:5, background:T.primary, color:'#fff', fontSize:10, fontWeight:700, letterSpacing:'.7px', textTransform:'uppercase' }}>Step {n} of 2</span>;
 }
 function FormBar({ label, right, children, depth = 0, tone = 'edit' }) {
   return (
@@ -117,46 +117,58 @@ function GroupFields({ type, form, set, err, canActivate, step }) {
           </div>
         </div>
 
-        <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
-          <div style={{ marginBottom:10 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Assignment behavior</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>Control when this group is available and whether it is selected by default.</div>
+        {step ? (
+          isCan && <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+            <div style={{ marginBottom:10 }}>
+              <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy terms</div>
+              <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>Set the commercial terms this group applies to every policy beneath it.</div>
+            </div>
+            <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
+              <GroupSettingRow first label="Refundable" on={form.refundable} onChange={v => set({ refundable:v })}
+                stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} help="Turning this off requires every band, from booking through sailing, to charge a percentage of cabin fare or the full deposit."/>
+            </div>
           </div>
-          <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
-            <GroupSettingRow first label="Active" on={form.active} dis={!canActivate} onChange={v => set({ active:v })}
-              stateLabel={form.active ? 'Active' : 'Inactive'} help={canActivate ? 'Available for assignment on Faretypes and Farecodes.' : 'Available after the group contains at least one active policy.'}/>
-            <GroupSettingRow label="Default group" on={form.isDefault} onChange={v => set({ isDefault:v })}
-              stateLabel={form.isDefault ? 'Default' : 'Not default'} help="Used when a Farecode leaves this policy type unset."/>
-            {isCan && <GroupSettingRow label="Refundable" on={form.refundable} onChange={v => set({ refundable:v })}
-              stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} help="Turning this off requires every band to charge a percentage of cabin fare or the full deposit."/>}
+        ) : (
+          <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+            <div style={{ marginBottom:10 }}>
+              <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Assignment behavior</div>
+              <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>Control when this group is available and whether it is selected by default.</div>
+            </div>
+            <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
+              <GroupSettingRow first label="Active" on={form.active} dis={!canActivate} onChange={v => set({ active:v })}
+                stateLabel={form.active ? 'Active' : 'Inactive'} help={canActivate ? 'Available for assignment on Faretypes and Farecodes.' : 'Available after the group contains at least one active policy.'}/>
+              <GroupSettingRow label="Default group" on={form.isDefault} onChange={v => set({ isDefault:v })}
+                stateLabel={form.isDefault ? 'Default' : 'Not default'} help="Used when a Farecode leaves this policy type unset."/>
+              {isCan && <GroupSettingRow label="Refundable" on={form.refundable} onChange={v => set({ refundable:v })}
+                stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} help="Turning this off requires every band to charge a percentage of cabin fare or the full deposit."/>}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );
 }
 
 /* 1.4 Parent fields */
-function ParentFields({ type, form, set, err, canActivate, activateHelp, activationLabel, step, context }) {
+function ParentFields({ type, form, set, err, step, context, children }) {
   const isCan = type === 'cancel';
   const uid = React.useId().replace(/:/g, '');
   const titleId = `policy-details-${uid}`;
   const policyType = isCan ? 'cancellation' : 'deposit';
-  const childName = isCan ? 'band' : 'milestone line';
   return (
     <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
       <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
         {step && <span aria-hidden="true" style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>{step}</span>}
         <div style={{ minWidth:0 }}>
           <h3 id={titleId} style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Policy details</h3>
-          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Define the assignable {policyType} policy that Farecodes reference. Its ordered {isCan ? 'bands are' : 'milestone lines are'} configured next.</p>
+          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Define the assignable {policyType} policy that Farecodes reference. Its ordered {isCan ? 'bands are' : 'milestone lines are'} configured {step ? 'below' : 'with the policy'}.</p>
         </div>
       </div>
 
-      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
+      <div style={{ display:'flex', flexDirection:'column', padding:'0 16px 16px' }}>
         {context && (
-          <div style={{ display:'flex', alignItems:'center', gap:11, padding:'11px 12px', borderRadius:8, background:T.primaryBg, border:`1px solid ${T.primaryLine}` }}>
-            <span aria-hidden="true" style={{ width:30, height:30, borderRadius:7, background:'#fff', border:`1px solid ${T.primaryLine}`, color:T.primary, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 10px', marginTop:14, borderRadius:7, background:T.primaryBg, border:`1px solid ${T.primaryLine}` }}>
+            <span aria-hidden="true" style={{ width:26, height:26, borderRadius:6, background:'#fff', border:`1px solid ${T.primaryLine}`, color:T.primary, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6h10a2 2 0 0 1 2 2v3"/><path d="M8 18h10a2 2 0 0 0 2-2v-3"/><rect x="3" y="3" width="5" height="6" rx="1"/><rect x="3" y="15" width="5" height="6" rx="1"/></svg>
             </span>
             <div style={{ minWidth:0, flex:1 }}>
@@ -174,23 +186,39 @@ function ParentFields({ type, form, set, err, canActivate, activateHelp, activat
           </div>
         )}
 
-        <div>
-          <div style={{ marginBottom:10 }}>
+        <div style={{ padding:'15px 0 16px' }}>
+          <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:12, marginBottom:8 }}>
             <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy identity</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>Use a concise name teams can recognize in Farecode assignment and reporting.</div>
+            <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.35, textAlign:'right' }}>Used in assignment, reporting, and history</div>
           </div>
-          <div style={{ padding:'12px', border:`1px solid ${err?.name ? '#FCA5A5' : T.line}`, borderRadius:8, background:T.fill }}>
-            <TextField label={isCan ? 'Cancellation policy name' : 'Deposit policy name'} value={form.name} onChange={v => set({ name:v })} error={err?.name}
-              placeholder={isCan ? 'e.g. Standard Cancellation' : 'e.g. 5 Night Standard Deposit'} helper="Shown in policy assignment, reporting, and audit history."/>
-          </div>
+          <TextField label={isCan ? 'Cancellation policy name' : 'Deposit policy name'} value={form.name} onChange={v => set({ name:v })} error={err?.name}
+            placeholder={isCan ? 'e.g. Standard Cancellation' : 'e.g. 5 Night Standard Deposit'}/>
         </div>
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
-          <div style={{ marginBottom:10 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Assignment behavior</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>Control availability, default selection, and policy-specific behavior.</div>
-          </div>
-          <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
+function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, activationLabel, creation = false, embedded = false }) {
+  const isCan = type === 'cancel';
+  const policyType = isCan ? 'cancellation' : 'deposit';
+  const childName = isCan ? 'band' : 'milestone line';
+  const uid = React.useId().replace(/:/g, '');
+  const titleId = `policy-assignment-${uid}`;
+  const settings = creation ? (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, padding:'10px 12px', border:`1px solid ${T.lineSoft}`, borderRadius:8, background:T.fill }}>
+      <div style={{ minWidth:0, flex:1 }}>
+        <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>Use as default {policyType} policy</div>
+        <div style={{ marginTop:2, maxWidth:520, color:T.inkSoft, fontSize:10.75, lineHeight:1.4 }}>Applied when a Farecode has no explicit {policyType} policy. Enabling this replaces the current default.</div>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:9, flexShrink:0 }}>
+        <span style={{ minWidth:62, textAlign:'right', fontSize:10.5, fontWeight:700, color:form.isDefault ? T.primary : T.inkSoft }}>{form.isDefault ? 'Default' : 'Optional'}</span>
+        <Toggle on={form.isDefault} onChange={v => set({ isDefault:v })} label={`Use as default ${policyType} policy`}/>
+      </div>
+    </div>
+  ) : (
+    <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
             <GroupSettingRow first label="Active" on={form.active} dis={!canActivate} onChange={v => set({ active:v })}
               disabledLabel={activationLabel || `Requires valid ${childName}`} stateLabel={form.active ? 'Active' : 'Inactive'}
               help={canActivate ? 'Available for assignment on Farecodes.' : activateHelp}/>
@@ -198,8 +226,35 @@ function ParentFields({ type, form, set, err, canActivate, activateHelp, activat
               stateLabel={form.isDefault ? 'Default' : 'Not default'} help="Used when a Farecode leaves this policy unset within the parent group."/>
             {isCan && <GroupSettingRow label="Refundable" on={form.refundable} onChange={v => set({ refundable:v })}
               stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} help="Applies only to this policy and must remain consistent with its cancellation bands."/>}
-          </div>
-        </div>
+    </div>
+  );
+  const sectionTitle = creation ? 'Default selection' : 'Assignment behavior';
+  const heading = (
+    <div style={{ marginBottom:8 }}>
+      <h4 id={titleId} style={{ fontSize:12.5, fontWeight:700, color:T.ink, margin:'0 0 2px' }}>{sectionTitle}</h4>
+      <p style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, margin:0 }}>
+        {creation ? 'Optional fallback behavior for unassigned Farecodes.' : 'Control availability, default selection, and policy-specific behavior.'}
+      </p>
+    </div>
+  );
+  if (embedded) {
+    return (
+      <div aria-labelledby={titleId} style={{ paddingTop:15, borderTop:`1px solid ${T.lineSoft}` }}>
+        {heading}
+        {settings}
+      </div>
+    );
+  }
+  return (
+    <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
+      <div style={{ padding:'12px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <h3 id={titleId} style={{ fontSize:14.5, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Assignment behavior</h3>
+        <p style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, margin:0 }}>
+          {creation ? `Choose whether this becomes the fallback ${policyType} policy when a Farecode does not select one.` : 'Control availability, default selection, and policy-specific behavior.'}
+        </p>
+      </div>
+      <div style={{ padding:'14px 16px' }}>
+        {settings}
       </div>
     </section>
   );
@@ -251,4 +306,4 @@ function CodeChip({ level, children }) {
   return <span style={{ ...s, fontFamily:MONO, fontWeight:700, borderRadius:5, whiteSpace:'nowrap', letterSpacing:'-.2px' }}>{children}</span>;
 }
 
-Object.assign(window, { PolStatusBadge, TypeBadge, Caret, Stem, Rails, TREE, CodeChip, StepPill, FormBar, ToggleRow, TextField, GroupSettingRow, GroupFields, ParentFields, IssueList, polBtn, polGhost, polDark, ActionRow });
+Object.assign(window, { PolStatusBadge, TypeBadge, Caret, Stem, Rails, TREE, CodeChip, StepPill, FormBar, ToggleRow, TextField, GroupSettingRow, GroupFields, ParentFields, ParentAssignmentFields, IssueList, polBtn, polGhost, polDark, ActionRow });

@@ -1,7 +1,7 @@
-// dc-group-panel.jsx — 720px slide-over shell + Group panel (1.2 / 2.2).
+// dc-group-panel.jsx — wide slide-over shell + Group panel (1.2 / 2.2).
 const { useState: useSG, useRef: useRG, useEffect: useEG } = React;
 
-function PanelShell({ z = 901, width = 720, titleLine, metaLine, actions, tabs, activeTab, onTab, onClose, children, readOnlyBg }) {
+function PanelShell({ z = 901, width = 1180, titleLine, metaLine, actions, tabs, activeTab, onTab, onClose, children, readOnlyBg }) {
   const [mounted, setMounted] = useSG(false);
   useEG(() => { requestAnimationFrame(() => setMounted(true)); }, []);
   return (

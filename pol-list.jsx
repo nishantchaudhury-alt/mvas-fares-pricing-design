@@ -13,6 +13,23 @@ function nextParentCode(list, type) {
 const blankForm = () => ({ name:'', active:true, isDefault:false, refundable:true });
 const gFormOf = g => ({ name:g.name, active:g.status === 'Active', isDefault:!!g.isDefault, refundable:g.isRefundable !== false });
 const pFormOf = p => ({ name:p.name, active:p.status === 'Active', isDefault:!!p.isDefault, refundable:p.isRefundable !== false });
+const makePolicyDraft = ({ parentCode, parentId=null, pForm=null, rows=[] }) => ({
+  key:parentId || `draft-${parentCode}`,
+  parentId,
+  parentCode,
+  pForm:pForm || blankForm(),
+  rows:rows.slice(),
+  issues:[],
+  validationAttempt:0,
+  err:null,
+});
+const flowPolicyDrafts = f => f.policyDrafts || [makePolicyDraft({
+  parentCode:f.parentCode,
+  parentId:f.parentId || null,
+  pForm:f.pForm,
+  rows:f.rows || [],
+})];
+const activeFlowPolicy = f => flowPolicyDrafts(f)[Math.min(f.activePolicyIndex || 0, flowPolicyDrafts(f).length - 1)];
 
 function PoliciesList({ policies, setPolicies, onNav }) {
   const [q, setQ] = useSPL('');
@@ -67,58 +84,89 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   /* ── guided flow ── */
   const beginFlow = type => {
     setEdit(null); setChooser(false);
-    setFlow({ type, entry:'new', step:1, groupId:null, parentId:null, groupCode:nextGroupCode(policies, type), parentCode:nextParentCode(policies, type),
-      gForm:blankForm(), pForm:blankForm(), rows:[], issues:[] });
+    const parentCode = nextParentCode(policies, type);
+    setFlow({ type, entry:'new', step:1, groupId:null, groupCode:nextGroupCode(policies, type),
+      gForm:blankForm(), policyDrafts:[makePolicyDraft({ parentCode })], activePolicyIndex:0 });
   };
   const addPolicyTo = g => {
     setEdit(null); openIds(g.id);
-    setFlow({ type:g.type, entry:'addPolicy', step:2, groupId:g.id, parentId:null, groupCode:g.code, parentCode:nextParentCode(policies, g.type),
-      gForm:gFormOf(g), pForm:blankForm(), rows:[], issues:[] });
+    const parentCode = nextParentCode(policies, g.type);
+    setFlow({ type:g.type, entry:'addPolicy', step:2, groupId:g.id, groupCode:g.code,
+      gForm:gFormOf(g), policyDrafts:[makePolicyDraft({ parentCode, pForm:{ ...blankForm(), refundable:g.isRefundable !== false } })], activePolicyIndex:0 });
   };
   const finishSetup = (g, p) => {
     setEdit(null); openIds(g.id, p?.id);
-    const parent = p || g.parents[0];
-    const kids = parent ? kidsOf(parent) : [];
-    const step = g.status === 'Draft' && !p ? 1 : parent && kids.length === 0 ? 3 : 2;
-    setFlow({ type:g.type, entry:'resume', step, groupId:g.id, parentId:parent?.id || null, groupCode:g.code, parentCode:parent?.code || nextParentCode(policies, g.type),
-      gForm:gFormOf(g), pForm:parent ? pFormOf(parent) : blankForm(), rows:kids.slice(), issues:[] });
+    const resumable = p
+      ? [p, ...g.parents.filter(parent => parent.id !== p.id && parent.status === 'Draft')]
+      : g.status === 'Draft' ? g.parents : g.parents.filter(parent => parent.status === 'Draft');
+    const drafts = resumable.length
+      ? resumable.map(parent => makePolicyDraft({ parentCode:parent.code, parentId:parent.id, pForm:pFormOf(parent), rows:kidsOf(parent) }))
+      : [makePolicyDraft({ parentCode:nextParentCode(policies, g.type), pForm:{ ...blankForm(), refundable:g.isRefundable !== false } })];
+    setFlow({ type:g.type, entry:'resume', step:2, groupId:g.id, groupCode:g.code,
+      gForm:gFormOf(g), policyDrafts:drafts, activePolicyIndex:0 });
   };
-  const setFlowRows = r => setFlow(f => ({ ...f, rows:r }));
-  const flowDirty = f => f.entry === 'resume' || f.gForm.name || f.pForm.name || f.rows.length > 0;
+  const flowDirty = f => f.entry === 'resume' || f.gForm.name || flowPolicyDrafts(f).some(d => d.pForm.name || d.rows.length > 0);
   const askCancelFlow = () => flow && flowDirty(flow) ? setDlg({ type:'discardFlow' }) : setFlow(null);
 
   const commitFlow = status => {
     const f = flow, meta = POL_META[f.type], key = meta.childKey;
     const existingG = policies.find(g => g.id === f.groupId) || null;
     const gid = f.groupId || `g${++uid.current}`;
-    const pid = f.parentId || `p${++uid.current}`;
-    const existingP = existingG ? existingG.parents.find(p => p.id === f.parentId) : null;
-    const parent = {
-      id:pid, code:f.parentCode, name:f.pForm.name.trim() || 'Untitled policy',
-      status, isDefault:f.pForm.isDefault, usedIn:existingP?.usedIn || 0, mod:TODAY, created:existingP?.created || TODAY, editor:ME,
-      [key]:f.rows, usedInFaretypes:existingP?.usedInFaretypes || [], usedInFarecodes:existingP?.usedInFarecodes || [],
-      ...(f.type === 'cancel' ? { isRefundable:f.pForm.refundable } : {}),
-    };
+    const drafts = flowPolicyDrafts(f);
+    const builtParents = drafts.map(d => {
+      const existingP = existingG ? existingG.parents.find(p => p.id === d.parentId) : null;
+      const pid = d.parentId || `p${++uid.current}`;
+      return {
+        id:pid, code:d.parentCode, name:d.pForm.name.trim() || 'Untitled policy',
+        status, isDefault:d.pForm.isDefault, usedIn:existingP?.usedIn || 0, mod:TODAY, created:existingP?.created || TODAY, editor:ME,
+        [key]:d.rows, usedInFaretypes:existingP?.usedInFaretypes || [], usedInFarecodes:existingP?.usedInFarecodes || [],
+        ...(f.type === 'cancel' ? { isRefundable:d.pForm.refundable } : {}),
+      };
+    });
+    const defaultParent = builtParents.find(p => p.isDefault);
+    let parents = existingG ? existingG.parents.slice() : [];
+    builtParents.forEach(parent => {
+      const at = parents.findIndex(p => p.id === parent.id);
+      at >= 0 ? parents.splice(at, 1, parent) : parents.push(parent);
+    });
+    if (defaultParent) parents = parents.map(p => ({ ...p, isDefault:p.id === defaultParent.id }));
     const groupStatus = f.entry === 'addPolicy' ? (existingG.status === 'Draft' ? status : existingG.status) : status;
     const group = {
       id:gid, type:f.type, code:f.groupCode, name:f.gForm.name.trim() || 'Untitled group',
       status:groupStatus, isDefault:f.gForm.isDefault, mod:TODAY, created:existingG?.created || TODAY, editor:ME,
-      parents: existingG
-        ? (existingP ? existingG.parents.map(p => p.id === pid ? parent : f.pForm.isDefault ? { ...p, isDefault:false } : p)
-                     : [...existingG.parents.map(p => f.pForm.isDefault ? { ...p, isDefault:false } : p), parent])
-        : [parent],
+      parents,
       ...(f.type === 'cancel' ? { isRefundable:f.gForm.refundable } : {}),
     };
     let next = existingG ? policies.map(g => g.id === gid ? group : g) : [group, ...policies];
     if (f.gForm.isDefault) next = next.map(g => g.type === f.type && g.id !== gid ? { ...g, isDefault:false } : g);
     setPolicies(next);
-    openIds(gid, pid);
+    openIds(gid, ...builtParents.map(p => p.id));
     setFlow(null);
-    setDlg({ type:'toast', text:`${group.name} · ${parent.name} saved as ${status} with ${f.rows.length} ${f.rows.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}.` });
+    const rowCount = drafts.reduce((sum, d) => sum + d.rows.length, 0);
+    setDlg({ type:'toast', text:`${group.name} saved as ${status} with ${builtParents.length} ${builtParents.length === 1 ? 'policy' : 'policies'} and ${rowCount} ${rowCount === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}.` });
   };
   const tryActivateFlow = () => {
-    const issues = chainIssues({ type:flow.type, policies, groupId:flow.groupId, groupName:flow.gForm.name, parentName:flow.pForm.name, rows:flow.rows, isRefundable:flow.pForm.refundable });
-    if (issues.length) { setFlow(f => ({ ...f, issues })); return; }
+    const drafts = flowPolicyDrafts(flow);
+    const issueSets = drafts.map(d => chainIssues({ type:flow.type, policies, groupId:flow.groupId, groupName:flow.gForm.name,
+      parentName:d.pForm.name, rows:d.rows, isRefundable:d.pForm.refundable }));
+    const firstInvalid = issueSets.findIndex(items => items.length > 0);
+    if (firstInvalid >= 0) {
+      const allIssues = issueSets.flat();
+      const groupInvalid = !flow.gForm.name.trim() || allIssues.some(it => it.text.startsWith('Another active'));
+      setFlow(f => ({
+        ...f,
+        step:groupInvalid ? 1 : 2,
+        activePolicyIndex:groupInvalid ? f.activePolicyIndex : firstInvalid,
+        err:groupInvalid ? { name:'Group name is required and must be unique' } : null,
+        policyDrafts:flowPolicyDrafts(f).map((d, i) => ({
+          ...d,
+          err:{ name:issueSets[i].some(it => it.text === 'Policy name is required.') ? 'Policy name is required' : null },
+          issues:issueSets[i],
+          validationAttempt:issueSets[i].length ? (d.validationAttempt || 0) + 1 : d.validationAttempt || 0,
+        })),
+      }));
+      return;
+    }
     commitFlow('Active');
   };
 
@@ -127,7 +175,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const editParent = (g, p, addRow) => {
     setFlow(null); openIds(g.id, p.id);
     const kids = kidsOf(p).slice();
-    setEdit({ level:'parent', groupId:g.id, parentId:p.id, form:pFormOf(p), init:pFormOf(p), rows:addRow ? [...kids, blankChild(g.type)] : kids, initRows:kidsOf(p), issues:[] });
+    setEdit({ level:'parent', groupId:g.id, parentId:p.id, form:pFormOf(p), init:pFormOf(p), rows:addRow ? [...kids, blankChild(g.type)] : kids, initRows:kidsOf(p), issues:[], validationAttempt:0 });
   };
   const editDirty = e => JSON.stringify(e.form) !== JSON.stringify(e.init) || (e.rows && JSON.stringify(e.rows) !== JSON.stringify(e.initRows));
   const askCancelEdit = () => edit && editDirty(edit) ? setDlg({ type:'discardEdit' }) : setEdit(null);
@@ -144,7 +192,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
     if (!e.form.name.trim()) { setEdit({ ...e, err:{ name:'Policy name is required' } }); return; }
     if (e.form.active) {
       const issues = chainIssues({ type:g.type, policies, groupId:g.id, groupName:g.name, parentName:e.form.name, rows:e.rows, isRefundable:e.form.refundable });
-      if (issues.length) { setEdit({ ...e, issues }); return; }
+      if (issues.length) { setEdit({ ...e, issues, validationAttempt:(e.validationAttempt || 0) + 1 }); return; }
     }
     const key = POL_META[g.type].childKey;
     setPolicies(policies.map(x => x.id !== g.id ? x : {
@@ -303,8 +351,8 @@ function PoliciesList({ policies, setPolicies, onNav }) {
                 <div aria-hidden="true" onClick={() => setChooser(false)} style={{ position:'fixed', inset:0, zIndex:300 }}/>
                 <div role="menu" aria-label="Choose policy type" style={{ position:'absolute', right:0, top:'calc(100% + 6px)', width:280, background:'#fff', border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 12px 32px rgba(15,23,42,.14)', zIndex:400, overflow:'hidden' }}>
                   <div style={{ padding:'9px 14px', fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px', background:T.fill, borderBottom:`1px solid ${T.lineSoft}` }}>Choose a type</div>
-                  {['deposit', 'cancel'].map(t => (
-                    <button key={t} type="button" role="menuitem" onClick={() => beginFlow(t)} style={{ width:'100%', padding:'12px 14px', border:'none', background:'#fff', fontFamily:'inherit', textAlign:'left', cursor:'pointer', borderBottom:t === 'deposit' ? `1px solid ${T.lineSoft}` : 'none' }}
+                  {['cancel', 'deposit'].map(t => (
+                    <button key={t} type="button" role="menuitem" onClick={() => beginFlow(t)} style={{ width:'100%', padding:'12px 14px', border:'none', background:'#fff', fontFamily:'inherit', textAlign:'left', cursor:'pointer', borderBottom:t === 'cancel' ? `1px solid ${T.lineSoft}` : 'none' }}
                       onMouseEnter={e => e.currentTarget.style.background = T.fill} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
                       <div style={{ fontSize:13, fontWeight:600, color:T.ink }}>{t === 'deposit' ? 'Deposit Policy' : 'Cancellation Policy'}</div>
                     </button>
@@ -399,7 +447,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
       })()}
 
       {flow && (
-        <PolFlowDrawer flow={flow} setFlow={setFlow} activatable={parentActivatable(flow.type, flow.pForm, flow.rows)}
+        <PolFlowDrawer flow={flow} setFlow={setFlow} activatable={(() => { const d = activeFlowPolicy(flow); return parentActivatable(flow.type, d.pForm, d.rows); })()}
           onCancel={askCancelFlow} onActivate={tryActivateFlow}/>
       )}
 

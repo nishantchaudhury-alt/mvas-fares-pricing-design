@@ -130,10 +130,25 @@ function windowGroups(rows) {
   return [...map.values()].sort((a,b) => b.endDts - a.endDts);
 }
 
-// Returns { cell:{ '<rowIdx>:<field>': msg }, issues:[{level,text}] }
+// A DTS window includes whole days, so the next continuous window starts one day
+// below the prior End DTS (30 -> 29). Blank means the first/open-ended window.
+const continuationBeginDts = endDts => {
+  if (isBlank(endDts) || isNaN(num(endDts)) || num(endDts) <= 0) return '';
+  return String(num(endDts) - 1);
+};
+
+// Returns blocking cell/issues plus non-blocking DTS continuity warnings.
+// Warnings are deliberately separate so an intentional override can be activated.
 function validateRows(rows) {
-  const cell = {}, issues = [];
-  if (!rows.length) return { cell, issues:[{ level:'error', text:'At least one line is required.' }] };
+  const cell = {}, warnCell = {}, issues = [], warnings = [];
+  if (!rows.length) return { cell, warnCell, issues:[{ level:'error', text:'At least one line is required.' }], warnings };
+  const isDepositPlan = rows.some(r => r.depositType !== undefined || r.marketingName !== undefined);
+  const planLabel = isDepositPlan ? 'deposit plan' : 'cancellation plan';
+  const rowLabel = isDepositPlan ? 'Line' : 'Band';
+  const warn = (row, field, text, detail) => {
+    warnCell[`${row}:${field}`] = text;
+    warnings.push({ level:'warning', row, field, text:detail || text });
+  };
   rows.forEach((r, i) => {
     if (isBlank(r.endDts) || isNaN(num(r.endDts)) || num(r.endDts) < 0) cell[`${i}:endDts`] = 'Required, ≥ 0';
     if (!isBlank(r.beginDts) && (isNaN(num(r.beginDts)) || num(r.beginDts) <= num(r.endDts))) cell[`${i}:beginDts`] = 'Must exceed End DTS';
@@ -147,27 +162,37 @@ function validateRows(rows) {
       if (isBlank(r.penaltyValue) || isNaN(num(r.penaltyValue)) || num(r.penaltyValue) < 0) cell[`${i}:penaltyValue`] = 'Required';
       else if (r.penaltyType === 'PCT_CABIN_FARE' && num(r.penaltyValue) > 100) cell[`${i}:penaltyValue`] = '0–100';
     }
-    const blankBegin = rows.filter(x => isBlank(x.beginDts));
   });
   const openEnded = rows.filter(r => isBlank(r.beginDts));
   const groups = windowGroups(rows);
-  if (openEnded.length === 0) issues.push({ level:'error', text:`No open-ended window: nothing covers bookings beyond ${groups[0] ? groups[0].beginDts : '—'} days to sail. Clear the top line's Begin DTS.` });
+  if (openEnded.length === 0) warn(0, 'beginDts', `No ${planLabel} exists for bookings before this day`, `The first ${rowLabel.toLowerCase()} does not begin at infinity. No ${planLabel} exists for bookings before this day.`);
+
+  rows.forEach((r, i) => {
+    if (i === 0) return;
+    const prev = rows[i - 1];
+    if (isBlank(prev.endDts) || isBlank(r.beginDts) || isNaN(num(prev.endDts)) || isNaN(num(r.beginDts))) return;
+    const sameWindow = String(prev.beginDts) === String(r.beginDts) && String(prev.endDts) === String(r.endDts);
+    if (sameWindow) return; // Multiple category-specific rows may intentionally share a window.
+    const expected = continuationBeginDts(prev.endDts);
+    if (expected !== '' && String(r.beginDts) !== expected) {
+      const relation = num(r.beginDts) > num(expected) ? 'overlap' : 'gap';
+      warn(i, 'beginDts', `Prior line ends at ${prev.endDts}`, `${rowLabel} ${i + 1}: Prior line ends at ${prev.endDts}. Continuous coverage begins at ${expected}; the current override creates a ${relation}.`);
+    }
+  });
 
   groups.forEach((g, gi) => {
-    const next = groups[gi + 1];
-    if (next) {
-      if (next.beginDts < g.endDts - 1) issues.push({ level:'error', text:`Gap between ${g.endDts}–${g.beginDts === Infinity ? '∞' : g.beginDts} and ${next.endDts}–${next.beginDts}: days ${next.beginDts + 1}–${g.endDts - 1} are uncovered.` });
-      else if (next.beginDts >= g.endDts) issues.push({ level:'error', text:`Overlap: window starting at ${next.beginDts} days overlaps the window ending at ${g.endDts} days.` });
-    }
     const covered = new Set();
     g.rows.forEach(r => catsCover(r.cats || []).forEach(c => covered.add(c)));
     const missing = CATS.filter(c => !covered.has(c));
     if (missing.length) issues.push({ level:'error', text:`Stateroom coverage gap in ${g.endDts}–${g.beginDts === Infinity ? '∞' : g.beginDts} days: ${missing.join(', ')} not covered.` });
   });
   const last = groups[groups.length - 1];
-  if (last && last.endDts !== 0) issues.push({ level:'error', text:`Lowest window ends at ${last.endDts} days — a line must reach End DTS 0 (the sailing date).` });
+  if (last && last.endDts !== 0) {
+    const lastRow = rows.reduce((best, r, i) => num(r.endDts) < num(rows[best].endDts) ? i : best, 0);
+    warn(lastRow, 'endDts', `No ${planLabel} exists for bookings before this day`, `Lowest window ends at ${last.endDts} days. No ${planLabel} exists for bookings before this day.`);
+  }
   if (Object.keys(cell).length) issues.unshift({ level:'error', text:'Some fields are incomplete or out of range.' });
-  return { cell, issues };
+  return { cell, warnCell, issues, warnings };
 }
 
 function refundabilityIssues(bands, isRefundable) {
@@ -693,7 +718,7 @@ Object.assign(window, {
   T, MONO, STATUS_S, CATS, DEP_TYPES, DEP_HELP, PEN_TYPES, PEN_HELP,
   DEP_GROUPS_INIT, CAN_GROUPS_INIT,
   num, isBlank, catsCover, catLabel, winLabel, money, depAmountLabel, penAmountLabel,
-  windowGroups, validateRows, refundabilityIssues, inWindow, rowForCat, depositAmountFor, cancelCharge, AUDIT,
+  windowGroups, continuationBeginDts, validateRows, refundabilityIssues, inWindow, rowForCat, depositAmountFor, cancelCharge, AUDIT,
   IcSearch, IcChevron, IcX, IcEdit, IcCheck, IcWarn, IcGrip, IcInfo,
   StatusBadge, Pill, CoverPill, iS, Field, Sel, Toggle, SectionHead, SCard, DRow, Banner, HelpList, AuditList, UsedInTables, CatSelect,
   Sidebar, TopBar, PageHead, Tabs, RowMenu, Modal, DCGroupList,

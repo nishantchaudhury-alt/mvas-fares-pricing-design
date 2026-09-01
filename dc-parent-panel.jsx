@@ -245,7 +245,7 @@ function DCParentPanel({ kind, group, parent, depParents, initialTab, initialEdi
 
   return (
     <>
-      <PanelShell z={960} width={860} onClose={() => guard(onClose)} tabs={tabs} activeTab={tab} onTab={setTab}
+      <PanelShell z={960} width={1075} onClose={() => guard(onClose)} tabs={tabs} activeTab={tab} onTab={setTab}
         readOnlyBg={!isCreate && !isEditing}
         titleLine={<div style={{ fontSize:15, fontWeight:700, color:T.ink, marginBottom:5 }}>{isCreate ? `New ${label}` : `Edit ${label}`}</div>}
         metaLine={

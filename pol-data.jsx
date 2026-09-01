@@ -141,7 +141,7 @@ const toLegacy = (policies, type) => policies.filter(g => g.type === type).map(g
   parents:g.parents.map(p => ({ ...p, isActive:p.status === 'Active', lines:p.lines, bands:p.bands })),
 }));
 
-/* Full-chain validation for Activate (1.2 Step 3). */
+/* Full-chain validation for Activate on the merged Policy step. */
 function chainIssues({ type, policies, groupId, groupName, parentName, rows, isRefundable }) {
   const out = [];
   const nm = (groupName || '').trim().toLowerCase();

@@ -30,6 +30,15 @@ const INIT_ROWS = [
 { id: 7, code: 'FT-00107', basis: 'NR-GROUP', group: 'Non-Refundable', source: 'WC', fc: 6, status: 'Active', mod: '13 Jun 2026' },
 { id: 8, code: 'FT-00108', basis: 'INT-PROMO', group: 'Interline', source: 'Partner', fc: 1, status: 'Active', mod: '02 Jun 2026' }];
 
+const INIT_POLICY_ELIGIBILITY = [
+{ id: 1, code: 'PE-00001', name: 'Retail Standard', faretypeCode: 'FT-00101', cancellationPolicy: 'Standard Cancellation', depositPolicy: '5 Night Standard Deposit', residency: 'Any', minAge: 18, status: 'Active', mod: '14 Jun 2026' },
+{ id: 2, code: 'PE-00002', name: 'Non-Refundable Retail', faretypeCode: 'FT-00102', cancellationPolicy: 'Non-Refundable', depositPolicy: 'Full Deposit', residency: 'Any', minAge: 18, status: 'Active', mod: '12 Jun 2026' },
+{ id: 3, code: 'PE-00003', name: 'International Agency', faretypeCode: 'FT-00103', cancellationPolicy: 'Flexible Cancellation', depositPolicy: '5 Night Standard Deposit', residency: 'Non-US', minAge: 18, status: 'Active', mod: '11 Jun 2026' },
+{ id: 4, code: 'PE-00004', name: 'Casino Guest', faretypeCode: 'FT-00105', cancellationPolicy: 'Standard Cancellation', depositPolicy: '3 Night Deposit', residency: 'Any', minAge: 21, status: 'Draft', mod: '09 Jun 2026' },
+{ id: 5, code: 'PE-00005', name: 'Flexible Retail', faretypeCode: 'FT-00106', cancellationPolicy: 'Flexible Cancellation', depositPolicy: '5 Night Standard Deposit', residency: 'Any', minAge: 18, status: 'Active', mod: '08 Jun 2026' },
+{ id: 6, code: 'PE-00006', name: 'Group Contract', faretypeCode: 'FT-00107', cancellationPolicy: 'Group Cancellation', depositPolicy: 'Group Deposit', residency: 'Any', minAge: 18, status: 'Inactive', mod: '04 Jun 2026' }
+];
+
 const GROUP_S = {
   'Core': { bg: '#EEF2FF', color: '#4338CA' },
   'Non-Refundable': { bg: '#FFF1F2', color: '#BE123C' },
@@ -409,7 +418,7 @@ function S1({ form, set, errors, mode, editData }) {
 }
 
 /* ── Section 2 ──────────────────────────────── */
-function S2({ form, set, errors, policies }) {
+function S2({ form, set, errors, policies, number = 2, title = 'Policies & Eligibility', description = 'Set the commercial rules and guest requirements that govern this Faretype.', context = null }) {
   const canPol = polParents(policies, 'cancel').find((p) => p.name === form.cancellationPolicy);
   const assignedPolicies = Number(!!form.cancellationPolicy) + Number(!!form.depositPolicy);
   const chips = [];
@@ -430,7 +439,8 @@ function S2({ form, set, errors, policies }) {
   { k: 'upgradeEligible', l: 'Upgrades', h: 'Cabin changes' },
   { k: 'couponEligible', l: 'Coupons', h: 'Promo codes' }];
   return (
-    <StepCard number={2} title="Policies & Eligibility" description="Set the commercial rules and guest requirements that govern this Faretype.">
+    <StepCard number={number} title={title} description={description}>
+      {context}
       <div style={{ border: `1px solid ${T.lineSoft}`, borderRadius: 10, background: T.fill, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <GroupHeading title="Commercial policies" helper="Assign payment and refund rules together so the booking terms stay aligned."
         aside={<span style={{ fontSize: 10.5, fontWeight: 700, color: assignedPolicies === 2 ? T.tealDark : T.inkSoft, background: assignedPolicies === 2 ? T.tealLight : '#fff', border: `1px solid ${assignedPolicies === 2 ? '#A7F3D0' : T.line}`, borderRadius: 999, padding: '3px 8px', whiteSpace: 'nowrap' }}>{assignedPolicies} of 2 assigned</span>} />
@@ -512,7 +522,7 @@ function S3({ form, set }) {
   const vis = CHS.filter((c) => form[c.k]).map((c) => c.l);
   const hid = CHS.filter((c) => !form[c.k]).map((c) => c.l);
   return (
-    <StepCard number={3} title="Channel Access" description="Choose where this Faretype is visible and available to book.">
+    <StepCard number={2} title="Channel Access" description="Choose where this Faretype is visible and available to book.">
       <div style={{ border: `1px solid ${form.cruiseControlAccess ? T.primaryLine : T.line}`, borderRadius: 10, padding: '13px 14px', background: form.cruiseControlAccess ? T.primaryBg : '#fff' }}>
         <TRow label="Cruise Control access" helper="Show this Faretype in the internal CRM booking workspace." on={form.cruiseControlAccess} onChange={(v) => set('cruiseControlAccess', v)} />
       </div>
@@ -555,13 +565,13 @@ function S4({ form, set }) {
   const partners = ['Virtuoso', 'AMEX Travel', 'Ensemble', 'Signature Travel', 'Travel Leaders', 'Nexion', 'Avoya Travel'];
   const selected = form.channelPartners.length;
   return (
-    <StepCard number={4} title="Partner Access" description="Choose which agency partners can access this Faretype through the MVAS B2B channel.">
+    <StepCard number={3} title="Partner Access" description="Choose which agency partners can access this Faretype through the MVAS B2B channel.">
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, padding: '11px 12px', borderRadius: 9, background: form.chMVASB2B ? T.primaryBg : T.amberLight, border: `1px solid ${form.chMVASB2B ? T.primaryLine : T.amberBorder}` }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={form.chMVASB2B ? T.inkSoft : T.amberDark} strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden="true">
           <circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><line x1="12" y1="7.5" x2="12" y2="7.6" />
         </svg>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: form.chMVASB2B ? T.ink : T.amberDark }}>{form.chMVASB2B ? 'MVAS B2B is enabled' : 'MVAS B2B is disabled in Step 3'}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: form.chMVASB2B ? T.ink : T.amberDark }}>{form.chMVASB2B ? 'MVAS B2B is enabled' : 'MVAS B2B is disabled in Step 2'}</div>
           <div style={{ fontSize: 11.5, color: form.chMVASB2B ? T.inkSoft : T.amberDark, lineHeight: 1.45, marginTop: 2 }}>Partner selections are retained and apply whenever the B2B channel is enabled.</div>
         </div>
       </div>
@@ -592,7 +602,7 @@ function S5({ form, set }) {
   ['offerSecondary', '02', 'Secondary offer', 'Fallback when the primary offer is unavailable.'],
   ['offerTertiary', '03', 'Tertiary offers', 'Final fallbacks in the offer sequence. Select one or more offers.']];
   return (
-    <StepCard number={5} title="Marketing" description="Manage optional guest-facing copy and the prioritized offer sequence.">
+    <StepCard number={4} title="Marketing" description="Manage optional guest-facing copy and the prioritized offer sequence.">
       {!form.mktExpanded ?
       <div style={{ border: `1px dashed #CBD5E1`, borderRadius: 10, background: T.fill, padding: '22px 18px', textAlign: 'center' }}>
           <div style={{ width: 36, height: 36, margin: '0 auto 10px', borderRadius: 9, border: `1px solid ${T.line}`, background: '#fff', color: T.inkSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -657,7 +667,7 @@ function S6({ form, set }) {
   const waiverCount = WAIVERS.filter(({ k }) => form[k]).length;
 
   return (
-    <StepCard number={6} title="Taxes & Privacy" description="Configure exceptional financial behavior and fare-display controls.">
+    <StepCard number={5} title="Taxes & Privacy" description="Configure exceptional financial behavior and fare-display controls.">
       <WarnBanner>
         <div>
           <div style={{ fontSize: 12.5, color: T.amberDark, fontWeight: 700, lineHeight: 1.35 }}>Restricted financial controls</div>
@@ -905,7 +915,7 @@ function S7({ form, setForm }) {
   };
   const activeCount = form.supp.filter((s) => s.enabled).length;
   return (
-    <StepCard number={7} title="Supplements" description="Define which extras are included or charged, and how each one is applied."
+    <StepCard number={6} title="Supplements" description="Define which extras are included or charged, and how each one is applied."
     aside={<span style={{ fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap', padding: '3px 9px', borderRadius: 999, color: activeCount ? T.tealDark : T.inkFaint, background: activeCount ? T.tealLight : T.fill, border: `1px solid ${activeCount ? '#D1FAE5' : T.line}` }}>{activeCount} of {form.supp.length} included</span>}>
 
       {/* Guidance shows only while it is actionable, and sits with the control it explains. */}
@@ -944,15 +954,12 @@ function S7({ form, setForm }) {
 /* ── Section 8 · Review Changes ──────────────── */
 const FIELD_META = {
   faretypeCode: [1, 'Faretype Code'], fareBasisCode: [1, 'Farebasis Code'], faretypeGroup: [1, 'Faretype Group'], source: [1, 'Source'],
-  cancellationPolicy: [2, 'Cancellation Policy'], depositPolicy: [2, 'Deposit Policy'], residency: [2, 'Residency'], minAge: [2, 'Minimum Age'],
-  minOccupancy: [2, 'Min Occupancy'], maxOccupancy: [2, 'Max Occupancy'], advancedPurchase: [2, 'Advanced Purchase'], boardingPass: [2, 'Boarding Pass'],
-  standbyEligible: [2, 'Standby Eligible'], upgradeEligible: [2, 'Upgrade Eligible'], couponEligible: [2, 'Coupon Eligible'],
-  cruiseControlAccess: [3, 'Cruise Control Access'], chMVASB2C: [3, 'MVAS B2C'], chMVASB2B: [3, 'MVAS B2B'], chCC: [3, 'Cruise Control'],
-  chTradeAPI: [3, 'Trade API'], chCRM: [3, 'CRM'], chGroup: [3, 'Group Desk'],
-  channelPartners: [4, 'Partner Access'],
-  includeDiscount: [5, 'Include Discount Message'], discountMessage: [5, 'Discount Message'],
-  offerPrimary: [5, 'Primary Offer'], offerSecondary: [5, 'Secondary Offer'], offerTertiary: [5, 'Tertiary Offers'],
-  waiveGovTaxes: [6, 'Waive Government Taxes'], waiveCruiseExp: [6, 'Waive Cruise Expenses'], noFareDisplay: [6, 'No Fare Display']
+  cruiseControlAccess: [2, 'Cruise Control Access'], chMVASB2C: [2, 'MVAS B2C'], chMVASB2B: [2, 'MVAS B2B'], chCC: [2, 'Cruise Control'],
+  chTradeAPI: [2, 'Trade API'], chCRM: [2, 'CRM'], chGroup: [2, 'Group Desk'],
+  channelPartners: [3, 'Partner Access'],
+  includeDiscount: [4, 'Include Discount Message'], discountMessage: [4, 'Discount Message'],
+  offerPrimary: [4, 'Primary Offer'], offerSecondary: [4, 'Secondary Offer'], offerTertiary: [4, 'Tertiary Offers'],
+  waiveGovTaxes: [5, 'Waive Government Taxes'], waiveCruiseExp: [5, 'Waive Cruise Expenses'], noFareDisplay: [5, 'No Fare Display']
 };
 const SUPP_FIELDS = { enabled: 'Status', title: 'Title', type: 'Type', name: 'Supplement Name', cabin: 'Cabin Category', cabins: 'Cabin Categories', rule: 'Rule', maxCount: 'Max Count', farePos: 'Fare Positions', applicableSailings: 'Applicable Sailings' };
 
@@ -978,26 +985,26 @@ function diffForm(a, b) {
   (b.supp || []).forEach((s) => {
     const o = was.get(s.id);
     if (!o) {
-      out.push({ sec: 7, label: `${suppName(s)} · ${typeLabel(s.type)}`, from: 'Not present', to: 'Added' });
+      out.push({ sec: 6, label: `${suppName(s)} · ${typeLabel(s.type)}`, from: 'Not present', to: 'Added' });
       return;
     }
     Object.keys(SUPP_FIELDS).forEach((k) => {
       if (JSON.stringify(o[k]) !== JSON.stringify(s[k]))
-      out.push({ sec: 7, label: `${suppName(s)} · ${SUPP_FIELDS[k]}`, from: fmtSuppVal(k, o[k]), to: fmtSuppVal(k, s[k]) });
+      out.push({ sec: 6, label: `${suppName(s)} · ${SUPP_FIELDS[k]}`, from: fmtSuppVal(k, o[k]), to: fmtSuppVal(k, s[k]) });
     });
   });
   const now = new Set((b.supp || []).map((s) => s.id));
   (a.supp || []).forEach((o) => {
-    if (!now.has(o.id)) out.push({ sec: 7, label: `${suppName(o)} · ${typeLabel(o.type)}`, from: 'Present', to: 'Removed' });
+    if (!now.has(o.id)) out.push({ sec: 6, label: `${suppName(o)} · ${typeLabel(o.type)}`, from: 'Present', to: 'Removed' });
   });
   return out;
 }
 
 const DEMO_DIFF = [
 { sec: 1, label: 'Faretype Group', from: 'Core', to: 'Non-Refundable' },
-{ sec: 2, label: 'Cancellation Policy', from: 'Standard', to: 'Non-Refundable 100%' },
-{ sec: 3, label: 'Trade API', from: 'Disabled', to: 'Enabled' },
-{ sec: 7, label: 'Paid Supplement · Status', from: 'Disabled', to: 'Enabled' }];
+{ sec: 2, label: 'Trade API', from: 'Disabled', to: 'Enabled' },
+{ sec: 4, label: 'Primary Offer', from: 'None', to: 'OFFER-2026-SPRING' },
+{ sec: 6, label: 'Paid Supplement · Status', from: 'Disabled', to: 'Enabled' }];
 
 
 function ChangeValue({ label, value, after }) {
@@ -1029,9 +1036,9 @@ function DiffRow({ d, first }) {
 function S8({ diff, demo, farecodes, onNav }) {
   const isPreview = !diff.length;
   const rows = diff.length ? diff : demo;
-  const groups = SECTIONS.filter((s) => s.n <= 7).map((s) => ({ ...s, items: rows.filter((r) => r.sec === s.n) })).filter((g) => g.items.length);
+  const groups = SECTIONS.filter((s) => s.n <= 6).map((s) => ({ ...s, items: rows.filter((r) => r.sec === s.n) })).filter((g) => g.items.length);
   return (
-    <StepCard number={8} title="Review Changes" description="Confirm the exact field updates and linked Farecode impact before saving."
+    <StepCard number={7} title="Review Changes" description="Confirm the exact field updates and linked Farecode impact before saving."
     aside={<span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 999, border: `1px solid ${isPreview ? T.amberBorder : T.primaryLine}`, background: isPreview ? T.amberLight : T.primaryBg, color: isPreview ? T.amberDark : T.primary, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{isPreview ? 'Preview data' : `${rows.length} ${rows.length === 1 ? 'update' : 'updates'}`}</span>}>
 
       {isPreview &&
@@ -1099,33 +1106,30 @@ function S8({ diff, demo, farecodes, onNav }) {
 
 /* ── Section logic ──────────────────────────── */
 const SECTIONS = [
-{ n: 1, l: 'Basics & Grouping' }, { n: 2, l: 'Policies & Eligibility' },
-{ n: 3, l: 'Channel Access' }, { n: 4, l: 'Partner Access' },
-{ n: 5, l: 'Marketing' }, { n: 6, l: 'Taxes & Privacy' },
-{ n: 7, l: 'Supplements' }, { n: 8, l: 'Review Changes' }];
+{ n: 1, l: 'Basics & Grouping' }, { n: 2, l: 'Channel Access' },
+{ n: 3, l: 'Partner Access' }, { n: 4, l: 'Marketing' },
+{ n: 5, l: 'Taxes & Privacy' }, { n: 6, l: 'Supplements' },
+{ n: 7, l: 'Review Changes' }];
 
 
 function sComplete(n, f) {
   if (n === 1) return !!(f.faretypeCode && f.faretypeGroup && f.source);
-  if (n === 2) return !!(f.cancellationPolicy && f.depositPolicy);
   return true;
 }
 function sErr(n, errors) {
   if (n === 1) return !!(errors.faretypeCode || errors.faretypeGroup || errors.source);
-  if (n === 2) return !!(errors.cancellationPolicy || errors.depositPolicy);
   return false;
 }
 function calcCompletion(form, visited, mode) {
   let done = 0;
   if (form.faretypeCode && form.faretypeGroup && form.source) done++;
-  if (form.cancellationPolicy && form.depositPolicy) done++;
+  if (visited.has(2)) done++;
   if (visited.has(3)) done++;
   if (visited.has(4)) done++;
   if (visited.has(5)) done++;
   if (visited.has(6)) done++;
-  if (visited.has(7)) done++;
-  if (mode === 'edit' && visited.has(8)) done++;
-  const total = mode === 'edit' ? 8 : 7;
+  if (mode === 'edit' && visited.has(7)) done++;
+  const total = mode === 'edit' ? 7 : 6;
   return Math.round(done / total * 100);
 }
 
@@ -1137,7 +1141,7 @@ function PanelNav({ active, onNav, form, errors, visited, pct, sections }) {
       <div style={{ flex: 1, padding: '16px 0 0', overflowY: 'auto' }}>
         {sections.map(({ n, l }) => {
           const isActive = active === n;
-          const isDone = !isActive && sComplete(n, form) && (visited.has(n) || n <= 2);
+          const isDone = !isActive && sComplete(n, form) && (visited.has(n) || n === 1);
           const hasErr = sErr(n, errors);
           const circBg = isActive ? T.primary : isDone ? T.primary : 'transparent';
           const circBd = isActive || isDone ? 'none' : `2px solid ${hasErr ? T.red : '#C8D5E0'}`;
@@ -1172,28 +1176,6 @@ function PanelNav({ active, onNav, form, errors, visited, pct, sections }) {
 
 }
 
-/* ── Farecode checklist ─────────────────────── */
-function FcChecklist({ checked, onChange, onClose }) {
-  const IDS = ['FC-00201', 'FC-00202', 'FC-00203', 'FC-00204', 'FC-00205'];
-  const tog = (id) => {const n = new Set(checked);n.has(id) ? n.delete(id) : n.add(id);onChange(n);};
-  return (
-    <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#fff', border: `1px solid ${T.line}`, borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 700, minWidth: 240, overflow: 'hidden' }}>
-      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${T.line}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: T.ink }}>Select farecodes to update</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.inkFaint, fontSize: 18, lineHeight: 1 }}>×</button>
-      </div>
-      {IDS.map((id) =>
-      <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', borderBottom: `1px solid ${T.lineSoft}` }}
-      onMouseEnter={(e) => e.currentTarget.style.background = T.fill}
-      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-          <input type="checkbox" checked={checked.has(id)} onChange={() => tog(id)} style={{ accentColor: T.primary, width: 14, height: 14 }} />
-          <span style={{ fontSize: 13, color: T.ink, fontFamily: "'SF Mono', Menlo, monospace" }}>{id}</span>
-        </label>
-      )}
-    </div>);
-
-}
-
 /* ── FaretypePanel v2 ───────────────────────── */
 function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, policies }) {
   const buildInit = () => mode === 'edit' && editData ?
@@ -1206,10 +1188,9 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const [active, setActive] = useState(1);
   const [visited, setVisited] = useState(new Set([1]));
   const [showDiscard, setShowDiscard] = useState(false);
-  const [fcOpen, setFcOpen] = useState(false);
-  const [checkedFc, setCheckedFc] = useState(new Set(['FC-00201', 'FC-00202', 'FC-00203', 'FC-00204', 'FC-00205']));
+  const [checkedFc] = useState(new Set(['FC-00201', 'FC-00202', 'FC-00203', 'FC-00204', 'FC-00205']));
   const [mounted, setMounted] = useState(false);
-  const sections = mode === 'edit' ? SECTIONS : SECTIONS.filter((s) => s.n !== 8);
+  const sections = mode === 'edit' ? SECTIONS : SECTIONS.filter((s) => s.n !== 7);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -1239,28 +1220,18 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
     setErrors(e);
     return !Object.keys(e).length;
   };
-  const validateS2 = () => {
-    const e = {};
-    if (!form.cancellationPolicy) e.cancellationPolicy = 'Required';
-    if (!form.depositPolicy) e.depositPolicy = 'Required';
-    setErrors(e);
-    return !Object.keys(e).length;
-  };
   const validateAll = () => {
     const e = {};
     if (!form.faretypeCode) e.faretypeCode = 'Required';
     if (!form.faretypeGroup) e.faretypeGroup = 'Required';
     if (!form.source) e.source = 'Required';
-    if (!form.cancellationPolicy) e.cancellationPolicy = 'Required';
-    if (!form.depositPolicy) e.depositPolicy = 'Required';
     setErrors(e);
     return !Object.keys(e).length;
   };
 
   const handleNext = () => {
     if (active === 1 && !validateS1()) return;
-    if (active === 2 && !validateS2()) return;
-    const lastStep = mode === 'edit' ? 8 : 7;
+    const lastStep = mode === 'edit' ? 7 : 6;
     if (active < lastStep) navTo(active + 1);else
     {if (validateAll()) onActivate(form);}
   };
@@ -1268,24 +1239,23 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const handleBack = () => {if (active > 1) navTo(active - 1);};
 
   const pct = calcCompletion(form, visited, mode);
-  const isLast = active === (mode === 'edit' ? 8 : 7);
-  const allReq = !!(form.faretypeCode && form.faretypeGroup && form.source && form.cancellationPolicy && form.depositPolicy);
+  const isLast = active === (mode === 'edit' ? 7 : 6);
+  const allReq = !!(form.faretypeCode && form.faretypeGroup && form.source);
 
   const renderSection = () => {
     if (active === 1) return <S1 form={form} set={set} errors={errors} mode={mode} editData={editData} />;
-    if (active === 2) return <S2 form={form} set={set} errors={errors} policies={policies} />;
-    if (active === 3) return <S3 form={form} set={set} />;
-    if (active === 4) return <S4 form={form} set={set} />;
-    if (active === 5) return <S5 form={form} set={set} />;
-    if (active === 6) return <S6 form={form} set={set} />;
-    if (active === 7) return <S7 form={form} setForm={setForm} />;
-    if (active === 8) return <S8 diff={diffForm(JSON.parse(initRef.current), form)} demo={DEMO_DIFF} farecodes={mode === 'edit' ? [...checkedFc] : []} onNav={navTo} />;
+    if (active === 2) return <S3 form={form} set={set} />;
+    if (active === 3) return <S4 form={form} set={set} />;
+    if (active === 4) return <S5 form={form} set={set} />;
+    if (active === 5) return <S6 form={form} set={set} />;
+    if (active === 6) return <S7 form={form} setForm={setForm} />;
+    if (active === 7) return <S8 diff={diffForm(JSON.parse(initRef.current), form)} demo={DEMO_DIFF} farecodes={mode === 'edit' ? [...checkedFc] : []} onNav={navTo} />;
   };
 
   return (
     <>
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.32)', backdropFilter: 'blur(2px)', zIndex: 900, opacity: mounted ? 1 : 0, transition: 'opacity .25s' }} />
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 720, maxWidth: '100%', background: T.panel, zIndex: 901, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,.14)', transform: mounted ? 'translateX(0)' : 'translateX(100%)', transition: 'transform .3s cubic-bezier(.32,0,.67,0)' }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 1180, maxWidth: '100%', background: T.panel, zIndex: 901, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,.14)', transform: mounted ? 'translateX(0)' : 'translateX(100%)', transition: 'transform .3s cubic-bezier(.32,0,.67,0)' }}>
 
         {/* Header */}
         <div style={{ padding: '16px 24px 0', borderBottom: `1px solid ${T.line}`, flexShrink: 0, background: T.panel }}>
@@ -1322,22 +1292,6 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
 
           {/* Content */}
           <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: '26px 30px 94px', background: T.panel }}>
-            {mode === 'edit' && active === 1 &&
-            <div style={{ marginBottom: 22 }}>
-                <WarnBanner>
-                  <div style={{ fontSize: 12.5, color: T.amberDark, lineHeight: 1.45 }}>
-                    Editing this faretype will update inherited values on linked farecodes. Select which farecodes should receive these changes before saving.
-                  </div>
-                  <div style={{ position: 'relative', display: 'inline-block', marginTop: 8 }}>
-                    <button onClick={() => setFcOpen((p) => !p)}
-                  style={{ padding: '5px 12px', border: `1px solid ${T.amberBorder}`, borderRadius: 6, background: '#fff', color: T.amberDark, fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
-                      Select farecodes ▾
-                    </button>
-                    {fcOpen && <FcChecklist checked={checkedFc} onChange={setCheckedFc} onClose={() => setFcOpen(false)} />}
-                  </div>
-                </WarnBanner>
-              </div>
-            }
             {renderSection()}
             <div style={{ height: 6 }} />
           </div>
@@ -1387,6 +1341,299 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
       </div>
     </>);
 
+}
+
+/* ── Independent Policy Eligibility template ── */
+function PolicyEligibilityReadOnlyValue({ label, value, mono = false }) {
+  const shown = value === '' || value === null || value === undefined ? '—' : value;
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 9.5, fontWeight: 800, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px' }}>{label}</div>
+      <div style={{ marginTop: 5, minHeight: 38, display: 'flex', alignItems: 'center', padding: '9px 11px', border: `1px solid ${T.line}`, borderRadius: 8, background: T.fill, color: T.ink, fontSize: 12.5, fontWeight: 600, fontFamily: mono ? "'SF Mono',Menlo,monospace" : 'inherit', overflowWrap: 'anywhere' }}>{shown}</div>
+    </div>
+  );
+}
+
+function FaretypePolicyEligibilityOverview({ form, faretypes = [] }) {
+  const permission = (label, enabled, helper) => (
+    <div style={{ minWidth: 0, padding: '11px 12px', border: `1px solid ${enabled ? T.primaryLine : T.line}`, borderRadius: 8, background: enabled ? T.primaryBg : T.fill }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>{label}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 750, color: enabled ? T.primary : T.inkFaint }}>{enabled ? 'Enabled' : 'Disabled'}</span>
+      </div>
+      <div style={{ marginTop: 3, fontSize: 10.5, lineHeight: 1.35, color: T.inkFaint }}>{helper}</div>
+    </div>
+  );
+  const linkedFaretype = faretypes.find((row) => row.code === form.faretypeCode);
+  return (
+    <section aria-label="Policy Eligibility details" style={{ width: '100%', border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 1px 2px rgba(15,23,42,.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '13px 16px', background: T.fill, borderBottom: `1px solid ${T.line}` }}>
+        <span style={{ padding: '3px 7px', borderRadius: 5, background: T.primary, color: '#fff', fontSize: 9.5, fontWeight: 800, lineHeight: 1.35 }}>01</span>
+        <div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: T.ink, margin: '0 0 3px' }}>Policy Eligibility</h2>
+          <p style={{ fontSize: 12, color: T.inkSoft, lineHeight: 1.45, margin: 0 }}>Review the assigned commercial policies and guest booking requirements.</p>
+        </div>
+      </div>
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ padding: '11px 12px', borderRadius: 8, border: `1px solid ${T.primaryLine}`, background: T.primaryBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+          <div>
+            <div style={{ fontSize: 9.5, fontWeight: 800, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px' }}>Linked Faretype</div>
+            <div style={{ marginTop: 4, fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 750, color: T.primary }}>{form.faretypeCode}</div>
+          </div>
+          {linkedFaretype && <span style={{ fontSize: 11.5, color: T.inkSoft, textAlign: 'right' }}>{linkedFaretype.basis} · {linkedFaretype.group}</span>}
+        </div>
+
+        <div>
+          <GroupHeading title="Policy assignment" helper="The payment and refund rules currently assigned to this Faretype." />
+          <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <PolicyEligibilityReadOnlyValue label="Cancellation Policy" value={form.cancellationPolicy} />
+            <PolicyEligibilityReadOnlyValue label="Deposit Policy" value={form.depositPolicy} />
+          </div>
+        </div>
+
+        <div style={{ paddingTop: 15, borderTop: `1px solid ${T.lineSoft}` }}>
+          <GroupHeading title="Guest eligibility" helper="Qualification and booking-window rules applied by this configuration." />
+          <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
+            <PolicyEligibilityReadOnlyValue label="Residency" value={form.residency || 'Any'} />
+            <PolicyEligibilityReadOnlyValue label="Minimum Age" value={form.minAge !== '' && form.minAge !== undefined ? `${form.minAge}+` : '—'} />
+            <PolicyEligibilityReadOnlyValue label="Advanced Purchase" value={form.advancedPurchase ? `${form.advancedPurchase} days` : 'No restriction'} />
+            <PolicyEligibilityReadOnlyValue label="Minimum Occupancy" value={form.minOccupancy || '—'} />
+            <PolicyEligibilityReadOnlyValue label="Maximum Occupancy" value={form.maxOccupancy || '—'} />
+            <PolicyEligibilityReadOnlyValue label="Boarding Pass Endorsement" value={form.boardingPass || '—'} mono />
+          </div>
+        </div>
+
+        <div style={{ paddingTop: 15, borderTop: `1px solid ${T.lineSoft}` }}>
+          <GroupHeading title="Booking permissions" helper="Optional booking paths enabled for this Faretype." />
+          <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }}>
+            {permission('Standby', form.standbyEligible, 'Waitlist booking')}
+            {permission('Upgrades', form.upgradeEligible, 'Cabin changes')}
+            {permission('Coupons', form.couponEligible, 'Promo codes')}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FaretypePolicyEligibilityEditor({ form, set, errors, policies, faretypes = [], selectedFaretype, selectFaretype }) {
+  const permission = (key, label, helper) => {
+    const enabled = !!form[key];
+    return (
+      <div style={{ minWidth: 0, padding: '11px 12px', border: `1px solid ${enabled ? T.primaryLine : T.line}`, borderRadius: 8, background: enabled ? T.primaryBg : T.fill }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>{label}</span>
+          <Toggle on={enabled} onChange={(value) => set(key, value)} label={`${label} eligibility`} />
+        </div>
+        <div style={{ marginTop: 3, fontSize: 10.5, lineHeight: 1.35, color: T.inkFaint }}>{helper}</div>
+      </div>
+    );
+  };
+
+  return (
+    <section aria-label="Edit Policy Eligibility" style={{ width: '100%', border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 1px 2px rgba(15,23,42,.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '13px 16px', background: T.fill, borderBottom: `1px solid ${T.line}` }}>
+        <span style={{ padding: '3px 7px', borderRadius: 5, background: T.primary, color: '#fff', fontSize: 9.5, fontWeight: 800, lineHeight: 1.35 }}>01</span>
+        <div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: T.ink, margin: '0 0 3px' }}>Policy Eligibility</h2>
+          <p style={{ fontSize: 12, color: T.inkSoft, lineHeight: 1.45, margin: 0 }}>Assign commercial policies and guest booking requirements to one Faretype.</p>
+        </div>
+      </div>
+
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ padding: '11px 12px', borderRadius: 8, border: `1px solid ${errors.faretypeCode ? '#FECACA' : T.primaryLine}`, background: T.primaryBg }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1.45fr) minmax(300px, 1fr)', alignItems: 'end', gap: 14 }}>
+            <Field label="Linked Faretype" required error={errors.faretypeCode}>
+              <Sel ariaLabel="Linked Faretype" value={form.faretypeCode || ''} onChange={selectFaretype} err={errors.faretypeCode}
+              opts={[["", "Select a Faretype…"], ...faretypes.map((row) => [row.code, `${row.code} · ${row.basis} · ${row.group}`])]} />
+            </Field>
+            <div style={{ minHeight: 37, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, alignItems: 'center', padding: '7px 10px', borderRadius: 7, background: '#fff', border: `1px solid ${T.primaryLine}` }}>
+              {[
+                ['Farebasis', selectedFaretype?.basis || '—', true],
+                ['Group', selectedFaretype?.group || '—', false],
+                ['Source', selectedFaretype?.source || '—', false]
+              ].map(([label, value, mono]) => (
+                <div key={label} style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 8.5, fontWeight: 800, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.6px' }}>{label}</div>
+                  <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 700, color: value === '—' ? T.inkFaint : T.ink, fontFamily: mono ? "'SF Mono',Menlo,monospace" : 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <GroupHeading title="Policy assignment" helper="The payment and refund rules assigned to this Faretype." />
+          <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <Field label="Cancellation Policy" required error={errors.cancellationPolicy}>
+              <Sel ariaLabel="Cancellation policy" value={form.cancellationPolicy} onChange={(value) => set('cancellationPolicy', value)} err={errors.cancellationPolicy}
+              opts={polOptsFor(policies, 'cancel', form.cancellationPolicy)} />
+            </Field>
+            <Field label="Deposit Policy" required error={errors.depositPolicy}>
+              <Sel ariaLabel="Deposit policy" value={form.depositPolicy} onChange={(value) => set('depositPolicy', value)} err={errors.depositPolicy}
+              opts={polOptsFor(policies, 'deposit', form.depositPolicy)} />
+            </Field>
+          </div>
+        </div>
+
+        <div style={{ paddingTop: 15, borderTop: `1px solid ${T.lineSoft}` }}>
+          <GroupHeading title="Guest eligibility" helper="Qualification and booking-window rules applied by this configuration." />
+          <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
+            <Field label="Residency">
+              <Sel ariaLabel="Residency" value={form.residency} onChange={(value) => set('residency', value)}
+              opts={[["Any", "Any"], ["US Only", "US Only"], ["Non-US", "Non-US"], ["Canada", "Canada"], ["UK", "UK"]]} />
+            </Field>
+            <Field label="Minimum Age">
+              <input className="fi" type="number" style={iS()} value={form.minAge} min={0} max={99} onChange={(event) => set('minAge', event.target.value)} />
+            </Field>
+            <Field label="Advanced Purchase">
+              <input className="fi" type="number" style={iS()} value={form.advancedPurchase} min={0} onChange={(event) => set('advancedPurchase', event.target.value)} placeholder="No restriction" />
+            </Field>
+            <Field label="Minimum Occupancy">
+              <input className="fi" type="number" style={iS()} value={form.minOccupancy} min={1} onChange={(event) => set('minOccupancy', event.target.value)} placeholder="—" />
+            </Field>
+            <Field label="Maximum Occupancy">
+              <input className="fi" type="number" style={iS()} value={form.maxOccupancy} min={1} onChange={(event) => set('maxOccupancy', event.target.value)} placeholder="—" />
+            </Field>
+            <Field label="Boarding Pass Endorsement">
+              <input className="fi" style={iS()} value={form.boardingPass} onChange={(event) => set('boardingPass', event.target.value)} placeholder="—" />
+            </Field>
+          </div>
+        </div>
+
+        <div style={{ paddingTop: 15, borderTop: `1px solid ${T.lineSoft}` }}>
+          <GroupHeading title="Booking permissions" helper="Optional booking paths enabled for this Faretype." />
+          <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }}>
+            {permission('standbyEligible', 'Standby', 'Waitlist booking')}
+            {permission('upgradeEligible', 'Upgrades', 'Cabin changes')}
+            {permission('couponEligible', 'Coupons', 'Promo codes')}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate, policies, faretypes = [] }) {
+  const buildInit = () => ({
+    ...DEFAULT_FORM(),
+    ...(editData || {})
+  });
+  const [form, setForm] = useState(buildInit);
+  const initRef = useRef(JSON.stringify(buildInit()));
+  const [errors, setErrors] = useState({});
+  const [showDiscard, setShowDiscard] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [isEditing, setIsEditing] = useState(mode !== 'view');
+  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const selectedFaretype = faretypes.find((row) => row.code === form.faretypeCode);
+
+  const selectFaretype = (code) => {
+    const row = faretypes.find((item) => item.code === code);
+    if (!row) {
+      setForm({ ...DEFAULT_FORM(), faretypeCode: '' });
+      setErrors({});
+      return;
+    }
+    const detail = getDtl(row.code);
+    const cleanValue = (value) => value === '—' ? '' : value;
+    setForm((previous) => ({
+      ...previous,
+      faretypeCode: row.code,
+      fareBasisCode: row.basis,
+      faretypeGroup: row.group,
+      source: row.source,
+      cancellationPolicy: detail.cancellation || previous.cancellationPolicy,
+      depositPolicy: detail.deposit || previous.depositPolicy,
+      residency: detail.residency || previous.residency,
+      minAge: detail.minAge ?? previous.minAge,
+      minOccupancy: cleanValue(detail.minOcc),
+      maxOccupancy: cleanValue(detail.maxOcc),
+      advancedPurchase: cleanValue(detail.advPurchase),
+      boardingPass: cleanValue(detail.boardingPass),
+      standbyEligible: detail.standby ?? previous.standbyEligible,
+      upgradeEligible: detail.upgrade ?? previous.upgradeEligible,
+      couponEligible: detail.coupon ?? previous.couponEligible
+    }));
+    setErrors((previous) => ({ ...previous, faretypeCode: undefined }));
+  };
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
+
+  const handleClose = () => {
+    if (isEditing && JSON.stringify(form) !== initRef.current) setShowDiscard(true);
+    else onClose();
+  };
+  const cancelEdit = () => {
+    setForm(JSON.parse(initRef.current));
+    setErrors({});
+    setIsEditing(false);
+  };
+  const submit = () => {
+    const next = {};
+    if (!form.faretypeCode) next.faretypeCode = 'Select a Faretype';
+    if (!form.cancellationPolicy) next.cancellationPolicy = 'Required';
+    if (!form.depositPolicy) next.depositPolicy = 'Required';
+    setErrors(next);
+    if (!Object.keys(next).length) onActivate(form);
+  };
+
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.32)', backdropFilter: 'blur(2px)', zIndex: 900, opacity: mounted ? 1 : 0, transition: 'opacity .25s' }} />
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 1180, maxWidth: '100%', background: T.panel, zIndex: 901, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 40px rgba(0,0,0,.14)', transform: mounted ? 'translateX(0)' : 'translateX(100%)', transition: 'transform .3s cubic-bezier(.32,0,.67,0)' }}>
+        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${T.line}`, flexShrink: 0, background: T.panel }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', minWidth: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M7 3h10a2 2 0 0 1 2 2v14l-7-4-7 4V5a2 2 0 0 1 2-2z" /></svg>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 5 }}>{mode === 'create' ? 'Configure New Policy Eligibility Template' : isEditing ? `Edit Policy Eligibility · ${editData?.code}` : `Policy Eligibility · ${editData?.code}`}</div>
+                <div style={{ fontSize: 12, color: T.inkFaint }}>{isEditing ? 'Define reusable commercial policies and guest booking requirements.' : 'Review the current policy assignment and guest requirements.'}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {mode === 'view' && !isEditing && <button type="button" onClick={() => setIsEditing(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', border: 'none', borderRadius: 7, background: T.primary, color: '#fff', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', boxShadow: '0 1px 3px rgba(15,23,42,.18)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                Edit
+              </button>}
+              <button onClick={handleClose} aria-label="Close Policy Eligibility drawer" style={{ width: 32, height: 32, borderRadius: 7, border: `1.5px solid ${T.line}`, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: `26px 30px ${isEditing ? 92 : 26}px`, background: T.panel }}>
+          {isEditing
+            ? <FaretypePolicyEligibilityEditor form={form} set={set} errors={errors} policies={policies} faretypes={faretypes} selectedFaretype={selectedFaretype} selectFaretype={selectFaretype} />
+            : <FaretypePolicyEligibilityOverview form={form} faretypes={faretypes} />}
+        </div>
+
+        {isEditing && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 22px', borderTop: `1px solid ${T.line}`, background: T.panel, display: 'flex', justifyContent: 'flex-end', gap: 9, zIndex: 10 }}>
+          {mode === 'view' && <button type="button" onClick={cancelEdit} style={{ padding: '8px 15px', background: '#fff', color: T.inkSoft, border: `1px solid ${T.line}`, borderRadius: 7, fontSize: 13, fontWeight: 650, cursor: 'pointer' }}>Cancel</button>}
+          <button onClick={submit} style={{ padding: '8px 16px', background: T.primary, color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 650, cursor: 'pointer', boxShadow: '0 1px 4px rgba(27,36,52,.2)' }}>
+            {mode === 'create' ? 'Activate Policy Eligibility' : 'Save Changes'}
+          </button>
+        </div>}
+
+        {showDiscard &&
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}>
+            <div style={{ background: '#fff', borderRadius: 14, padding: '28px 32px', maxWidth: 360, width: '90%', boxShadow: '0 24px 64px rgba(0,0,0,.22)' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 8 }}>Unsaved changes</div>
+              <div style={{ fontSize: 14, color: T.inkSoft, marginBottom: 24, lineHeight: 1.6 }}>Discard this Policy Eligibility configuration?</div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowDiscard(false)} style={{ padding: '9px 15px', border: `1px solid ${T.line}`, borderRadius: 8, background: '#fff', color: T.ink, cursor: 'pointer' }}>Keep editing</button>
+                <button onClick={onClose} style={{ padding: '9px 15px', border: 'none', borderRadius: 8, background: T.red, color: '#fff', cursor: 'pointer', fontWeight: 650 }}>Discard</button>
+              </div>
+            </div>
+          </div>}
+      </div>
+    </>
+  );
 }
 
 /* ── List View Components (unchanged) ──────── */
@@ -1506,6 +1753,29 @@ function FaretypeTable({ rows, selected, onToggleRow, onToggleAll, sortCol, sort
 
 }
 
+const POLICY_ELIGIBILITY_COLS = [
+{ key: 'code', label: 'Template Code', sort: true, width: '130px' },
+{ key: 'name', label: 'Policy Eligibility', sort: true, width: '180px' },
+{ key: 'cancellationPolicy', label: 'Cancellation Policy', sort: true, width: '190px' },
+{ key: 'depositPolicy', label: 'Deposit Policy', sort: true, width: '185px' },
+{ key: 'eligibility', label: 'Guest Eligibility', sort: false, width: '145px' },
+{ key: 'status', label: 'Status', sort: true, width: '105px' },
+{ key: 'mod', label: 'Last Modified', sort: true, width: '135px' }
+];
+
+function PolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen }) {
+  const cell = (row, key) => {
+    if (key === 'code') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 700, color: T.primary }}>{row.code}</span>;
+    if (key === 'name') return <span style={{ fontWeight: 650, color: T.ink }}>{row.name}</span>;
+    if (key === 'cancellationPolicy' || key === 'depositPolicy') return <span style={{ color: T.inkSoft }}>{row[key]}</span>;
+    if (key === 'eligibility') return <span style={{ color: T.inkSoft }}>{row.residency} · Age {row.minAge}+</span>;
+    if (key === 'status') return <StatusBadge status={row.status} />;
+    if (key === 'mod') return <span style={{ color: T.inkSoft, fontSize: 12.5 }}>{row.mod}</span>;
+    return null;
+  };
+  return <DataTable cols={POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} sortCol={sortCol} sortDir={sortDir} onSort={onSort} onRowClick={onOpen} emptyTitle="No Policy Eligibility templates match your filters" minWidth={1080} />;
+}
+
 /* ── Faretype Detail Panel ─────────────────── */
 
 const FTYPE_DETAIL = {
@@ -1607,6 +1877,9 @@ function DetailOverviewTab({ row, detail, policies }) {
   const vis = detail.channels.filter((c) => c.on).map((c) => c.k);
   const hid = detail.channels.filter((c) => !c.on).map((c) => c.k);
   const activeSupps = detail.supps.filter((s) => s.enabled);
+  const partners = Array.isArray(detail.channelPartners) ? detail.channelPartners : [];
+  const b2bEnabled = detail.channels.some((c) => c.k === 'MVAS B2B' && c.on);
+  const configuredOffers = [detail.offerPrimary, detail.offerSecondary, ...(Array.isArray(detail.offerTertiary) ? detail.offerTertiary : detail.offerTertiary ? [detail.offerTertiary] : [])].filter(Boolean);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1621,16 +1894,18 @@ function DetailOverviewTab({ row, detail, policies }) {
         </div>
       </SCard>
 
-      {/* 02 Policies */}
-      <SCard num={2} title="Policies">
-        <div style={{ display: 'flex', gap: 14 }}>
-          <RField label="Cancellation Policy" value={polLabel(policies, 'cancel', detail.cancellation)} mono />
-          <RField label="Deposit Policy" value={polLabel(policies, 'deposit', detail.deposit)} mono />
+      {/* 02 Policy Eligibility */}
+      <SCard num={2} title="Policy Eligibility">
+        <div>
+          <DLbl>Assigned Policies</DLbl>
+          <div style={{ display: 'flex', gap: 14, marginTop: 8 }}>
+            <RField label="Cancellation Policy" value={polLabel(policies, 'cancel', detail.cancellation)} mono />
+            <RField label="Deposit Policy" value={polLabel(policies, 'deposit', detail.deposit)} mono />
+          </div>
         </div>
-      </SCard>
-
-      {/* 03 Eligibility */}
-      <SCard num={3} title="Eligibility">
+        <div style={{ paddingTop: 12, borderTop: `1px solid ${T.lineSoft}` }}>
+          <DLbl>Guest Eligibility</DLbl>
+        </div>
         <div style={{ display: 'flex', gap: 14 }}>
           <RField label="Residency" value={detail.residency} locked />
           <RField label="Min Age" value={detail.minAge ? String(detail.minAge) : null} locked />
@@ -1647,8 +1922,8 @@ function DetailOverviewTab({ row, detail, policies }) {
         </div>
       </SCard>
 
-      {/* 04 Channel Access */}
-      <SCard num={4} title="Channel Access">
+      {/* 03 Channel Access */}
+      <SCard num={3} title="Channel Access">
         <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, background: T.panel, padding: '11px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1683,10 +1958,72 @@ function DetailOverviewTab({ row, detail, policies }) {
         </div>
       </SCard>
 
-      {/* 05 Supplements (if active) */}
-      {activeSupps.length > 0 &&
-        <SCard num={5} title="Supplements">
-          {activeSupps.map((s, i) =>
+      {/* 04 Partner Access */}
+      <SCard num={4} title="Partner Access">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 10 }}>
+          <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, padding: '11px 12px', background: T.fill }}>
+            <DLbl>MVAS B2B Channel</DLbl>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 12, fontWeight: 700, color: b2bEnabled ? T.green : T.inkSoft }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: b2bEnabled ? T.green : T.inkFaint }} />{b2bEnabled ? 'Enabled' : 'Disabled'}
+            </span>
+          </div>
+          <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, padding: '11px 12px', background: '#fff' }}>
+            <DLbl>Partner Availability</DLbl>
+            <div style={{ marginTop: 5, fontSize: 12.5, fontWeight: 650, color: T.ink }}>{partners.length ? `${partners.length} selected partner${partners.length === 1 ? '' : 's'}` : 'All agency partners'}</div>
+            <div style={{ marginTop: 4, fontSize: 11, color: T.inkSoft, lineHeight: 1.4 }}>{partners.length ? partners.join(', ') : 'No partner-level restrictions are applied.'}</div>
+          </div>
+        </div>
+      </SCard>
+
+      {/* 05 Marketing */}
+      <SCard num={5} title="Marketing">
+        {detail.mktEmpty ?
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px', border: `1px dashed ${T.line}`, borderRadius: 8, background: T.fill }}>
+            <div style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${T.line}`, background: '#fff', color: T.inkSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>✦</div>
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>No Faretype-level marketing configured</div>
+              <div style={{ marginTop: 3, fontSize: 11.5, color: T.inkSoft }}>No discount message or prioritized offers are attached to this Faretype.</div>
+            </div>
+          </div> :
+          <>
+            <RField label="Guest-facing Message" value={detail.discountMsg || 'No discount message'} />
+            <div style={{ paddingTop: 11, borderTop: `1px solid ${T.lineSoft}` }}>
+              <DLbl>Offer Priority</DLbl>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 7 }}>
+                {configuredOffers.length ? configuredOffers.map((offer, index) =>
+                  <span key={`${offer}-${index}`} style={{ padding: '5px 8px', borderRadius: 6, background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary, fontFamily: "'SF Mono', Menlo, monospace", fontSize: 10.5, fontWeight: 650 }}>{String(index + 1).padStart(2, '0')} · {offer}</span>
+                ) : <span style={{ fontSize: 11.5, color: T.inkFaint }}>No offers configured</span>}
+              </div>
+            </div>
+          </>
+        }
+      </SCard>
+
+      {/* 06 Taxes & Privacy */}
+      <SCard num={6} title="Taxes & Privacy">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+          <FFlag label="Government Tax Waiver" on={detail.waiveGov} locked />
+          <FFlag label="Cruise Expense Waiver" on={detail.waiveCruise} locked />
+          <FFlag label="Hide Fare Amounts" on={detail.noFareDisplay} locked />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ padding: '9px 11px', background: T.fill, border: `1px solid ${T.line}`, borderRadius: 7 }}>
+            <DLbl>Calculation</DLbl><div style={{ marginTop: 5, color: detail.waiveGov || detail.waiveCruise ? T.amberDark : T.inkSoft, fontSize: 12, fontWeight: 650 }}>{detail.waiveGov || detail.waiveCruise ? 'Financial override active' : 'Standard charges'}</div>
+          </div>
+          <div style={{ padding: '9px 11px', background: T.fill, border: `1px solid ${T.line}`, borderRadius: 7 }}>
+            <DLbl>Fare Display</DLbl><div style={{ marginTop: 5, color: T.inkSoft, fontSize: 12, fontWeight: 650 }}>{detail.noFareDisplay ? 'Amounts hidden' : 'Amounts visible'}</div>
+          </div>
+        </div>
+      </SCard>
+
+      {/* 07 Supplements */}
+      <SCard num={7} title="Supplements">
+        {activeSupps.length === 0 ?
+          <div style={{ padding: '13px 14px', border: `1px dashed ${T.line}`, borderRadius: 8, background: T.fill }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>No supplements included</div>
+            <div style={{ marginTop: 3, fontSize: 11.5, color: T.inkSoft }}>This Faretype has no active complimentary or paid supplement configuration.</div>
+          </div> :
+          activeSupps.map((s, i) =>
             <div key={i} style={{ border: `1px solid ${T.line}`, borderRadius: 9, overflow: 'hidden', background: T.panel }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 13px', background: T.fill, borderBottom: `1px solid ${T.lineSoft}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1708,8 +2045,7 @@ function DetailOverviewTab({ row, detail, policies }) {
               </div>
             </div>
           )}
-        </SCard>
-      }
+      </SCard>
     </div>);
 
 }
@@ -1723,45 +2059,60 @@ function DetailFarecodesTab({ fcCount }) {
   return (
     <div style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: T.fill, borderBottom: `1px solid ${T.line}` }}>
-        <span style={{ fontSize: 12.5, color: T.inkSoft }}><strong style={{ color: T.ink }}>3</strong> of {fcCount} farecodes</span>
+        <div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>Linked farecodes</div>
+          <div style={{ marginTop: 2, fontSize: 11.5, color: T.inkSoft }}>Showing {FC_SAMPLE.length} of {fcCount}</div>
+        </div>
         <button onClick={() => alert('Open add farecode panel')}
         style={{ padding: '7px 12px', border: 'none', borderRadius: 7, background: T.primary,
           color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>+ Add Farecode</button>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 10 }}>
-      {FC_SAMPLE.map((fc) =>
-      <div key={fc.id} style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 9,
-        overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: T.fill, borderBottom: `1px solid ${T.lineSoft}` }}>
-            <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 13, fontWeight: 800, color: T.primary, cursor: 'pointer' }}
-          onClick={() => alert(`Navigate to farecode: ${fc.id}`)}>
-            {fc.id}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <StatusBadge status={fc.status} />
-              <span style={{ color: T.primary, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
-            onClick={() => alert(`Navigate to farecode: ${fc.id}`)}>View →</span>
-            </div>
-          </div>
-          <div style={{ padding: '12px 14px 13px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr', gap: 12 }}>
-            <div><DLbl>Ship</DLbl><div style={{ fontSize: 13, color: T.ink }}>{fc.ship}</div></div>
-            <div><DLbl>Sailing</DLbl><div style={{ fontSize: 13, color: T.ink, fontFamily: "'SF Mono',Menlo,monospace" }}>{fc.sailing}</div></div>
-            <div><DLbl>Last Modified</DLbl><div style={{ fontSize: 13, color: T.inkSoft }}>{fc.mod}</div></div>
-          </div>
-          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${T.lineSoft}` }}>
-            <div>
-              <DLbl>Cabin Categories</DLbl>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 3 }}>
-                {fc.cabins.map((c) =>
-              <span key={c} style={{ padding: '2px 9px', borderRadius: 5, fontSize: 11.5, fontWeight: 500,
-                background: T.primaryBg, color: T.primary }}>{c}</span>
+      <div className="hscroll" style={{ overflowX: 'auto' }}>
+        <table aria-label="Farecodes linked to this Faretype" style={{ width: '100%', minWidth: 820, borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+          <thead>
+            <tr style={{ background: '#F8FAFC' }}>
+              {[
+              ['Farecode', '15%'],
+              ['Ship', '18%'],
+              ['Sailing', '18%'],
+              ['Cabin Categories', '22%'],
+              ['Status', '11%'],
+              ['Last Modified', '12%'],
+              ['', '4%']].map(([label, width]) =>
+              <th key={label || 'actions'} scope="col" style={{ width, padding: '9px 12px', borderBottom: `1px solid ${T.line}`, color: T.inkSoft, fontSize: 10, fontWeight: 800, letterSpacing: '.055em', textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                  {label}
+                </th>
               )}
-              </div>
-            </div>
-          </div>
-          </div>
-        </div>
-      )}
+            </tr>
+          </thead>
+          <tbody>
+            {FC_SAMPLE.map((fc) =>
+            <tr key={fc.id} style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
+                <td style={{ padding: '12px', verticalAlign: 'middle' }}>
+                  <button onClick={() => alert(`Navigate to farecode: ${fc.id}`)}
+                style={{ padding: 0, border: 0, background: 'transparent', color: T.primary, cursor: 'pointer', fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 800 }}>
+                    {fc.id}
+                  </button>
+                </td>
+                <td style={{ padding: '12px', color: T.ink, fontSize: 12.5, verticalAlign: 'middle' }}>{fc.ship}</td>
+                <td style={{ padding: '12px', color: T.ink, fontFamily: "'SF Mono',Menlo,monospace", fontSize: 11.5, verticalAlign: 'middle' }}>{fc.sailing}</td>
+                <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {fc.cabins.map((c) =>
+                  <span key={c} style={{ padding: '3px 7px', border: `1px solid ${T.lineSoft}`, borderRadius: 5, background: T.primaryBg, color: T.primary, fontSize: 10.5, fontWeight: 600, lineHeight: 1.2 }}>{c}</span>
+                  )}
+                  </div>
+                </td>
+                <td style={{ padding: '12px', verticalAlign: 'middle' }}><StatusBadge status={fc.status} /></td>
+                <td style={{ padding: '12px', color: T.inkSoft, fontSize: 11.5, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{fc.mod}</td>
+                <td style={{ padding: '8px 12px 8px 4px', textAlign: 'right', verticalAlign: 'middle' }}>
+                  <button aria-label={`View ${fc.id}`} onClick={() => alert(`Navigate to farecode: ${fc.id}`)}
+                style={{ width: 28, height: 28, border: `1px solid ${T.line}`, borderRadius: 6, background: '#fff', color: T.primary, cursor: 'pointer', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>›</button>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
       <div style={{ textAlign: 'center', padding: '10px 0', borderTop: `1px solid ${T.line}`, background: T.fill }}>
         <span style={{ color: T.primary, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}
@@ -1841,7 +2192,7 @@ function FaretypeDetailPanel({ row, onClose, onEdit, onToggleStatus, policies })
         opacity: mounted ? 1 : 0, transition: 'opacity 220ms ease-out' }} />
 
       {/* Panel */}
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 720, maxWidth: '100%',
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 1180, maxWidth: '100%',
         background: '#F1F5F9', zIndex: 401, display: 'flex', flexDirection: 'column',
         boxShadow: '-8px 0 48px rgba(15,23,42,0.2)',
         transform: mounted ? 'translateX(0)' : 'translateX(100%)',
@@ -1930,6 +2281,8 @@ function FaretypeDetailPanel({ row, onClose, onEdit, onToggleStatus, policies })
 /* ── App ────────────────────────────────────── */
 function FaretypeListScreen({ policies }) {
   const [data, setData] = useState(INIT_ROWS);
+  const [policyEligibility, setPolicyEligibility] = useState(INIT_POLICY_ELIGIBILITY);
+  const [view, setView] = useState('faretype');
   const [search, setSearch] = useState('');
   const [groupF, setGroupF] = useState('All Groups');
   const [sourceF, setSourceF] = useState('All Sources');
@@ -1939,15 +2292,20 @@ function FaretypeListScreen({ policies }) {
   const [page, setPage] = useState(1);
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelMode, setPanelMode] = useState('create');
+  const [panelKind, setPanelKind] = useState('faretype');
+  const [chooser, setChooser] = useState(false);
   const [editData, setEditData] = useState(null);
   const [pendingDeactivate, setPendingDeactivate] = useState(null);
   const nextId = useRef(9);
+  const nextPolicyEligibilityId = useRef(7);
 
-  let rows = data.filter((r) => {
+  const sourceRows = view === 'faretype' ? data : policyEligibility;
+  let rows = sourceRows.filter((r) => {
     const q = search.trim().toLowerCase();
-    if (q && !r.code.toLowerCase().includes(q) && !r.basis.toLowerCase().includes(q)) return false;
-    if (groupF !== 'All Groups' && r.group !== groupF) return false;
-    if (sourceF !== 'All Sources' && r.source !== sourceF) return false;
+    const searchable = view === 'faretype' ? `${r.code} ${r.basis} ${r.group}` : `${r.code} ${r.name} ${r.cancellationPolicy} ${r.depositPolicy}`;
+    if (q && !searchable.toLowerCase().includes(q)) return false;
+    if (view === 'faretype' && groupF !== 'All Groups' && r.group !== groupF) return false;
+    if (view === 'faretype' && sourceF !== 'All Sources' && r.source !== sourceF) return false;
     return true;
   });
   if (sortCol) rows = [...rows].sort((a, b) => {
@@ -1957,11 +2315,17 @@ function FaretypeListScreen({ policies }) {
   });
 
   const PAGE_SIZE = 10;
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => {
+    setPage(1);
+    setSearch('');
+    setGroupF('All Groups');
+    setSourceF('All Sources');
+    setSortCol(null);
+  }, [view]);
   useEffect(() => setPage(1), [search, groupF, sourceF]);
 
-  const hasFilter = search || groupF !== 'All Groups' || sourceF !== 'All Sources';
+  const hasFilter = search || view === 'faretype' && (groupF !== 'All Groups' || sourceF !== 'All Sources');
   const handleSort = (col) => {if (sortCol === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');else {setSortCol(col);setSortDir('asc');}};
   const toggleRow = (id) => setSelected((p) => {const n = new Set(p);n.has(id) ? n.delete(id) : n.add(id);return n;});
   const toggleAll = (vr) => {
@@ -1984,13 +2348,14 @@ function FaretypeListScreen({ policies }) {
     setPendingDeactivate(null);
   };
   const cancelDeactivate = () => setPendingDeactivate(null);
-  const openCreate = () => {setPanelMode('create');setEditData(null);setPanelOpen(true);};
-  const openDetail = (row) => {setPanelMode('detail');setEditData(row);setPanelOpen(true);};
-  const closePanel = () => setPanelOpen(false);
+  const openCreate = (kind) => {setPanelKind(kind);setPanelMode('create');setEditData(null);setChooser(false);setPanelOpen(true);};
+  const openDetail = (row) => {setPanelKind('faretype');setPanelMode('detail');setEditData(row);setPanelOpen(true);};
+  const openPolicyEligibility = (row) => {setPanelKind('policyEligibility');setPanelMode('view');setEditData(row);setPanelOpen(true);};
+  const closePanel = () => {setPanelOpen(false);setEditData(null);};
   const TODAY = '18 Jun 2026';
 
   const handleSaveDraft = (form) => {
-    if (panelMode === 'edit' && editData) {
+    if (editData) {
       setData((p) => p.map((r) => r.id === editData.id ? { ...r, code: form.faretypeCode, basis: form.fareBasisCode || r.basis, group: form.faretypeGroup || r.group, source: form.source || r.source, status: 'Draft', mod: TODAY } : r));
     } else {
       const id = nextId.current++;
@@ -2000,13 +2365,35 @@ function FaretypeListScreen({ policies }) {
   };
 
   const handleActivate = (form) => {
-    if (!form.faretypeCode || !form.faretypeGroup || !form.source || !form.cancellationPolicy || !form.depositPolicy) return;
-    if (panelMode === 'edit' && editData) {
+    if (!form.faretypeCode || !form.faretypeGroup || !form.source) return;
+    if (editData) {
       setData((p) => p.map((r) => r.id === editData.id ? { ...r, code: form.faretypeCode, basis: form.fareBasisCode || r.basis, group: form.faretypeGroup, source: form.source, status: 'Active', mod: TODAY } : r));
     } else {
       const id = nextId.current++;
       setData((p) => [...p, { id, code: `FT-${String(id).padStart(5, '0')}`, basis: form.fareBasisCode || '—', group: form.faretypeGroup, source: form.source, fc: 0, status: 'Active', mod: TODAY }]);
     }
+    closePanel();
+  };
+
+  const handlePolicyEligibilityActivate = (form) => {
+    if (!form.faretypeCode || !form.cancellationPolicy || !form.depositPolicy) return;
+    if (editData) {
+      setPolicyEligibility((p) => p.map((r) => r.id === editData.id ? {
+        ...r, ...form, status: 'Active', mod: TODAY
+      } : r));
+    } else {
+      const id = nextPolicyEligibilityId.current++;
+      const cancellationName = form.cancellationPolicy.replace(/\s+(Cancellation|Policy)$/i, '').trim();
+      setPolicyEligibility((p) => [...p, {
+        ...form,
+        id,
+        code: `PE-${String(id).padStart(5, '0')}`,
+        name: `${cancellationName || 'Policy'} · ${form.residency} ${form.minAge}+`,
+        status: 'Active',
+        mod: TODAY
+      }]);
+    }
+    setView('policyEligibility');
     closePanel();
   };
 
@@ -2023,38 +2410,66 @@ function FaretypeListScreen({ policies }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h1 style={{ fontSize: 22, fontWeight: 700, lineHeight: 1, margin: '0 0 5px 0' }}>Faretypes</h1>
-              <div style={{ fontSize: 13, color: T.inkSoft }}>Configure systemic fare rules, parent templates, and dynamic inheritance policies.</div>
+              <div style={{ fontSize: 13, color: T.inkSoft }}>Manage Faretype definitions and reusable Policy Eligibility templates.</div>
             </div>
-            <button onClick={openCreate}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: T.primary, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, boxShadow: '0 2px 6px rgba(27,36,52,.2)' }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '.88'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
-              + New Template
-            </button>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button type="button" aria-haspopup="menu" aria-expanded={chooser} onClick={() => setChooser((p) => !p)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: T.primary, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(27,36,52,.2)' }}>
+                + New Template
+              </button>
+              {chooser && <>
+                <div aria-hidden="true" onClick={() => setChooser(false)} style={{ position: 'fixed', inset: 0, zIndex: 300 }} />
+                <div role="menu" aria-label="Choose template type" style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', width: 310, background: '#fff', border: `1px solid ${T.line}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(15,23,42,.14)', zIndex: 400, overflow: 'hidden' }}>
+                  <div style={{ padding: '9px 14px', fontSize: 10.5, fontWeight: 750, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.6px', background: T.fill, borderBottom: `1px solid ${T.lineSoft}` }}>Choose a template type</div>
+                  <button role="menuitem" onClick={() => openCreate('faretype')} style={{ width: '100%', display: 'flex', gap: 11, alignItems: 'flex-start', padding: '13px 14px', background: '#fff', border: 'none', borderBottom: `1px solid ${T.lineSoft}`, textAlign: 'left', cursor: 'pointer' }}>
+                    <span style={{ width: 28, height: 28, borderRadius: 7, background: T.primary, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>F</span>
+                    <span><span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: T.ink }}>Faretype</span><span style={{ display: 'block', marginTop: 3, fontSize: 11.5, lineHeight: 1.4, color: T.inkFaint }}>Define systemic identity, access, marketing, taxes, and supplements.</span></span>
+                  </button>
+                  <button role="menuitem" onClick={() => openCreate('policyEligibility')} style={{ width: '100%', display: 'flex', gap: 11, alignItems: 'flex-start', padding: '13px 14px', background: '#fff', border: 'none', textAlign: 'left', cursor: 'pointer' }}>
+                    <span style={{ width: 28, height: 28, borderRadius: 7, background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, flexShrink: 0 }}>PE</span>
+                    <span><span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: T.ink }}>Policy Eligibility</span><span style={{ display: 'block', marginTop: 3, fontSize: 11.5, lineHeight: 1.4, color: T.inkFaint }}>Create reusable policy assignments and guest booking requirements.</span></span>
+                  </button>
+                </div>
+              </>}
+            </div>
           </div>
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '0 28px 28px', display: 'flex', flexDirection: 'column' }}>
           <ListCard>
+            <div style={{ padding: '14px 16px 0', background: T.fill }}>
+              <div role="tablist" aria-label="Faretype template views" style={{ display: 'inline-flex', padding: 3, borderRadius: 9, border: `1px solid ${T.line}`, background: '#EEF2F7', gap: 3 }}>
+                {[
+                  ['faretype', 'Faretype', data.length],
+                  ['policyEligibility', 'Policy Eligibility', policyEligibility.length]
+                ].map(([key, label, count]) => {
+                  const activeView = view === key;
+                  return <button key={key} role="tab" aria-selected={activeView} onClick={() => setView(key)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 32, padding: '6px 12px', borderRadius: 7, border: activeView ? `1px solid ${T.primary}` : '1px solid transparent', background: activeView ? T.primary : 'transparent', color: activeView ? '#fff' : T.inkSoft, fontSize: 12.5, fontWeight: activeView ? 700 : 600, cursor: 'pointer' }}>
+                    {label}<span style={{ minWidth: 20, padding: '1px 6px', borderRadius: 999, background: activeView ? 'rgba(255,255,255,.16)' : '#fff', color: activeView ? '#fff' : T.inkFaint, fontSize: 10.5, fontWeight: 750 }}>{count}</span>
+                  </button>;
+                })}
+              </div>
+            </div>
             <ListToolbar>
               <FilterRow>
-                <ListSearch value={search} onChange={setSearch} placeholder="Filter by code, basis, group name…" />
-                <SelectFilter value={groupF} onChange={setGroupF} options={['All Groups', 'Core', 'Interline', 'Brochure', 'Non-Refundable']} />
-                <SelectFilter value={sourceF} onChange={setSourceF} options={['All Sources', 'WC', 'Casino', 'Partner', 'YM']} />
+                <ListSearch value={search} onChange={setSearch} placeholder={view === 'faretype' ? 'Filter by code, basis, group name…' : 'Filter by code, name, or policy…'} />
+                {view === 'faretype' && <SelectFilter value={groupF} onChange={setGroupF} options={['All Groups', 'Core', 'Interline', 'Brochure', 'Non-Refundable']} />}
+                {view === 'faretype' && <SelectFilter value={sourceF} onChange={setSourceF} options={['All Sources', 'WC', 'Casino', 'Partner', 'YM']} />}
                 {hasFilter && <ClearFilters onClick={() => {setSearch('');setGroupF('All Groups');setSourceF('All Sources');}} />}
-                <ResultCount>{rows.length} of {data.length} faretypes</ResultCount>
+                <ResultCount>{rows.length} of {sourceRows.length} {view === 'faretype' ? 'faretypes' : 'Policy Eligibility templates'}</ResultCount>
               </FilterRow>
             </ListToolbar>
 
-            <FaretypeTable rows={pageRows}
-            sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onViewDetail={openDetail} />
+            {view === 'faretype' ?
+              <FaretypeTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onViewDetail={openDetail} /> :
+              <PolicyEligibilityTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onOpen={openPolicyEligibility} />}
 
-            <ListPager page={page} setPage={setPage} total={rows.length} pageSize={PAGE_SIZE} noun="faretypes" />
+            <ListPager page={page} setPage={setPage} total={rows.length} pageSize={PAGE_SIZE} noun={view === 'faretype' ? 'faretypes' : 'Policy Eligibility templates'} />
           </ListCard>
         </div>
       </div>
 
-      {panelOpen && panelMode === 'detail' &&
+      {panelOpen && panelKind === 'faretype' && panelMode === 'detail' &&
       <FaretypeDetailPanel
         row={editData}
         onClose={closePanel}
@@ -2063,8 +2478,12 @@ function FaretypeListScreen({ policies }) {
         policies={policies} />
 
       }
-      {panelOpen && panelMode !== 'detail' &&
+      {panelOpen && panelKind === 'faretype' && panelMode !== 'detail' &&
       <FaretypePanel mode={panelMode} editData={editData} policies={policies} onClose={closePanel} onSaveDraft={handleSaveDraft} onActivate={handleActivate} />
+      }
+
+      {panelOpen && panelKind === 'policyEligibility' &&
+      <PolicyEligibilityPanel mode={panelMode} editData={editData} policies={policies} faretypes={data} onClose={closePanel} onActivate={handlePolicyEligibilityActivate} />
       }
 
       {pendingDeactivate &&

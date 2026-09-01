@@ -427,7 +427,7 @@ function SupplementPanel({ mode, viewRow, initialEdit, onClose, onSaveDraft, onA
     <>
       <div onClick={handleClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.32)', zIndex: 900, opacity: mounted ? 1 : 0, transition: 'opacity .22s' }} />
 
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 720, maxWidth: '100%', background: readOnly ? T.bg : '#fff', zIndex: 901, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 48px rgba(15,23,42,.2)', transform: mounted ? 'translateX(0)' : 'translateX(100%)', transition: 'transform .25s ease-out' }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 1180, maxWidth: '100%', background: readOnly ? T.bg : '#fff', zIndex: 901, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 48px rgba(15,23,42,.2)', transform: mounted ? 'translateX(0)' : 'translateX(100%)', transition: 'transform .25s ease-out' }}>
 
         {/* Header */}
         <div style={{ padding: '16px 24px 0', borderBottom: `1px solid ${T.line}`, flexShrink: 0, background: '#fff' }}>

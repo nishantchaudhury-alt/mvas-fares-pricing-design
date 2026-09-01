@@ -50,6 +50,57 @@ function PolMetricTile({ label, value, helper, full, mono }) {
   );
 }
 
+function PolOverviewSection({ title, description, children }) {
+  return (
+    <section>
+      <div style={{ marginBottom:9 }}>
+        <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>{title}</div>
+        {description && <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>{description}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function PolIdentityValue({ label, value, mono }) {
+  return (
+    <div style={{ minWidth:0, padding:'11px 12px', background:'#fff' }}>
+      <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{label}</div>
+      <div style={{ marginTop:5, color:T.ink, fontSize:13, fontWeight:700, lineHeight:1.35, overflowWrap:'anywhere', fontFamily:mono ? MONO : undefined }}>{value}</div>
+    </div>
+  );
+}
+
+function PolOverviewRows({ children }) {
+  return <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>{children}</div>;
+}
+
+function PolOverviewRow({ label, helper, children, last }) {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) auto', gap:16, alignItems:'center', padding:'11px 12px', borderBottom:last ? 'none' : `1px solid ${T.lineSoft}` }}>
+      <div style={{ minWidth:0 }}>
+        <div style={{ color:T.ink, fontSize:12.5, fontWeight:700, lineHeight:1.35 }}>{label}</div>
+        {helper && <div style={{ marginTop:2, color:T.inkSoft, fontSize:10.5, lineHeight:1.45 }}>{helper}</div>}
+      </div>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', minWidth:96 }}>{children}</div>
+    </div>
+  );
+}
+
+function PolOverviewMetrics({ items }) {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:`repeat(${items.length}, minmax(0,1fr))`, border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:T.fill }}>
+      {items.map((item, index) => (
+        <div key={item.label} style={{ minWidth:0, padding:'11px 12px', borderLeft:index ? `1px solid ${T.line}` : 'none' }}>
+          <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>{item.label}</div>
+          <div style={{ marginTop:5, minHeight:21, display:'flex', alignItems:'center', color:T.ink, fontSize:15, fontWeight:700, lineHeight:1.3, fontFamily:item.mono ? MONO : undefined }}>{item.value}</div>
+          {item.helper && <div style={{ marginTop:2, color:T.inkSoft, fontSize:10.5, lineHeight:1.4 }}>{item.helper}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const POL_RULE_REFERENCE = {
   deposit: [
     { code:'FP', title:'Fixed amount per guest', detail:'Charge the same flat amount for each guest.' },
@@ -199,7 +250,7 @@ function PolActivityHistory({ status, label }) {
 function DetailShell({ badge, code, title, sub, tabs, tab, setTab, actions, onClose, children }) {
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(15,23,42,.42)', zIndex:900, display:'flex', justifyContent:'flex-end' }}>
-      <div onClick={e => e.stopPropagation()} style={{ width:'clamp(400px, 40%, 760px)', height:'100%', background:T.bg, display:'flex', flexDirection:'column', boxShadow:'-14px 0 44px rgba(15,23,42,.18)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ width:'clamp(655px, 65.5%, 1240px)', height:'100%', background:T.bg, display:'flex', flexDirection:'column', boxShadow:'-14px 0 44px rgba(15,23,42,.18)' }}>
         <div style={{ padding:'16px 18px 0', background:'#fff', borderBottom:`1px solid ${T.line}` }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
             <div style={{ minWidth:180, flex:1 }}>
@@ -246,42 +297,30 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
 
   const groupOverview = (
     <>
-      <PolDetailCard number="01" title="Group configuration" description={`Identity, assignment state, and downstream usage for this ${meta.label.toLowerCase()} policy group.`}>
-        <div>
-          <div style={{ marginBottom:9 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Identity</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Stable identifiers used in assignment, reporting, and audit records.</div>
+      <PolDetailCard number="01" title="Group overview" description={`Shared settings and current usage for this ${meta.label.toLowerCase()} policy group.`}>
+        <PolOverviewSection title="Identity" description="Stable identifiers for assignment, reporting, and audit history.">
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden' }}>
+            <PolIdentityValue label="Group name" value={g.name}/>
+            <div style={{ borderLeft:`1px solid ${T.line}` }}><PolIdentityValue label="Group code" value={g.code} mono/></div>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <PolValueField label="Group name" value={g.name}/>
-            <PolValueField label="Group code" value={g.code} mono/>
-          </div>
-        </div>
+        </PolOverviewSection>
 
-        <div style={{ paddingTop:13, borderTop:`1px solid ${T.lineSoft}` }}>
-          <div style={{ marginBottom:9 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Assignment state</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Current lifecycle and default-selection behavior.</div>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <PolStateTile label="Policy type" helper={`${meta.label} policy group`}><TypeBadge type={g.type}/></PolStateTile>
-            <PolStateTile label="Lifecycle" helper={g.status === 'Active' ? 'Available for policy assignment' : 'Unavailable for new assignments'}><PolStatusBadge status={g.status}/></PolStateTile>
-            <PolStateTile label="Default selection" helper="Used when this policy type is left unset"><Pill bg={g.isDefault ? T.primaryBg : T.fill} color={g.isDefault ? T.primary : T.inkSoft}>{g.isDefault ? 'Default group' : 'Not default'}</Pill></PolStateTile>
-            {g.type === 'cancel' && <PolStateTile label="Refundability" helper="Applies to policies within this group"><Pill bg={g.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={g.isRefundable === false ? '#991B1B' : '#065F46'}>{g.isRefundable === false ? 'Non-Refundable' : 'Refundable'}</Pill></PolStateTile>}
-          </div>
-        </div>
+        <PolOverviewSection title="Assignment rules" description="How this group behaves when policies are assigned to Farecodes.">
+          <PolOverviewRows>
+            <PolOverviewRow label="Policy family" helper="Fixed for every policy held by this group."><TypeBadge type={g.type}/></PolOverviewRow>
+            <PolOverviewRow label="Availability" helper={g.status === 'Active' ? 'Policies in this group can be selected for assignment.' : 'Policies in this group are unavailable for new assignments.'}><PolStatusBadge status={g.status}/></PolOverviewRow>
+            <PolOverviewRow last={g.type !== 'cancel'} label="Default group" helper="Used when a Farecode leaves this policy type unset."><Pill bg={g.isDefault ? T.primaryBg : T.fill} color={g.isDefault ? T.primary : T.inkSoft}>{g.isDefault ? 'Default group' : 'Not default'}</Pill></PolOverviewRow>
+            {g.type === 'cancel' && <PolOverviewRow last label="Refundability" helper="Commercial term shared by every cancellation policy in this group."><Pill bg={g.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={g.isRefundable === false ? '#991B1B' : '#065F46'}>{g.isRefundable === false ? 'Non-Refundable' : 'Refundable'}</Pill></PolOverviewRow>}
+          </PolOverviewRows>
+        </PolOverviewSection>
 
-        <div style={{ paddingTop:13, borderTop:`1px solid ${T.lineSoft}` }}>
-          <div style={{ marginBottom:9 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Usage & ownership</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Policy inventory, downstream references, and record ownership.</div>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <PolMetricTile label="Policies" value={String(g.parents.length)} helper={`${g.parents.filter(x => x.status === 'Active').length} active inside this group`}/>
-            <PolMetricTile label="Referenced by" value={String(usedInGroup(g))} helper="Faretype / Farecode records"/>
-            <PolMetricTile full label="Last modified" value={g.mod} helper={g.editor}/>
-          </div>
-        </div>
+        <PolOverviewSection title="Current usage" description="Live policy inventory and downstream assignment scope.">
+          <PolOverviewMetrics items={[
+            { label:'Policies', value:String(g.parents.length), helper:'Total in this group' },
+            { label:'Available', value:String(g.parents.filter(x => x.status === 'Active').length), helper:'Active policies' },
+            { label:'Referenced by', value:String(usedInGroup(g)), helper:'Faretype / Farecode records' },
+          ]}/>
+        </PolOverviewSection>
       </PolDetailCard>
       {g.status === 'Draft' && <Banner level="warn" title="Draft chain" action={finishAction}>This group was saved before its policy was finished. Complete the remaining steps before activation.</Banner>}
       {g.status !== 'Active' && g.status !== 'Draft' && !g.parents.some(x => x.status === 'Active') && (
@@ -292,7 +331,12 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
 
   const groupChildren = (
     <PolDetailCard number="02" title={`Policies in ${g.name}`} description={`Parent policies available for assignment inside this ${meta.label.toLowerCase()} group.`}
-      aside={<span style={{ padding:'2px 7px', borderRadius:999, background:'#fff', border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{g.parents.length}</span>} pad="10px">
+      aside={(
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ padding:'2px 7px', borderRadius:999, background:'#fff', border:`1px solid ${T.line}`, color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{g.parents.length}</span>
+          <button type="button" style={{ ...polGhost, whiteSpace:'nowrap' }} onClick={() => onAddPolicy(g)}>+ Add policy</button>
+        </div>
+      )} pad="10px">
       {g.parents.length === 0 ? <div style={{ padding:'34px 20px', textAlign:'center', fontSize:13, color:T.inkSoft }}>No policies in this group yet.</div> : g.parents.map((x) => {
         const k = kidsOf(x), ok = k.length > 0 && validateRows(k).issues.length === 0;
         const configLabel = g.type === 'cancel'
@@ -327,53 +371,41 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
   const parentOverview = !p ? null : (
     <>
       {isDraftTarget && <Banner level="warn" title="Draft policy" action={finishAction}>This policy setup is incomplete. Complete its remaining {meta.childWords.toLowerCase()} before activation.</Banner>}
-      <PolDetailCard number="01" title="Policy configuration" description={`Identity, assignment state, and downstream usage for this ${meta.label.toLowerCase()} policy.`}>
-        <div>
-          <div style={{ marginBottom:9 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Identity</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Stable identifiers used in assignment, reporting, and audit records.</div>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <PolValueField label="Policy name" value={p.name}/>
-            <PolValueField label="Policy code" value={p.code} mono/>
-          </div>
-          <div style={{ marginTop:10, minWidth:0, padding:'10px 12px', border:`1px solid ${T.line}`, borderRadius:8, background:T.fill }}>
-            <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Parent group</div>
-            <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginTop:7 }}>
-              <TypeBadge type={g.type}/>
-              <span style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{g.name}</span>
-              <span style={{ fontFamily:MONO, fontSize:10.5, fontWeight:700, color:T.inkSoft }}>{g.code}</span>
+      <PolDetailCard number="01" title="Policy overview" description={`Current identity, assignment behavior, and configuration health for this ${meta.label.toLowerCase()} policy.`}>
+        <PolOverviewSection title="Identity" description="Stable identifiers and the group that owns this policy.">
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden' }}>
+            <PolIdentityValue label="Policy name" value={p.name}/>
+            <div style={{ borderLeft:`1px solid ${T.line}` }}><PolIdentityValue label="Policy code" value={p.code} mono/></div>
+            <div style={{ gridColumn:'1 / -1', borderTop:`1px solid ${T.line}`, padding:'10px 12px', background:T.fill }}>
+              <div style={{ fontSize:9.5, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Parent group</div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginTop:6 }}>
+                <TypeBadge type={g.type}/>
+                <span style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{g.name}</span>
+                <span style={{ fontFamily:MONO, fontSize:10.5, fontWeight:700, color:T.inkSoft }}>{g.code}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </PolOverviewSection>
 
-        <div style={{ paddingTop:13, borderTop:`1px solid ${T.lineSoft}` }}>
-          <div style={{ marginBottom:9 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Assignment state</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Current lifecycle and default-selection behavior.</div>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <PolStateTile label="Lifecycle" helper={p.status === 'Active' ? 'Available for Farecode assignment' : 'Unavailable for new assignments'}><PolStatusBadge status={p.status}/></PolStateTile>
-            <PolStateTile label="Default selection" helper={p.isDefault ? 'Automatically selected within this group' : 'Selected only when explicitly assigned'}><Pill bg={p.isDefault ? T.primaryBg : T.fill} color={p.isDefault ? T.primary : T.inkSoft}>{p.isDefault ? 'Default policy' : 'Not default'}</Pill></PolStateTile>
-            {g.type === 'cancel' && <PolStateTile full label="Refundability" helper="Policy-level setting inherited by its cancellation bands"><Pill bg={p.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={p.isRefundable === false ? '#991B1B' : '#065F46'}>{p.isRefundable === false ? 'Non-Refundable' : 'Refundable'}</Pill></PolStateTile>}
-          </div>
-        </div>
+        <PolOverviewSection title="Assignment rules" description="How this policy is made available and selected for Farecodes.">
+          <PolOverviewRows>
+            <PolOverviewRow label="Availability" helper={p.status === 'Active' ? 'Available for Farecode assignment.' : 'Unavailable for new Farecode assignments.'}><PolStatusBadge status={p.status}/></PolOverviewRow>
+            <PolOverviewRow last={g.type !== 'cancel'} label={`Default ${meta.label.toLowerCase()} policy`} helper={p.isDefault ? 'Automatically selected when this group does not specify another policy.' : 'Used only when it is explicitly assigned.'}><Pill bg={p.isDefault ? T.primaryBg : T.fill} color={p.isDefault ? T.primary : T.inkSoft}>{p.isDefault ? 'Default policy' : 'Not default'}</Pill></PolOverviewRow>
+            {g.type === 'cancel' && <PolOverviewRow last label="Refundability" helper="Commercial term inherited by every cancellation band in this policy."><Pill bg={p.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={p.isRefundable === false ? '#991B1B' : '#065F46'}>{p.isRefundable === false ? 'Non-Refundable' : 'Refundable'}</Pill></PolOverviewRow>}
+          </PolOverviewRows>
+        </PolOverviewSection>
 
-        <div style={{ paddingTop:13, borderTop:`1px solid ${T.lineSoft}` }}>
-          <div style={{ marginBottom:9 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Usage & ownership</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, marginTop:3 }}>Rule coverage, downstream references, and record ownership.</div>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <PolMetricTile label={g.type === 'deposit' ? 'Configured lines' : 'Configured bands'} value={String(kids.length)} helper={<CoverPill ok={v.issues.length === 0 && kids.length > 0} label={kids.length === 0 ? 'None configured' : v.issues.length === 0 ? 'Coverage complete' : 'Coverage needs attention'}/>}/>
-            <PolMetricTile label="Referenced by" value={String(p.usedIn || 0)} helper="Faretype / Farecode records"/>
-          </div>
-        </div>
+        <PolOverviewSection title="Current configuration" description="Configured rule coverage and downstream usage.">
+          <PolOverviewMetrics items={[
+            { label:g.type === 'deposit' ? 'Milestone lines' : 'Cancellation bands', value:String(kids.length), helper:kids.length === 1 ? 'Configured row' : 'Configured rows' },
+            { label:'Coverage', value:<CoverPill ok={v.issues.length === 0 && kids.length > 0} label={kids.length === 0 ? 'Not configured' : v.issues.length === 0 ? 'Complete' : 'Needs attention'}/>, helper:'DTS and stateroom scope' },
+            { label:'Referenced by', value:String(p.usedIn || 0), helper:'Faretype / Farecode records' },
+          ]}/>
+        </PolOverviewSection>
       </PolDetailCard>
       <PolResolvedSchedule type={g.type} parentCode={p.code} rows={kids} complete={v.issues.length === 0 && kids.length > 0}/>
       {v.issues.length > 0 && <IssueList issues={v.issues} title="Configuration gaps"/>}
       {refundIssues.length > 0 && <IssueList issues={refundIssues} title="Refundability conflict"/>}
-      <PolRuleReference type={g.type}/>
     </>
   );
 
@@ -387,12 +419,12 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
       {g.type === 'cancel' && kids.length > 0 && (
         <Banner level="info" title="Charge formula">Cancellation charge = max(% of cabin fare + port fees for the active band, full deposit paid when the deposit line has cancellation-applies ON).</Banner>
       )}
+      <PolRuleReference type={g.type}/>
     </>
   );
 
   const actions = (
     <>
-      {isGroup && <button style={polGhost} onClick={() => onAddPolicy(g)}>+ Add policy</button>}
       <button style={editBtn} onClick={() => onEdit(g, p)}><IcEdit/>{isGroup ? 'Edit group' : 'Edit policy'}</button>
       <RowMenu items={[
         ...(isDraftTarget ? [
