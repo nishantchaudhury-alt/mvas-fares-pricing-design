@@ -22,11 +22,17 @@ const STATUS_S = {
 };
 
 const CATS = ['Interior','Ocean View','Balcony','Suites'];
-const DEP_TYPES = [['FP','FP'],['FC','FC'],['PCT','PCT']];
+const DEPOSIT_TYPE_LABELS = {
+  FC:'Fixed per Cabin',
+  FP:'Fixed per Person',
+  PCT:'Percentage',
+};
+const depositTypeLabel = value => DEPOSIT_TYPE_LABELS[value] || value;
+const DEP_TYPES = Object.entries(DEPOSIT_TYPE_LABELS);
 const DEP_HELP = [
-  ['FP','Fixed Amount per Pax — flat amount charged per guest.'],
-  ['FC','Fixed Amount per Cabin — flat amount charged per cabin regardless of occupancy.'],
-  ['PCT','Percentage of Total Amount Due — percentage of the total booking amount due at that milestone.'],
+  ['Fixed per Cabin','Charge one flat amount per cabin, regardless of occupancy.'],
+  ['Fixed per Person','Charge the same flat amount for each person.'],
+  ['Percentage','Charge a percentage of the total booking amount due at that milestone.'],
 ];
 const PEN_TYPES = [['NONE','NONE'],['FIXED','FIXED'],['PCT_CABIN_FARE','PCT_CABIN_FARE'],['FULL_DEPOSIT','FULL_DEPOSIT']];
 const PEN_HELP = [
@@ -88,7 +94,9 @@ const CAN_GROUPS_INIT = [
         bands:[
           { id:'104.1', beginDts:'', endDts:45, penaltyType:'NONE', penaltyValue:'', cats:['All'] },
           { id:'104.2', beginDts:44, endDts:0,  penaltyType:'PCT_CABIN_FARE', penaltyValue:40, cats:['All'] },
-        ], usedInFaretypes:[], usedInFarecodes:[] },
+        ],
+        usedInFaretypes:[{ code:'FT-00103', name:'International Agency', status:'Draft', mod:'10 Jun 2026' }],
+        usedInFarecodes:[{ code:'FC-20106', ship:'Island Escape · 05 Dec 2026', status:'Active', mod:'11 Jun 2026' }] },
     ]},
   { id:'cg2', name:'Non-Refundable', isActive:true, isRefundable:false, isDefault:false, mod:'10 Jun 2026', editor:'admin@mvas.com',
     parents:[
@@ -113,7 +121,7 @@ const catsCover = cats => cats.includes('All') ? CATS.slice() : cats.slice();
 const catLabel = cats => cats.includes('All') || CATS.every(c => cats.includes(c)) ? 'All types' : cats.join(', ');
 const winLabel = r => isBlank(r.beginDts) ? `${r.endDts === '' ? '—' : r.endDts}+ days` : `${r.endDts}–${r.beginDts} days`;
 const money = n => '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits:2 });
-const depAmountLabel = r => r.depositType === 'PCT' ? `${r.amount}%` : `${money(r.amount)} ${r.depositType === 'FP' ? '/ pax' : '/ cabin'}`;
+const depAmountLabel = r => r.depositType === 'PCT' ? `${r.amount}%` : `${money(r.amount)} ${r.depositType === 'FP' ? '/ person' : '/ cabin'}`;
 const penAmountLabel = r => r.penaltyType === 'PCT_CABIN_FARE' ? `${r.penaltyValue}% of cabin fare`
   : r.penaltyType === 'FIXED' ? `${money(r.penaltyValue)} fixed`
   : r.penaltyType === 'FULL_DEPOSIT' ? 'Full deposit forfeited' : 'No charge';
@@ -235,6 +243,7 @@ const AUDIT = (label, status) => ([
 const IcSearch = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>);
 const IcChevron = ({ up }) => (<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points={up ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}/></svg>);
 const IcX = ({ size = 12 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>);
+const IcTrash = ({ size = 14 }) => (<svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M8 6V4h8v2"/><line x1="10" y1="10" x2="10" y2="17"/><line x1="14" y1="10" x2="14" y2="17"/></svg>);
 const IcEdit = () => (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>);
 const IcCheck = ({ size = 12 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>);
 const IcWarn = ({ color, size = 14 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>);
@@ -698,7 +707,7 @@ function DCGroupList({ kind, groups, onOpen, onCreate, onDelete }) {
                         { icon:'↗', label:'View', onClick:() => onOpen(g) },
                         { icon:'✎', label:'Edit', onClick:() => onOpen(g, true) },
                         { sep:true },
-                        { icon:'⌫', label:'Delete', danger:true, disabled:g.parents.some(p => p.usedIn > 0), title: g.parents.some(p => p.usedIn > 0) ? 'Cannot delete — parent policies are in use.' : undefined, onClick:() => onDelete(g) },
+                        { icon:<IcTrash size={13}/>, label:'Delete', danger:true, disabled:g.parents.some(p => p.usedIn > 0), title: g.parents.some(p => p.usedIn > 0) ? 'Cannot delete — parent policies are in use.' : undefined, onClick:() => onDelete(g) },
                       ]}/>
                     </td>
                   </tr>
@@ -723,7 +732,7 @@ function DCGroupList({ kind, groups, onOpen, onCreate, onDelete }) {
 }
 
 Object.assign(window, {
-  T, MONO, STATUS_S, CATS, DEP_TYPES, DEP_HELP, PEN_TYPES, PEN_HELP,
+  T, MONO, STATUS_S, CATS, DEPOSIT_TYPE_LABELS, depositTypeLabel, DEP_TYPES, DEP_HELP, PEN_TYPES, PEN_HELP,
   DEP_GROUPS_INIT, CAN_GROUPS_INIT,
   num, isBlank, catsCover, catLabel, winLabel, money, depAmountLabel, penAmountLabel,
   windowGroups, continuationBeginDts, validateRows, refundabilityIssues, inWindow, rowForCat, depositAmountFor, cancelCharge, AUDIT,

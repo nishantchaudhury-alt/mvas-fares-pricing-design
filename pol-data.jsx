@@ -11,7 +11,7 @@ const POL_STATUS = {
 
 const dtsLabel = r => isBlank(r.beginDts) ? `${r.endDts === '' ? '—' : r.endDts}+` : `${r.endDts}–${r.beginDts}`;
 const catSentence = cats => catLabel(cats) === 'All types' ? 'All stateroom types' : catLabel(cats);
-const depLabel = r => r.depositType === 'PCT' ? `${r.amount || '—'}% of fare` : `${money(r.amount)} ${r.depositType === 'FP' ? 'per pax' : 'per cabin'}`;
+const depLabel = r => r.depositType === 'PCT' ? `${r.amount || '—'}% of fare` : `${money(r.amount)} ${r.depositType === 'FP' ? 'per person' : 'per cabin'}`;
 const childCode = (parentCode, i) => `${String(parentCode).replace(/^[A-Z]+-/, '')}.${i + 1}`;
 const lineSummary = r => [r.marketingName || 'Untitled line', `DTS ${dtsLabel(r)}`, depLabel(r), catSentence(r.cats || [])].join(' · ') + (r.cancelApplies ? ' · cancellation applies' : '');
 const bandSummary = r => [`DTS ${dtsLabel(r)}`, penAmountLabel(r), catSentence(r.cats || [])].join(' · ');
@@ -21,6 +21,42 @@ const usedInGroup = g => g.parents.reduce((s, p) => s + (p.usedIn || 0), 0);
 const blankLine = () => ({ marketingName:'', beginDts:'', endDts:'', depositType:'FC', amount:'', cats:['All'], cancelApplies:true });
 const blankBand = () => ({ beginDts:'', endDts:'', penaltyType:'PCT_CABIN_FARE', penaltyValue:'', cats:['All'] });
 const blankChild = type => type === 'deposit' ? blankLine() : blankBand();
+
+/* Used In details mirror the Faretype and Farecode records elsewhere in the prototype. The
+   larger seeded policy set reuses these deterministic pools so a non-zero reference count
+   always has inspectable records instead of a contradictory empty state. */
+const REFERENCE_FARETYPES = [
+  { code:'FT-00101', name:'Core Retail', status:'Active', mod:'14 Jun 2026' },
+  { code:'FT-00102', name:'Non-Refundable Promo', status:'Active', mod:'11 Jun 2026' },
+  { code:'FT-00103', name:'International Agency', status:'Draft', mod:'10 Jun 2026' },
+  { code:'FT-00104', name:'Brochure Retail', status:'Active', mod:'08 Jun 2026' },
+  { code:'FT-00105', name:'Casino Standard', status:'Draft', mod:'07 Jun 2026' },
+  { code:'FT-00106', name:'Flexible Retail', status:'Inactive', mod:'28 May 2026' },
+  { code:'FT-00107', name:'Group Contract', status:'Active', mod:'13 Jun 2026' },
+  { code:'FT-00108', name:'Interline Promo', status:'Active', mod:'02 Jun 2026' },
+];
+const REFERENCE_FARECODES = [
+  { code:'FC-20101', ship:'Island Escape · 01 Sep 2026', status:'Active', mod:'12 Jun 2026' },
+  { code:'FC-20102', ship:'Island Escape · 15 Oct 2026', status:'Active', mod:'10 Jun 2026' },
+  { code:'FC-20103', ship:'Island Escape · 20 Nov 2026', status:'Active', mod:'08 Jun 2026' },
+  { code:'FC-20104', ship:'Paradise Bay · 05 Aug 2026', status:'Draft', mod:'14 Jun 2026' },
+  { code:'FC-20105', ship:'Paradise Bay · 10 Sep 2026', status:'Inactive', mod:'06 Jun 2026' },
+  { code:'FC-20106', ship:'Island Escape · 05 Dec 2026', status:'Active', mod:'11 Jun 2026' },
+  { code:'FC-20107', ship:'Paradise Bay · 20 Oct 2026', status:'Active', mod:'09 Jun 2026' },
+  { code:'FC-20108', ship:'Northern Star · 15 Sep 2026', status:'Active', mod:'07 Jun 2026' },
+  { code:'FC-20109', ship:'Northern Star · 01 Oct 2026', status:'Draft', mod:'05 Jun 2026' },
+  { code:'FC-20110', ship:'Island Escape · 20 Aug 2026', status:'Active', mod:'04 Jun 2026' },
+];
+const rotateReferencePool = (pool, start, count) => Array.from({ length:count }, (_, i) => pool[(start + i) % pool.length]);
+const seededReferenceDetails = (total=0, seed=0) => {
+  const count = Math.max(0, Number(total) || 0);
+  if (!count) return { usedInFaretypes:[], usedInFarecodes:[] };
+  const faretypeCount = count > 1 ? Math.min(3, Math.ceil(count / 4)) : 0;
+  return {
+    usedInFaretypes:rotateReferencePool(REFERENCE_FARETYPES, seed % REFERENCE_FARETYPES.length, faretypeCount),
+    usedInFarecodes:rotateReferencePool(REFERENCE_FARECODES, (seed * 2) % REFERENCE_FARECODES.length, count - faretypeCount),
+  };
+};
 
 const POLICIES_INIT = [
   { id:'g1', type:'deposit', code:'DEP-GRP-01', name:'IS 5-Night Retail Std', status:'Active', isDefault:true, mod:'14 Jun 2026', created:'01 Jun 2026', editor:'jane.doe@mvas.com',
@@ -64,7 +100,9 @@ const POLICIES_INIT = [
         bands:[
           { beginDts:'', endDts:45, penaltyType:'NONE', penaltyValue:'', cats:['All'] },
           { beginDts:44, endDts:0, penaltyType:'PCT_CABIN_FARE', penaltyValue:40, cats:['All'] },
-        ], usedInFaretypes:[], usedInFarecodes:[] },
+        ],
+        usedInFaretypes:[{ code:'FT-00103', name:'International Agency', status:'Draft', mod:'10 Jun 2026' }],
+        usedInFarecodes:[{ code:'FC-20106', ship:'Island Escape · 05 Dec 2026', status:'Active', mod:'11 Jun 2026' }] },
     ]},
   { id:'g3', type:'cancel', code:'CANC-GRP-02', name:'Non-Refundable', status:'Active', isDefault:false, isRefundable:false, mod:'10 Jun 2026', created:'03 Jun 2026', editor:'admin@mvas.com',
     parents:[
@@ -102,14 +140,14 @@ const seededDepositGroup = ({ number, name, parentCode, parentName, status='Acti
   id:`seed-deposit-group-${number}`, type:'deposit', code:`DEP-GRP-${String(number).padStart(2, '0')}`, name, status, isDefault:false, mod, created, editor,
   parents:[{
     id:`seed-deposit-policy-${number}`, code:parentCode, name:parentName, status, isDefault:true, usedIn, mod, created, editor,
-    lines, usedInFaretypes:[], usedInFarecodes:[],
+    lines, ...seededReferenceDetails(usedIn, number),
   }],
 });
 const seededCancellationGroup = ({ number, name, parentCode, parentName, status='Active', refundable=true, mod, created, editor='jane.doe@mvas.com', usedIn=0, bands }) => ({
   id:`seed-cancel-group-${number}`, type:'cancel', code:`CANC-GRP-${String(number).padStart(2, '0')}`, name, status, isDefault:false, isRefundable:refundable, mod, created, editor,
   parents:[{
     id:`seed-cancel-policy-${number}`, code:parentCode, name:parentName, status, isDefault:true, isRefundable:refundable, usedIn, mod, created, editor,
-    bands, usedInFaretypes:[], usedInFarecodes:[],
+    bands, ...seededReferenceDetails(usedIn, number),
   }],
 });
 

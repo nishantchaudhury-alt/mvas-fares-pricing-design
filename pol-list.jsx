@@ -275,7 +275,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
           <td style={{ ...TD, padding:'9px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{g.created}</td>
           <td style={{ ...TD, width:44, padding:'6px 8px', textAlign:'right' }} onClick={e => e.stopPropagation()}>
             <RowMenu size={20} items={[{
-              label:'Delete group', icon:'×', danger:true,
+              label:'Delete group', icon:<IcTrash size={13}/>, danger:true,
               disabled:usedInGroup(g) > 0,
               title:usedInGroup(g) > 0 ? 'In use by Faretypes/Farecodes.' : undefined,
               onClick:() => setDlg({ type:'confirmDeleteGroup', group:g }),
@@ -312,7 +312,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
             <td style={{ ...TD, padding:'7px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{p.created}</td>
             <td style={{ ...TD, width:44, padding:'5px 8px', textAlign:'right' }} onClick={e => e.stopPropagation()}>
               <RowMenu size={20} items={[{
-                label:'Delete policy', icon:'×', danger:true,
+                label:'Delete policy', icon:<IcTrash size={13}/>, danger:true,
                 disabled:p.usedIn > 0,
                 title:p.usedIn > 0 ? 'In use by Faretypes/Farecodes.' : undefined,
                 onClick:() => setDlg({ type:'confirmDeleteParent', group:g, parent:p }),

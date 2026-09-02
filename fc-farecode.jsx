@@ -2778,7 +2778,7 @@ function FarecodePolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen
   };
   return <DataTable cols={FARECODE_POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} minWidth={1160}
     sortCol={sortCol} sortDir={sortDir} onSort={onSort} onRowClick={onOpen}
-    rowActions={(row) => [{ label:'Delete Policy Eligibility', icon:'×', danger:true, onClick:() => onDelete(row) }]}
+    rowActions={(row) => [{ label:'Delete Policy Eligibility', icon:<IcTrash size={13}/>, danger:true, onClick:() => onDelete(row) }]}
     emptyTitle="No Farecode Policy Eligibility records match your filters"/>;
 }
 
@@ -2959,7 +2959,7 @@ function FarecodeListScreen({ policies }) {
                 cols={COLS} rows={pageRows} cell={cell} minWidth={1180}
                 sortCol={sortCol} sortDir={sortDir} onSort={handleSort}
                 onRowClick={openFarecode}
-                rowActions={(row) => [{ label:'Delete Farecode', icon:'×', danger:true, onClick:() => deleteFarecode(row) }]}
+                rowActions={(row) => [{ label:'Delete Farecode', icon:<IcTrash size={13}/>, danger:true, onClick:() => deleteFarecode(row) }]}
                 emptyTitle={hasFilter ? 'No farecodes match your filters' : 'No farecodes yet'}/>
             ) : (
               <FarecodePolicyEligibilityTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onOpen={openPolicyEligibility} onDelete={deletePolicyEligibility}/>

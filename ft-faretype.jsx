@@ -1750,7 +1750,7 @@ function FaretypeTable({ rows, selected, onToggleRow, onToggleAll, sortCol, sort
     cols={COLS} rows={rows} cell={cell}
     sortCol={sortCol} sortDir={sortDir} onSort={onSort}
     onRowClick={onViewDetail}
-    rowActions={(row) => [{ label: 'Delete Faretype', icon: '×', danger: true, onClick: () => onDelete(row) }]}
+    rowActions={(row) => [{ label: 'Delete Faretype', icon: <IcTrash size={13}/>, danger: true, onClick: () => onDelete(row) }]}
     emptyTitle="No faretypes match your filters" />);
 
 }
@@ -1776,7 +1776,7 @@ function PolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen, onDele
     return null;
   };
   return <DataTable cols={POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} sortCol={sortCol} sortDir={sortDir} onSort={onSort} onRowClick={onOpen}
-    rowActions={(row) => [{ label: 'Delete Policy Eligibility', icon: '×', danger: true, onClick: () => onDelete(row) }]}
+    rowActions={(row) => [{ label: 'Delete Policy Eligibility', icon: <IcTrash size={13}/>, danger: true, onClick: () => onDelete(row) }]}
     emptyTitle="No Policy Eligibility templates match your filters" minWidth={1080} />;
 }
 

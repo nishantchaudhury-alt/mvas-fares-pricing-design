@@ -129,9 +129,7 @@ function DeleteIconButton({ onClick, label = 'Delete', title, disabled = false }
       style={{ width:32, height:32, padding:0, borderRadius:7, border:`1.5px solid ${disabled ? T.line : '#FCA5A5'}`, background:T.panel, color:disabled ? T.inkFaint : T.red, cursor:disabled ? 'not-allowed' : 'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'background .12s, border-color .12s, color .12s' }}
       onMouseEnter={e => { if (!disabled) { e.currentTarget.style.background = T.redLight; e.currentTarget.style.borderColor = '#F87171'; } }}
       onMouseLeave={e => { e.currentTarget.style.background = T.panel; e.currentTarget.style.borderColor = disabled ? T.line : '#FCA5A5'; }}>
-      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M8 6V4h8v2"/><line x1="10" y1="10" x2="10" y2="17"/><line x1="14" y1="10" x2="14" y2="17"/>
-      </svg>
+      <IcTrash/>
     </button>
   );
 }

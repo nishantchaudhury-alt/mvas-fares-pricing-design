@@ -52,7 +52,7 @@ function LineGrid({ codeNum, rows, setRows, cellErr, editing }) {
               {editing ? cellIn(r.marketingName, v => upd(i,'marketingName',v), cellErr[`${i}:marketingName`], 'e.g. Full Deposit') : <span style={{ fontWeight:600 }}>{r.marketingName}</span>}
               {editing ? cellIn(r.beginDts, v => upd(i,'beginDts', v.replace(/[^0-9]/g,'')), cellErr[`${i}:beginDts`], '∞') : <span>{isBlank(r.beginDts) ? '∞' : r.beginDts}</span>}
               {editing ? cellIn(r.endDts, v => upd(i,'endDts', v.replace(/[^0-9]/g,'')), cellErr[`${i}:endDts`], '0') : <span>{r.endDts}</span>}
-              {editing ? <Sel compact value={r.depositType} onChange={v => upd(i,'depositType',v)} opts={DEP_TYPES}/> : <Pill bg={T.fill} color={T.inkSoft} mono>{r.depositType}</Pill>}
+              {editing ? <Sel compact value={r.depositType} onChange={v => upd(i,'depositType',v)} opts={DEP_TYPES}/> : <Pill bg={T.fill} color={T.inkSoft}>{depositTypeLabel(r.depositType)}</Pill>}
               {editing ? (
                 <div style={{ position:'relative' }}>
                   <input value={r.amount} onChange={e => upd(i,'amount', e.target.value.replace(/[^0-9.]/g,''))}

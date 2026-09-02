@@ -23,9 +23,9 @@ function PolDetailCard({ number, title, description, aside, children, pad = '14p
 
 const POL_RULE_REFERENCE = {
   deposit: [
-    { code:'FP', title:'Fixed amount per guest', detail:'Charge the same flat amount for each guest.' },
-    { code:'FC', title:'Fixed amount per cabin', detail:'Charge one flat amount per cabin, regardless of occupancy.' },
-    { code:'PCT', title:'Percentage of amount due', detail:'Charge a percentage of the total booking amount due at this milestone.' },
+    { code:'Fixed per Cabin', title:'One amount for the cabin', detail:'Charge one flat amount per cabin, regardless of occupancy.' },
+    { code:'Fixed per Person', title:'One amount for each person', detail:'Charge the same flat amount for each person.' },
+    { code:'Percentage', title:'A share of the amount due', detail:'Charge a percentage of the total booking amount due at this milestone.' },
   ],
   cancel: [
     { code:'NONE', title:'No penalty', detail:'Apply no cancellation penalty for this band.' },
@@ -270,9 +270,6 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
       {isDraftTarget && <Banner level="warn" title="Draft policy" action={finishAction}>This policy setup is incomplete. Complete its remaining {meta.childWords.toLowerCase()} before activation.</Banner>}
       {v.issues.length > 0 && <IssueList issues={v.issues} title="Configuration gaps"/>}
       {refundIssues.length > 0 && <IssueList issues={refundIssues} title="Refundability conflict"/>}
-      {g.type === 'cancel' && kids.length > 0 && (
-        <Banner level="info" title="Configuration only">These bands determine which penalty method applies by days to sailing and stateroom type. The final monetary amount is calculated from the booking’s fare and applicable deposit context.</Banner>
-      )}
       <SCard title={meta.childWords} right={<span style={{ fontSize:11.5, color:T.inkFaint }}>Read-only — use Edit to change</span>} pad="14px 16px">
         {kids.length === 0
           ? <div style={{ padding:'28px 12px', textAlign:'center', fontSize:13, color:T.inkSoft }}>No {meta.childWords.toLowerCase()} yet.</div>

@@ -35,7 +35,7 @@ const rcIn = (v, onChange, err, ph, suffix) => (
 );
 const rcVal = txt => <span style={{ fontSize:12.5, color:T.ink }}>{txt}</span>;
 
-const ROW_DEP_TYPES = [['FC','Fixed per Cabin'],['FP','Fixed per Guest'],['PCT','Percentage']];
+const ROW_DEP_TYPES = DEP_TYPES;
 const ROW_PEN_TYPES = [['NONE','No charge'],['FIXED','Fixed amount'],['PCT_CABIN_FARE','Percentage of cabin fare'],['FULL_DEPOSIT','Full deposit']];
 
 function InlineRowField({ error, errorId, children }) {
@@ -196,6 +196,11 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
   const minWidth = widths.reduce((sum, width) => sum + width, 0);
   const thStyle = { position:'sticky', top:0, zIndex:2, padding:'8px', textAlign:'left', color:T.inkLabel, background:'#F8FAFC', fontSize:9.25, fontWeight:800, textTransform:'uppercase', letterSpacing:'.62px', whiteSpace:'nowrap', borderBottom:`1px solid ${T.line}` };
   const tdStyle = { padding:'9px 8px', color:T.ink, fontSize:12, lineHeight:1.3, borderBottom:`1px solid ${T.lineSoft}`, verticalAlign:'top' };
+  const headerHelp = label => label === 'Penalty Type'
+    ? 'Final charges are calculated using the booking’s fare and applicable deposit.'
+    : isDep && label === 'Type'
+      ? 'Deposit amounts use the selected method and the booking’s applicable fare or cabin context.'
+      : null;
   const errorId = (i, field) => `policy-row-${type}-${i}-${field}-error`;
   const fieldCell = (i, field, control, extra = {}) => {
     const error = cellErr[`${i}:${field}`];
@@ -212,7 +217,20 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
         <table aria-label={`${meta.childWords} configuration`} style={{ width:'100%', minWidth, borderCollapse:'collapse', tableLayout:'fixed' }}>
           <colgroup>{widths.map((width, i) => <col key={i} style={{ width }}/>)}</colgroup>
           <thead style={{ background:T.fill }}>
-            <tr>{header.map((label, i) => <th key={`${label}-${i}`} scope="col" aria-label={!label ? (i === 0 ? 'Reorder' : 'Remove') : undefined} style={thStyle}>{label}</th>)}</tr>
+            <tr>{header.map((label, i) => {
+              const help = headerHelp(label);
+              return (
+                <th key={`${label}-${i}`} scope="col" aria-label={!label ? (i === 0 ? 'Reorder' : 'Remove') : undefined} style={thStyle}>
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+                    {label}
+                    {help && <span tabIndex="0" role="note" aria-label={help} title={help}
+                      style={{ width:15, height:15, display:'inline-flex', alignItems:'center', justifyContent:'center', borderRadius:'50%', color:T.inkFaint, cursor:'help', outlineOffset:2 }}>
+                      <IcInfo color="currentColor" size={11}/>
+                    </span>}
+                  </span>
+                </th>
+              );
+            })}</tr>
           </thead>
           <tbody>
             {rows.map((r, i) => {
@@ -244,7 +262,7 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
                       ? fieldCell(i, 'endDts', (error, id) => <InlineRowInput value={r.endDts} onChange={v => upd(i, 'endDts', v.replace(/[^0-9]/g, ''))} error={error} errorId={id} label={`End DTS for ${meta.childWord.toLowerCase()} ${i + 1}`} placeholder="0" inputMode="numeric"/>)
                       : <td style={tdStyle}>{isBlank(r.endDts) ? '—' : r.endDts}</td>}
                     {isDep
-                      ? <td style={{ ...tdStyle, fontFamily:MONO }}>{editing ? <Sel compact value={r.depositType} onChange={v => upd(i, 'depositType', v)} opts={ROW_DEP_TYPES} ariaLabel={`Deposit type for line ${i + 1}`}/> : r.depositType}</td>
+                      ? <td style={tdStyle}>{editing ? <Sel compact value={r.depositType} onChange={v => upd(i, 'depositType', v)} opts={ROW_DEP_TYPES} ariaLabel={`Deposit type for line ${i + 1}`}/> : depositTypeLabel(r.depositType)}</td>
                       : <td style={{ ...tdStyle, fontFamily:MONO }}>{editing ? <Sel compact value={r.penaltyType} onChange={v => upd(i, 'penaltyType', v)} opts={ROW_PEN_TYPES} ariaLabel={`Penalty type for band ${i + 1}`}/> : r.penaltyType}</td>}
                     {editing
                       ? fieldCell(i, isDep ? 'amount' : 'penaltyValue', (error, id) => <InlineRowInput
@@ -362,7 +380,7 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
                 </RCGroup>
                 <RCGroup divided label="Deposit charge" helper="Set how the deposit amount is calculated.">
                   <RCField label="Type">
-                    {editing ? <Sel compact value={r.depositType} onChange={v => upd(i, 'depositType', v)} opts={DEP_TYPES}/> : rcVal(r.depositType)}
+                    {editing ? <Sel compact value={r.depositType} onChange={v => upd(i, 'depositType', v)} opts={DEP_TYPES}/> : rcVal(depositTypeLabel(r.depositType))}
                   </RCField>
                   <RCField required label="Amount" err={cellErr[`${i}:amount`]}>
                     {editing ? rcIn(r.amount, v => upd(i, 'amount', v.replace(/[^0-9.]/g, '')), cellErr[`${i}:amount`], '', r.depositType === 'PCT' ? '%' : '$') : rcVal(depAmountLabel(r))}
