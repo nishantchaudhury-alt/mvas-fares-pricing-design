@@ -2054,7 +2054,7 @@ function AuditLogTab() {
    viewRow: the farecode record (view mode only)
    initialEdit: open directly in edit mode
 ══════════════════════════════════════════════ */
-function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies, policyEligibilityRecord }) {
+function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, onDelete, policies, policyEligibilityRecord }) {
   const buildForm = () => {
     if (mode==='view' && viewRow) {
       const ft = FT_DATA.find(f => f.code===viewRow.faretype);
@@ -2223,6 +2223,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, policies, 
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
                 </button>
               )}
+              {mode==='view' && !isEditing && <DeleteIconButton onClick={() => onDelete(viewRow)} label={`Delete ${viewRow?.code || 'Farecode'}`} title="Delete Farecode" />}
               {/* Close */}
               <button onClick={handleClose} aria-label="Close Farecode drawer" style={{ width:32, height:32, borderRadius:7, border:`1.5px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkSoft }}
                 onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; }}
@@ -2574,7 +2575,7 @@ function FarecodePolicyEligibilityEditor({ mode, form, set, overrides, toggleOve
   );
 }
 
-function FarecodePolicyEligibilityPanel({ mode='create', editData, farecodes, policies, onClose, onSave }) {
+function FarecodePolicyEligibilityPanel({ mode='create', editData, farecodes, policies, onClose, onSave, onDelete }) {
   const buildInitialForm = () => editData ? {
     ...DEFAULT_FORM(),
     farecode:editData.farecode,
@@ -2658,6 +2659,7 @@ function FarecodePolicyEligibilityPanel({ mode='create', editData, farecodes, po
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                 Edit
               </button>}
+              {mode==='view' && !isEditing && <DeleteIconButton onClick={() => onDelete(editData)} label={`Delete Policy Eligibility for ${editData?.farecode || 'Farecode'}`} title="Delete Policy Eligibility" />}
               <button onClick={handleClose} aria-label="Close Policy Eligibility drawer" style={{ width:32, height:32, borderRadius:7, border:`1.5px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkSoft }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
@@ -2759,7 +2761,7 @@ const FARECODE_POLICY_ELIGIBILITY_COLS = [
   { key:'mod', label:'Last Modified', sort:true, width:'140px' },
 ];
 
-function FarecodePolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen }) {
+function FarecodePolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen, onDelete }) {
   const mono = "'SF Mono',Menlo,monospace";
   const cell = (row, key) => {
     if (key==='farecode') return <span style={{ fontFamily:mono, fontSize:12.5, fontWeight:750, color:T.primary }}>{row.farecode}</span>;
@@ -2776,6 +2778,7 @@ function FarecodePolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen
   };
   return <DataTable cols={FARECODE_POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} minWidth={1160}
     sortCol={sortCol} sortDir={sortDir} onSort={onSort} onRowClick={onOpen}
+    rowActions={(row) => [{ label:'Delete Policy Eligibility', icon:'×', danger:true, onClick:() => onDelete(row) }]}
     emptyTitle="No Farecode Policy Eligibility records match your filters"/>;
 }
 
@@ -2796,7 +2799,9 @@ function FarecodeListScreen({ policies }) {
   const [chooser, setChooser] = useState(false);
   const nextPolicyEligibilityId = useRef(7);
 
-  const sourceRows = view==='farecode' ? data : policyEligibility;
+  const activeData = data.filter(row => row.status === 'Active');
+  const activePolicyEligibility = policyEligibility.filter(row => row.status === 'Active');
+  const sourceRows = view==='farecode' ? activeData : activePolicyEligibility;
   let filtered = sourceRows.filter(row => {
     const q = search.trim().toLowerCase();
     const searchable = view==='farecode'
@@ -2833,6 +2838,17 @@ function FarecodeListScreen({ policies }) {
   };
   const openFarecode = row => setPanel({ kind:'farecode', mode:'view', row });
   const openPolicyEligibility = row => setPanel({ kind:'policyEligibility', mode:'view', row });
+  const deleteFarecode = row => {
+    if (!window.confirm(`Delete ${row.code}? Its linked Policy Eligibility configuration will also be deleted.`)) return;
+    setData(previous => previous.filter(item => item.id !== row.id));
+    setPolicyEligibility(previous => previous.filter(item => item.farecode !== row.code));
+    if (panel?.row?.id === row.id) setPanel(null);
+  };
+  const deletePolicyEligibility = row => {
+    if (!window.confirm(`Delete the Policy Eligibility configuration for ${row.farecode}? This action cannot be undone.`)) return;
+    setPolicyEligibility(previous => previous.filter(item => item.id !== row.id));
+    if (panel?.row?.id === row.id) setPanel(null);
+  };
   const TODAY = '18 Jun 2026';
   const savePolicyEligibility = ({ form, overrides }) => {
     const base = data.find(row => row.code===form.farecode);
@@ -2897,11 +2913,9 @@ function FarecodeListScreen({ policies }) {
                 <div role="menu" aria-label="Choose Farecode configuration type" style={{ position:'absolute', right:0, top:'calc(100% + 6px)', width:320, background:'#fff', border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 12px 32px rgba(15,23,42,.14)', zIndex:400, overflow:'hidden' }}>
                   <div style={{ padding:'9px 14px', fontSize:10.5, fontWeight:750, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.6px', background:T.fill, borderBottom:`1px solid ${T.lineSoft}` }}>Choose a configuration</div>
                   <button role="menuitem" onClick={() => openCreate('farecode')} style={{ width:'100%', display:'flex', gap:11, alignItems:'flex-start', padding:'13px 14px', background:'#fff', border:'none', borderBottom:`1px solid ${T.lineSoft}`, textAlign:'left', cursor:'pointer' }}>
-                    <span style={{ width:28, height:28, borderRadius:7, background:T.primary, color:'#fff', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:800, flexShrink:0 }}>F</span>
                     <span><span style={{ display:'block', fontSize:13, fontWeight:700, color:T.ink }}>Farecode</span><span style={{ display:'block', marginTop:3, fontSize:11.5, lineHeight:1.4, color:T.inkFaint }}>Configure sailing context, access, marketing, supplements, and pricing.</span></span>
                   </button>
                   <button role="menuitem" onClick={() => openCreate('policyEligibility')} style={{ width:'100%', display:'flex', gap:11, alignItems:'flex-start', padding:'13px 14px', background:'#fff', border:'none', textAlign:'left', cursor:'pointer' }}>
-                    <span style={{ width:28, height:28, borderRadius:7, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, flexShrink:0 }}>PE</span>
                     <span><span style={{ display:'block', fontSize:13, fontWeight:700, color:T.ink }}>Policy Eligibility</span><span style={{ display:'block', marginTop:3, fontSize:11.5, lineHeight:1.4, color:T.inkFaint }}>Assign policy rules and guest requirements to a Farecode.</span></span>
                   </button>
                 </div>
@@ -2917,8 +2931,8 @@ function FarecodeListScreen({ policies }) {
             <div style={{ padding:'14px 16px 0', background:T.fill }}>
               <div role="tablist" aria-label="Farecode configuration views" style={{ display:'inline-flex', padding:3, borderRadius:9, border:`1px solid ${T.line}`, background:'#EEF2F7', gap:3 }}>
                 {[
-                  ['farecode','Farecode',data.length],
-                  ['policyEligibility','Policy Eligibility',policyEligibility.length],
+                  ['farecode','Farecode',activeData.length],
+                  ['policyEligibility','Policy Eligibility',activePolicyEligibility.length],
                 ].map(([key,label,count]) => {
                   const activeView = view===key;
                   return <button key={key} role="tab" aria-selected={activeView} onClick={() => setView(key)}
@@ -2945,9 +2959,10 @@ function FarecodeListScreen({ policies }) {
                 cols={COLS} rows={pageRows} cell={cell} minWidth={1180}
                 sortCol={sortCol} sortDir={sortDir} onSort={handleSort}
                 onRowClick={openFarecode}
+                rowActions={(row) => [{ label:'Delete Farecode', icon:'×', danger:true, onClick:() => deleteFarecode(row) }]}
                 emptyTitle={hasFilter ? 'No farecodes match your filters' : 'No farecodes yet'}/>
             ) : (
-              <FarecodePolicyEligibilityTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onOpen={openPolicyEligibility}/>
+              <FarecodePolicyEligibilityTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onOpen={openPolicyEligibility} onDelete={deletePolicyEligibility}/>
             )}
 
             <ListPager page={page} setPage={setPage} total={filtered.length} pageSize={PAGE_SIZE} noun={view==='farecode'?'farecodes':'Policy Eligibility records'}/>
@@ -2958,11 +2973,11 @@ function FarecodeListScreen({ policies }) {
       {/* Panel overlay */}
       {panel?.kind==='farecode' && (
         <FarecodePanel mode={panel.mode} viewRow={panel.row} initialEdit={!!panel.initialEdit} policies={policies}
-          policyEligibilityRecord={policyEligibility.find(record => record.farecode===panel.row?.code)} onClose={() => setPanel(null)}/>
+          policyEligibilityRecord={policyEligibility.find(record => record.farecode===panel.row?.code)} onDelete={deleteFarecode} onClose={() => setPanel(null)}/>
       )}
       {panel?.kind==='policyEligibility' && (
         <FarecodePolicyEligibilityPanel mode={panel.mode} editData={panel.row} farecodes={data} policies={policies}
-          onSave={savePolicyEligibility} onClose={() => setPanel(null)}/>
+          onSave={savePolicyEligibility} onDelete={deletePolicyEligibility} onClose={() => setPanel(null)}/>
       )}
     </>
   );

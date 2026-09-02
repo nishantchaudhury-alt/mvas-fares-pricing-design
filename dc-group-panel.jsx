@@ -42,7 +42,7 @@ function DiscardModal({ onKeep, onDiscard }) {
 }
 
 /* ═════════ Group panel (1.2 / 2.2) ═════════ */
-function DCGroupPanel({ kind, group, allGroups, onClose, onSave, onOpenParent, onAddParent, onToggleActive, onDelete }) {
+function DCGroupPanel({ kind, group, allGroups, onClose, onSave, onOpenParent, onAddParent, onDelete }) {
   const isDep = kind === 'deposit';
   const label = isDep ? 'Deposit Policy Group' : 'Cancellation Policy Group';
   const isCreate = !group;
@@ -113,9 +113,8 @@ function DCGroupPanel({ kind, group, allGroups, onClose, onSave, onOpenParent, o
           {isCreate && <button onClick={save} style={btnPrimary}><IcCheck/>Create Group</button>}
           {!isCreate && !isEditing && (<>
             <button onClick={() => { snap.current = JSON.stringify(form); setIsEditing(true); setTab('overview'); }} style={btnPrimary}><IcEdit/>Edit</button>
-            <button onClick={() => onToggleActive(group)} style={group.isActive ? btnDanger : btnGreen}>{group.isActive ? 'Deactivate' : 'Activate'}</button>
-            <button onClick={() => onDelete(group)} disabled={parents.some(p => p.usedIn > 0)} title={parents.some(p => p.usedIn > 0) ? 'Parent policies in this group are in use.' : undefined}
-              style={{ ...btnGhost, color: parents.some(p => p.usedIn > 0) ? T.inkFaint : T.inkSoft, cursor: parents.some(p => p.usedIn > 0) ? 'not-allowed' : 'pointer' }}>Delete</button>
+            <DeleteIconButton onClick={() => onDelete(group)} disabled={parents.some(p => p.usedIn > 0)} label={`Delete ${group.name}`}
+              title={parents.some(p => p.usedIn > 0) ? 'Parent policies in this group are in use.' : 'Delete Policy Group'} />
           </>)}
           {!isCreate && isEditing && (<>
             <button onClick={() => guard(() => { setForm(build()); setErrors({}); setIsEditing(false); })} style={btnGhost}>Cancel</button>

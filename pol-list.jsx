@@ -52,8 +52,8 @@ function PoliciesList({ policies, setPolicies, onNav }) {
 
   /* ── filtering / search ── */
   const term = q.trim().toLowerCase();
-  const tablePolicies = policies.filter(g => g.status !== 'Draft');
-  const tableParents = g => g.parents.filter(p => p.status !== 'Draft');
+  const tablePolicies = policies.filter(g => g.status === 'Active');
+  const tableParents = g => g.parents.filter(p => p.status === 'Active');
   const hits = g => {
     if (!term) return true;
     if (`${g.code} ${g.name}`.toLowerCase().includes(term)) return true;
@@ -67,7 +67,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const searchOpen = useMPL(() => {
     if (!term) return null;
     const s = new Set();
-    rows.forEach(g => { s.add(g.id); g.parents.forEach(p => s.add(p.id)); });
+    rows.forEach(g => { s.add(g.id); tableParents(g).forEach(p => s.add(p.id)); });
     return s;
   }, [term, rows.length, policies]);
   const shown = id => searchOpen ? searchOpen.has(id) : isOpen(id);
@@ -120,7 +120,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
         id:pid, code:d.parentCode, name:d.pForm.name.trim() || 'Untitled policy',
         status, isDefault:d.pForm.isDefault, usedIn:existingP?.usedIn || 0, mod:TODAY, created:existingP?.created || TODAY, editor:ME,
         [key]:d.rows, usedInFaretypes:existingP?.usedInFaretypes || [], usedInFarecodes:existingP?.usedInFarecodes || [],
-        ...(f.type === 'cancel' ? { isRefundable:d.pForm.refundable } : {}),
+        ...(f.type === 'cancel' ? { isRefundable:f.gForm.refundable !== false } : {}),
       };
     });
     const defaultParent = builtParents.find(p => p.isDefault);
@@ -148,7 +148,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const tryActivateFlow = () => {
     const drafts = flowPolicyDrafts(flow);
     const issueSets = drafts.map(d => chainIssues({ type:flow.type, policies, groupId:flow.groupId, groupName:flow.gForm.name,
-      parentName:d.pForm.name, rows:d.rows, isRefundable:d.pForm.refundable }));
+      parentName:d.pForm.name, rows:d.rows, isRefundable:flow.gForm.refundable !== false }));
     const firstInvalid = issueSets.findIndex(items => items.length > 0);
     if (firstInvalid >= 0) {
       const allIssues = issueSets.flat();
@@ -175,7 +175,8 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const editParent = (g, p, addRow) => {
     setFlow(null); openIds(g.id, p.id);
     const kids = kidsOf(p).slice();
-    setEdit({ level:'parent', groupId:g.id, parentId:p.id, form:pFormOf(p), init:pFormOf(p), rows:addRow ? [...kids, blankChild(g.type)] : kids, initRows:kidsOf(p), issues:[], validationAttempt:0 });
+    const form = { ...pFormOf(p), ...(g.type === 'cancel' ? { refundable:g.isRefundable !== false } : {}) };
+    setEdit({ level:'parent', groupId:g.id, parentId:p.id, form, init:form, rows:addRow ? [...kids, blankChild(g.type)] : kids, initRows:kidsOf(p), issues:[], validationAttempt:0 });
   };
   const editDirty = e => JSON.stringify(e.form) !== JSON.stringify(e.init) || (e.rows && JSON.stringify(e.rows) !== JSON.stringify(e.initRows));
   const askCancelEdit = () => edit && editDirty(edit) ? setDlg({ type:'discardEdit' }) : setEdit(null);
@@ -183,7 +184,18 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const saveGroupEdit = () => {
     const e = edit, g = policies.find(x => x.id === e.groupId);
     if (!e.form.name.trim()) { setEdit({ ...e, err:{ name:'Group name is required' } }); return; }
-    let next = policies.map(x => x.id === g.id ? { ...x, name:e.form.name.trim(), status:e.form.active ? 'Active' : g.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY, ...(g.type === 'cancel' ? { isRefundable:e.form.refundable } : {}) } : x);
+    if (policies.some(x => x.type === g.type && x.id !== g.id && x.status === 'Active' && x.name.trim().toLowerCase() === e.form.name.trim().toLowerCase())) {
+      setEdit({ ...e, err:{ name:`An active ${POL_META[g.type].label.toLowerCase()} group with this name already exists.` } });
+      return;
+    }
+    const inheritedTermIssues = g.type === 'cancel'
+      ? g.parents.flatMap(p => refundabilityIssues(kidsOf(p), e.form.refundable !== false).map(issue => ({ ...issue, text:`${p.code}: ${issue.text}` })))
+      : [];
+    if (inheritedTermIssues.length) { setEdit({ ...e, issues:inheritedTermIssues }); return; }
+    let next = policies.map(x => x.id === g.id ? {
+      ...x, name:e.form.name.trim(), status:e.form.active ? 'Active' : g.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY,
+      ...(g.type === 'cancel' ? { isRefundable:e.form.refundable, parents:x.parents.map(p => ({ ...p, isRefundable:e.form.refundable })) } : {}),
+    } : x);
     if (e.form.isDefault) next = next.map(x => x.type === g.type && x.id !== g.id ? { ...x, isDefault:false } : x);
     setPolicies(next); setEdit(null);
   };
@@ -191,7 +203,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
     const e = edit, g = policies.find(x => x.id === e.groupId), p = g.parents.find(x => x.id === e.parentId);
     if (!e.form.name.trim()) { setEdit({ ...e, err:{ name:'Policy name is required' } }); return; }
     if (e.form.active) {
-      const issues = chainIssues({ type:g.type, policies, groupId:g.id, groupName:g.name, parentName:e.form.name, rows:e.rows, isRefundable:e.form.refundable });
+      const issues = chainIssues({ type:g.type, policies, groupId:g.id, groupName:g.name, parentName:e.form.name, rows:e.rows, isRefundable:g.isRefundable !== false });
       if (issues.length) { setEdit({ ...e, issues, validationAttempt:(e.validationAttempt || 0) + 1 }); return; }
     }
     const key = POL_META[g.type].childKey;
@@ -199,31 +211,12 @@ function PoliciesList({ policies, setPolicies, onNav }) {
       ...x, mod:TODAY,
       parents:x.parents.map(y => y.id !== p.id
         ? (e.form.isDefault ? { ...y, isDefault:false } : y)
-        : { ...y, name:e.form.name.trim(), status:e.form.active ? 'Active' : p.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY, [key]:e.rows, ...(g.type === 'cancel' ? { isRefundable:e.form.refundable } : {}) }),
+        : { ...y, name:e.form.name.trim(), status:e.form.active ? 'Active' : p.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY, [key]:e.rows, ...(g.type === 'cancel' ? { isRefundable:g.isRefundable !== false } : {}) }),
     }));
     setEdit(null);
   };
 
-  /* ── status / delete ops ── */
-  const setGroupStatus = (g, status) => setPolicies(policies.map(x => x.id === g.id ? { ...x, status, mod:TODAY } : x));
-  const toggleGroup = g => {
-    if (g.status !== 'Active') {
-      if (!g.parents.some(p => p.status === 'Active')) { setDlg({ type:'needParent', group:g }); return; }
-      setGroupStatus(g, 'Active'); return;
-    }
-    if (usedInGroup(g) > 0) { setDlg({ type:'deactivateGroup', group:g }); return; }
-    setGroupStatus(g, 'Inactive');
-  };
-  const setParentStatus = (g, p, status) => setPolicies(policies.map(x => x.id !== g.id ? x : { ...x, parents:x.parents.map(y => y.id === p.id ? { ...y, status, mod:TODAY } : y), mod:TODAY }));
-  const toggleParent = (g, p) => {
-    if (p.status !== 'Active') {
-      const issues = chainIssues({ type:g.type, policies, groupId:g.id, groupName:g.name, parentName:p.name, rows:kidsOf(p), isRefundable:p.isRefundable !== false });
-      if (issues.length) { setDlg({ type:'cannotActivate', group:g, parent:p, issues }); return; }
-      setParentStatus(g, p, 'Active'); return;
-    }
-    if (p.usedIn > 0) { setDlg({ type:'deactivateParent', group:g, parent:p }); return; }
-    setParentStatus(g, p, 'Inactive');
-  };
+  /* ── delete ops ── */
   const doDeleteGroup = g => { setPolicies(policies.filter(x => x.id !== g.id)); setDlg(null); setEdit(null); setDetail(null); };
   const doDeleteParent = (g, p) => { setPolicies(policies.map(x => x.id !== g.id ? x : { ...x, parents:x.parents.filter(y => y.id !== p.id) })); setDlg(null); setEdit(null); setDetail(d => d && d.parentId === p.id ? { groupId:g.id } : d); };
 
@@ -237,7 +230,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const editorCell = editor => <span style={{ fontSize:12.5, color:T.inkSoft, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block', maxWidth:'100%' }}>{editor}</span>;
   const cbx = (id, on) => <input type="checkbox" checked={on} onChange={e => { e.stopPropagation(); setSel(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; }); }} style={{ accentColor:T.primary, width:13, height:13, cursor:'pointer' }}/>;
 
-  const formRow = (key, content) => <tr key={key}><td colSpan={6} style={{ padding:0, background:'#fff', borderBottom:`1px solid ${T.line}` }}>{content}</td></tr>;
+  const formRow = (key, content) => <tr key={key}><td colSpan={7} style={{ padding:0, background:'#fff', borderBottom:`1px solid ${T.line}` }}>{content}</td></tr>;
 
   /* ── tree rows ── */
   const dtsChip = txt => <span style={{ fontFamily:MONO, fontSize:10.5, fontWeight:700, color:T.inkSoft, background:'#fff', border:`1px solid ${T.line}`, padding:'2px 6px', borderRadius:4, whiteSpace:'nowrap' }}>{txt}</span>;
@@ -280,6 +273,14 @@ function PoliciesList({ policies, setPolicies, onNav }) {
           <td style={{ ...TD, padding:'9px 14px' }}>{editorCell(g.editor)}</td>
           <td style={{ ...TD, padding:'9px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{g.mod}</td>
           <td style={{ ...TD, padding:'9px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{g.created}</td>
+          <td style={{ ...TD, width:44, padding:'6px 8px', textAlign:'right' }} onClick={e => e.stopPropagation()}>
+            <RowMenu size={20} items={[{
+              label:'Delete group', icon:'×', danger:true,
+              disabled:usedInGroup(g) > 0,
+              title:usedInGroup(g) > 0 ? 'In use by Faretypes/Farecodes.' : undefined,
+              onClick:() => setDlg({ type:'confirmDeleteGroup', group:g }),
+            }]}/>
+          </td>
         </tr>
       );
       if (!open) return;
@@ -309,6 +310,14 @@ function PoliciesList({ policies, setPolicies, onNav }) {
             <td style={{ ...TD, padding:'7px 14px' }}>{editorCell(p.editor)}</td>
             <td style={{ ...TD, padding:'7px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{p.mod}</td>
             <td style={{ ...TD, padding:'7px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{p.created}</td>
+            <td style={{ ...TD, width:44, padding:'5px 8px', textAlign:'right' }} onClick={e => e.stopPropagation()}>
+              <RowMenu size={20} items={[{
+                label:'Delete policy', icon:'×', danger:true,
+                disabled:p.usedIn > 0,
+                title:p.usedIn > 0 ? 'In use by Faretypes/Farecodes.' : undefined,
+                onClick:() => setDlg({ type:'confirmDeleteParent', group:g, parent:p }),
+              }]}/>
+            </td>
           </tr>
         );
         if (!pOpen) return;
@@ -326,7 +335,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
                 <CodeChip level="line">{childCode(p.code, i)}</CodeChip>
               </td>
               <td style={{ ...TD, padding:'6px 14px' }}>{kidSummary(g.type, r)}</td>
-              <td colSpan={4} style={{ ...TD, padding:'6px 14px' }}></td>
+              <td colSpan={5} style={{ ...TD, padding:'6px 14px' }}></td>
             </tr>
           );
         });
@@ -388,13 +397,13 @@ function PoliciesList({ policies, setPolicies, onNav }) {
           </div>
 
           <table style={{ width:'100%', minWidth:960, borderCollapse:'collapse' }}>
-            <colgroup><col style={{ width:148 }}/><col style={{ width:'auto' }}/><col style={{ width:100 }}/><col style={{ width:160 }}/><col style={{ width:112 }}/><col style={{ width:112 }}/></colgroup>
+            <colgroup><col style={{ width:148 }}/><col style={{ width:'auto' }}/><col style={{ width:100 }}/><col style={{ width:160 }}/><col style={{ width:112 }}/><col style={{ width:112 }}/><col style={{ width:44 }}/></colgroup>
             <thead><tr>
-              <th style={TH}>Code</th><th style={TH}>Name</th><th style={TH}>Status</th><th style={TH}>Created by</th><th style={TH}>Last Modified</th><th style={TH}>Created On</th>
+              <th style={TH}>Code</th><th style={TH}>Name</th><th style={TH}>Status</th><th style={TH}>Created by</th><th style={TH}>Last Modified</th><th style={TH}>Created On</th><th aria-label="Actions" style={{ ...TH, width:44, padding:'9px 8px' }}></th>
             </tr></thead>
             <tbody>
               {pageRows.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding:'72px 20px', textAlign:'center' }}>
+                <tr><td colSpan={7} style={{ padding:'72px 20px', textAlign:'center' }}>
                   <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                     <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={T.inkFaint} strokeWidth="1.4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <div style={{ fontSize:15, fontWeight:600, color:T.inkSoft }}>{term || typeF !== 'all' ? 'No policies match your filters.' : 'No policies yet.'}</div>
@@ -430,10 +439,10 @@ function PoliciesList({ policies, setPolicies, onNav }) {
         <PolDetailDrawer target={detail} policies={policies} depParents={activeDepParents}
           onClose={() => setDetail(null)}
           onOpenParent={p => setDetail({ groupId:detail.groupId, parentId:p.id })}
+          onBackToGroup={() => setDetail({ groupId:detail.groupId })}
           onEdit={(g, p) => { setDetail(null); p ? editParent(g, p) : editGroup(g); }}
           onFinish={(g, p) => { setDetail(null); finishSetup(g, p && p.status === 'Draft' && g.status !== 'Draft' ? p : null); }}
           onAddPolicy={g => { setDetail(null); addPolicyTo(g); }}
-          onToggleActive={(g, p) => p ? toggleParent(g, p) : toggleGroup(g)}
           onDelete={(g, p) => setDlg(p ? { type:'confirmDeleteParent', group:g, parent:p } : { type:'confirmDeleteGroup', group:g })}/>
       )}
 
@@ -447,12 +456,11 @@ function PoliciesList({ policies, setPolicies, onNav }) {
       })()}
 
       {flow && (
-        <PolFlowDrawer flow={flow} setFlow={setFlow} activatable={(() => { const d = activeFlowPolicy(flow); return parentActivatable(flow.type, d.pForm, d.rows); })()}
+        <PolFlowDrawer flow={flow} setFlow={setFlow} policies={policies} activatable={(() => { const d = activeFlowPolicy(flow); return parentActivatable(flow.type, { ...d.pForm, refundable:flow.gForm.refundable }, d.rows); })()}
           onCancel={askCancelFlow} onActivate={tryActivateFlow}/>
       )}
 
       <PolDialogs dlg={dlg} setDlg={setDlg} onDiscardFlow={() => { setFlow(null); setDlg(null); }} onDiscardEdit={() => { setEdit(null); setDlg(null); }}
-        onDeactivateGroup={g => { setGroupStatus(g, 'Inactive'); setDlg(null); }} onDeactivateParent={(g, p) => { setParentStatus(g, p, 'Inactive'); setDlg(null); }}
         onDeleteGroup={doDeleteGroup} onDeleteParent={doDeleteParent}/>
     </div>
   );

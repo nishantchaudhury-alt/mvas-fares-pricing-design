@@ -176,24 +176,26 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
   }, [rows.length]);
 
   if (!rows.length) return (
-    <div role="group" aria-label={`Empty ${meta.childWords.toLowerCase()} configuration`} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px', border:`1px dashed ${T.line}`, borderRadius:8, background:T.fill }}>
-      <span aria-hidden="true" style={{ width:32, height:32, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, borderRadius:7, border:`1px solid ${T.primaryLine}`, background:'#fff', color:T.primary, fontSize:18, fontWeight:500 }}>+</span>
+    <div role="group" aria-label={`Empty ${meta.childWords.toLowerCase()} configuration`} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', border:`1px solid ${T.line}`, borderRadius:7, background:T.fill }}>
+      <span aria-hidden="true" style={{ width:24, height:24, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, borderRadius:6, border:`1px solid ${T.primaryLine}`, background:'#fff', color:T.primary, fontSize:14, fontWeight:600 }}>+</span>
       <div style={{ minWidth:0, flex:1 }}>
-        <div style={{ color:T.ink, fontSize:12.5, fontWeight:700 }}>Create the first {meta.childWord.toLowerCase()}</div>
-        <div style={{ marginTop:2, color:T.inkSoft, fontSize:10.75, lineHeight:1.4 }}>Define its DTS window, {isDep ? 'deposit amount' : 'penalty'}, and stateroom coverage directly in the table.</div>
+        <div style={{ color:T.ink, fontSize:11.5, fontWeight:700 }}>No {meta.childWords.toLowerCase()} configured</div>
+        <div style={{ marginTop:1, color:T.inkSoft, fontSize:10.25, lineHeight:1.35 }}>Add the first row to define DTS, {isDep ? 'deposit amount' : 'penalty'}, and coverage.</div>
       </div>
-      {editing && <button type="button" onClick={addRow} style={{ flexShrink:0, padding:'7px 11px', border:'none', borderRadius:7, background:T.primary, color:'#fff', fontSize:11.5, fontWeight:700, cursor:'pointer' }}>+ Add {meta.childWord}</button>}
+      {editing && <button type="button" onClick={addRow} style={{ flexShrink:0, padding:'5px 9px', border:'none', borderRadius:6, background:T.primary, color:'#fff', fontSize:10.5, fontWeight:700, cursor:'pointer' }}>+ Add {meta.childWord}</button>}
     </div>
   );
 
-  const header = isDep
-    ? ['','Line ID','Marketing Name','Begin DTS','End DTS','Type','Amount','Stateroom Coverage','Cancel Applies','']
-    : ['','Band ID','Begin DTS','End DTS','Penalty Type','Penalty Value','Stateroom Coverage',''];
+  const dataHeader = isDep
+    ? ['Line ID','Marketing Name','Begin DTS','End DTS','Type','Amount','Stateroom Coverage','Cancel Applies']
+    : ['Band ID','Begin DTS','End DTS','Penalty Type','Penalty Value','Stateroom Coverage'];
+  const dataWidths = isDep ? [76,170,86,86,150,110,180,112] : [76,86,86,190,116,180];
+  const header = editing ? ['', ...dataHeader, ''] : dataHeader;
   const colSpan = header.length;
-  const widths = isDep ? [38,76,170,86,86,150,110,180,112,58] : [38,76,86,86,190,116,180,58];
+  const widths = editing ? [38, ...dataWidths, 58] : dataWidths;
   const minWidth = widths.reduce((sum, width) => sum + width, 0);
-  const thStyle = { position:'sticky', top:0, zIndex:2, padding:'10px 8px', textAlign:'left', color:T.inkLabel, background:T.fill, fontSize:9.5, fontWeight:800, textTransform:'uppercase', letterSpacing:'.65px', whiteSpace:'nowrap', borderBottom:`1px solid ${T.line}` };
-  const tdStyle = { padding:'8px', color:T.ink, fontSize:12, lineHeight:1.3, borderBottom:`1px solid ${T.lineSoft}`, verticalAlign:'top' };
+  const thStyle = { position:'sticky', top:0, zIndex:2, padding:'8px', textAlign:'left', color:T.inkLabel, background:'#F8FAFC', fontSize:9.25, fontWeight:800, textTransform:'uppercase', letterSpacing:'.62px', whiteSpace:'nowrap', borderBottom:`1px solid ${T.line}` };
+  const tdStyle = { padding:'9px 8px', color:T.ink, fontSize:12, lineHeight:1.3, borderBottom:`1px solid ${T.lineSoft}`, verticalAlign:'top' };
   const errorId = (i, field) => `policy-row-${type}-${i}-${field}-error`;
   const fieldCell = (i, field, control, extra = {}) => {
     const error = cellErr[`${i}:${field}`];
@@ -205,7 +207,7 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
   };
 
   return (
-    <div style={{ border:`1px solid ${T.line}`, borderRadius:8, background:'#fff', overflow:'hidden' }}>
+    <div style={{ border:`1px solid ${T.line}`, borderRadius:7, background:'#fff', overflow:'hidden', boxShadow:'0 1px 2px rgba(15,23,42,.04)' }}>
       <div className="hscroll" style={{ overflow:'auto', maxHeight:rows.length > 6 ? 'min(46vh, 520px)' : 'none', scrollbarGutter:'stable' }}>
         <table aria-label={`${meta.childWords} configuration`} style={{ width:'100%', minWidth, borderCollapse:'collapse', tableLayout:'fixed' }}>
           <colgroup>{widths.map((width, i) => <col key={i} style={{ width }}/>)}</colgroup>
@@ -219,41 +221,62 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
               const valDis = !isDep && (r.penaltyType === 'NONE' || r.penaltyType === 'FULL_DEPOSIT');
               return (
                   <tr key={`policy-row-${i}`} onDragOver={editing ? e => e.preventDefault() : undefined} onDrop={editing ? () => dropAt(i) : undefined}
-                    style={{ background:rowErrorCount ? '#FFFBEB' : '#fff' }}>
-                    <td style={{ ...tdStyle, textAlign:'center' }}>
-                      {editing && <span role="button" tabIndex="0" aria-label={`Reorder ${meta.childWord.toLowerCase()} ${i + 1}. Use up and down arrow keys to move it.`} draggable
+                    style={{ background:'#fff' }}>
+                    {editing && <td style={{ ...tdStyle, textAlign:'center', boxShadow:rowErrorCount ? 'inset 3px 0 0 #D97706' : 'none' }}>
+                      <span role="button" tabIndex="0" aria-label={`Reorder ${meta.childWord.toLowerCase()} ${i + 1}. Use up and down arrow keys to move it.`} draggable
                         onDragStart={() => { dragI.current = i; }} onDragEnd={() => { dragI.current = null; }}
                         onKeyDown={e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); moveRow(i, i + (e.key === 'ArrowUp' ? -1 : 1)); } }}
-                        style={{ width:24, height:24, display:'inline-flex', alignItems:'center', justifyContent:'center', color:T.inkFaint, cursor:'grab' }}><IcGrip/></span>}
+                        style={{ width:24, height:24, display:'inline-flex', alignItems:'center', justifyContent:'center', color:T.inkFaint, cursor:'grab' }}><IcGrip/></span>
+                    </td>}
+                    <td style={{ ...tdStyle, fontFamily:MONO, fontWeight:800, color:T.inkSoft, boxShadow:!editing && rowErrorCount ? 'inset 3px 0 0 #D97706' : 'none' }}>
+                      <span style={{ display:'inline-flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
+                        <span style={{ display:'inline-flex', alignItems:'center', minHeight:22, padding:'2px 6px', border:`1px solid ${T.line}`, borderRadius:5, background:T.fill, color:T.inkSoft }}>{code}</span>
+                        {rowErrorCount > 0 && <span aria-label={`${rowErrorCount} ${rowErrorCount === 1 ? 'field needs' : 'fields need'} attention`} title={`${rowErrorCount} ${rowErrorCount === 1 ? 'issue' : 'issues'} in this row`} style={{ display:'inline-flex', alignItems:'center', minHeight:20, padding:'2px 6px', borderRadius:999, background:'#FFF7E6', color:'#92400E', fontFamily:'inherit', fontSize:9.5, fontWeight:800, whiteSpace:'nowrap' }}>! {rowErrorCount}</span>}
+                      </span>
                     </td>
-                    <td style={{ ...tdStyle, fontFamily:MONO, fontWeight:800, color:rowErrorCount ? '#92400E' : T.inkSoft }}>
-                      <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}>{code}{rowErrorCount > 0 && <span aria-label={`${rowErrorCount} fields need attention`} style={{ color:'#92400E', fontFamily:'inherit' }}>!</span>}</span>
-                    </td>
-                    {isDep && fieldCell(i, 'marketingName', (error, id) => <InlineRowInput value={r.marketingName} onChange={v => upd(i, 'marketingName', v)} error={error} errorId={id} label={`Marketing name for line ${i + 1}`} placeholder="e.g. Full Deposit"/>)}
-                    {fieldCell(i, 'beginDts', (error, id) => <InlineRowInput value={r.beginDts} onChange={v => upd(i, 'beginDts', v.replace(/[^0-9]/g, ''))} error={error} errorId={id} label={`Begin DTS for ${meta.childWord.toLowerCase()} ${i + 1}`} placeholder="∞" inputMode="numeric"/>)}
-                    {fieldCell(i, 'endDts', (error, id) => <InlineRowInput value={r.endDts} onChange={v => upd(i, 'endDts', v.replace(/[^0-9]/g, ''))} error={error} errorId={id} label={`End DTS for ${meta.childWord.toLowerCase()} ${i + 1}`} placeholder="0" inputMode="numeric"/>)}
+                    {isDep && (editing
+                      ? fieldCell(i, 'marketingName', (error, id) => <InlineRowInput value={r.marketingName} onChange={v => upd(i, 'marketingName', v)} error={error} errorId={id} label={`Marketing name for line ${i + 1}`} placeholder="e.g. Full Deposit"/>)
+                      : <td style={tdStyle}>{r.marketingName || '—'}</td>)}
+                    {editing
+                      ? fieldCell(i, 'beginDts', (error, id) => <InlineRowInput value={r.beginDts} onChange={v => upd(i, 'beginDts', v.replace(/[^0-9]/g, ''))} error={error} errorId={id} label={`Begin DTS for ${meta.childWord.toLowerCase()} ${i + 1}`} placeholder="∞" inputMode="numeric"/>)
+                      : <td style={tdStyle}>{isBlank(r.beginDts) ? '∞' : r.beginDts}</td>}
+                    {editing
+                      ? fieldCell(i, 'endDts', (error, id) => <InlineRowInput value={r.endDts} onChange={v => upd(i, 'endDts', v.replace(/[^0-9]/g, ''))} error={error} errorId={id} label={`End DTS for ${meta.childWord.toLowerCase()} ${i + 1}`} placeholder="0" inputMode="numeric"/>)
+                      : <td style={tdStyle}>{isBlank(r.endDts) ? '—' : r.endDts}</td>}
                     {isDep
-                      ? <td style={tdStyle}><Sel compact value={r.depositType} onChange={v => upd(i, 'depositType', v)} opts={ROW_DEP_TYPES} ariaLabel={`Deposit type for line ${i + 1}`}/></td>
-                      : <td style={tdStyle}><Sel compact value={r.penaltyType} onChange={v => upd(i, 'penaltyType', v)} opts={ROW_PEN_TYPES} ariaLabel={`Penalty type for band ${i + 1}`}/></td>}
-                    {fieldCell(i, isDep ? 'amount' : 'penaltyValue', (error, id) => <InlineRowInput
-                      value={valDis ? '' : isDep ? r.amount : r.penaltyValue} disabled={valDis}
-                      onChange={v => upd(i, isDep ? 'amount' : 'penaltyValue', v.replace(/[^0-9.]/g, ''))}
-                      error={error} errorId={id} label={`${isDep ? 'Amount' : 'Penalty value'} for ${meta.childWord.toLowerCase()} ${i + 1}`}
-                      suffix={isDep ? (r.depositType === 'PCT' ? '%' : '$') : r.penaltyType === 'PCT_CABIN_FARE' ? '%' : r.penaltyType === 'FIXED' ? '$' : '—'} inputMode="decimal"/>)}
-                    {fieldCell(i, 'cats', (error, id) => <PolicyTableCatSelect value={r.cats || []} onChange={v => upd(i, 'cats', v)} error={error} errorId={id} label={`Stateroom coverage for ${meta.childWord.toLowerCase()} ${i + 1}`}/>)}
-                    {isDep && <td style={{ ...tdStyle, textAlign:'center', paddingTop:14 }}><Toggle on={r.cancelApplies} dis={!editing} onChange={v => upd(i, 'cancelApplies', v)} label={`Cancellation policy applies to line ${i + 1}`}/></td>}
-                    <td style={{ ...tdStyle, textAlign:'center' }}>
-                      {editing && <button type="button" aria-label={`Remove ${meta.childWord.toLowerCase()} ${i + 1}`} onClick={() => removeRow(i)} disabled={rows.length <= 1}
+                      ? <td style={{ ...tdStyle, fontFamily:MONO }}>{editing ? <Sel compact value={r.depositType} onChange={v => upd(i, 'depositType', v)} opts={ROW_DEP_TYPES} ariaLabel={`Deposit type for line ${i + 1}`}/> : r.depositType}</td>
+                      : <td style={{ ...tdStyle, fontFamily:MONO }}>{editing ? <Sel compact value={r.penaltyType} onChange={v => upd(i, 'penaltyType', v)} opts={ROW_PEN_TYPES} ariaLabel={`Penalty type for band ${i + 1}`}/> : r.penaltyType}</td>}
+                    {editing
+                      ? fieldCell(i, isDep ? 'amount' : 'penaltyValue', (error, id) => <InlineRowInput
+                          value={valDis ? '' : isDep ? r.amount : r.penaltyValue} disabled={valDis}
+                          onChange={v => upd(i, isDep ? 'amount' : 'penaltyValue', v.replace(/[^0-9.]/g, ''))}
+                          error={error} errorId={id} label={`${isDep ? 'Amount' : 'Penalty value'} for ${meta.childWord.toLowerCase()} ${i + 1}`}
+                          suffix={isDep ? (r.depositType === 'PCT' ? '%' : '$') : r.penaltyType === 'PCT_CABIN_FARE' ? '%' : r.penaltyType === 'FIXED' ? '$' : '—'} inputMode="decimal"/>)
+                      : <td style={{ ...tdStyle, fontWeight:650 }}>{isDep ? depAmountLabel(r) : penAmountLabel(r)}</td>}
+                    {editing
+                      ? fieldCell(i, 'cats', (error, id) => <PolicyTableCatSelect value={r.cats || []} onChange={v => upd(i, 'cats', v)} error={error} errorId={id} label={`Stateroom coverage for ${meta.childWord.toLowerCase()} ${i + 1}`}/>)
+                      : <td style={tdStyle}>{catSentence(r.cats || [])}</td>}
+                    {isDep && <td style={{ ...tdStyle, textAlign:'center', paddingTop:editing ? 14 : 8 }}>{editing
+                      ? <Toggle on={r.cancelApplies} dis={false} onChange={v => upd(i, 'cancelApplies', v)} label={`Cancellation policy applies to line ${i + 1}`}/>
+                      : <span style={{ display:'inline-flex', padding:'2px 7px', borderRadius:999, background:r.cancelApplies ? T.primaryBg : T.fill, color:r.cancelApplies ? T.primary : T.inkFaint, fontSize:10.5, fontWeight:700 }}>{r.cancelApplies ? 'Yes' : 'No'}</span>}
+                    </td>}
+                    {editing && <td style={{ ...tdStyle, textAlign:'center' }}>
+                      <button type="button" aria-label={`Remove ${meta.childWord.toLowerCase()} ${i + 1}`} onClick={() => removeRow(i)} disabled={rows.length <= 1}
                         title={rows.length <= 1 ? `At least one ${meta.childWord.toLowerCase()} is required` : `Remove ${meta.childWord.toLowerCase()}`}
-                        style={{ width:28, height:28, borderRadius:6, border:'none', background:'transparent', color:rows.length <= 1 ? T.inkFaint : T.red, cursor:rows.length <= 1 ? 'not-allowed' : 'pointer', opacity:rows.length <= 1 ? .45 : 1, display:'inline-flex', alignItems:'center', justifyContent:'center' }}><IcX size={13}/></button>}
-                    </td>
+                        style={{ width:28, height:28, borderRadius:6, border:'none', background:'transparent', color:rows.length <= 1 ? T.inkFaint : T.red, cursor:rows.length <= 1 ? 'not-allowed' : 'pointer', opacity:rows.length <= 1 ? .45 : 1, display:'inline-flex', alignItems:'center', justifyContent:'center' }}><IcX size={13}/></button>
+                    </td>}
                   </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      {editing && <button type="button" onClick={addRow} style={{ width:'100%', padding:'10px 14px', textAlign:'left', border:'none', background:T.fill, color:T.primary, fontSize:12, fontWeight:800, cursor:'pointer' }}>+ Add {meta.childWord}</button>}
+      {editing && <div style={{ display:'flex', alignItems:'center', minHeight:42, padding:'6px 9px', borderTop:`1px solid ${T.lineSoft}`, background:'#F8FAFC' }}>
+        <button type="button" onClick={addRow} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'5px 9px', border:`1px solid ${T.line}`, borderRadius:6, background:'#fff', color:T.primary, fontSize:10.5, fontWeight:800, cursor:'pointer', boxShadow:'0 1px 1px rgba(15,23,42,.03)' }}>
+          <span aria-hidden="true" style={{ fontSize:14, lineHeight:1 }}>+</span> Add {meta.childWord}
+        </button>
+        <span style={{ marginLeft:8, color:T.inkFaint, fontSize:9.75 }}>Adds a new row to this schedule.</span>
+      </div>}
     </div>
   );
 }

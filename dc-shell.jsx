@@ -397,11 +397,18 @@ function AuditList({ status, label }) {
 }
 function UsedInTables({ row }) {
   const fts = row?.usedInFaretypes || [], fcs = row?.usedInFarecodes || [];
-  if (!fts.length && !fcs.length) return (<div style={{ background:'#fff', border:`1px solid ${T.line}`, borderRadius:10, padding:'48px 24px', textAlign:'center', fontSize:13.5, color:T.inkSoft }}>Not currently referenced by any Faretype or Farecode.</div>);
+  const visibleCount = fts.length + fcs.length;
+  const totalCount = Math.max(Number(row?.usedIn) || 0, visibleCount);
+  if (!totalCount) return (<div style={{ background:'#fff', border:`1px solid ${T.line}`, borderRadius:10, padding:'48px 24px', textAlign:'center', fontSize:13.5, color:T.inkSoft }}>Not currently referenced by any Faretype or Farecode.</div>);
   const rs = { display:'grid', gridTemplateColumns:'110px 1fr 90px 110px', gap:10, padding:'9px 14px', fontSize:12.5, alignItems:'center', borderBottom:'1px solid #F1F5F9' };
   const head = { ...rs, background:T.fill, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', fontSize:10.5, letterSpacing:'.5px' };
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+      {totalCount > visibleCount && (
+        <div role="note" style={{ padding:'10px 12px', border:`1px solid ${T.primaryLine}`, borderRadius:8, background:T.primaryBg, color:T.inkSoft, fontSize:11.5, lineHeight:1.45 }}>
+          <strong style={{ color:T.ink }}>{totalCount} total references.</strong> Showing {visibleCount} detailed {visibleCount === 1 ? 'record' : 'records'} available in this prototype.
+        </div>
+      )}
       {fts.length > 0 && (
         <SCard title="Faretypes Using This Policy">
           <div style={{ border:`1px solid ${T.lineSoft}`, borderRadius:8, overflow:'hidden' }}>
@@ -417,6 +424,9 @@ function UsedInTables({ row }) {
             {fcs.map((f,i) => (<div key={i} style={rs}><span style={{ fontFamily:MONO, fontWeight:700, color:T.primary }}>{f.code}</span><span>{f.ship}</span><StatusBadge status={f.status}/><span style={{ color:T.inkSoft }}>{f.mod}</span></div>))}
           </div>
         </SCard>
+      )}
+      {visibleCount === 0 && (
+        <div style={{ background:'#fff', border:`1px solid ${T.line}`, borderRadius:10, padding:'36px 24px', textAlign:'center', fontSize:13, color:T.inkSoft }}>Detailed reference records are not available in this prototype.</div>
       )}
     </div>
   );
@@ -598,7 +608,7 @@ function Modal({ title, icon, children, actions, width = 420, onClose }) {
 }
 
 /* ─────────── Group list view (1.1 / 2.1) ─────────── */
-function DCGroupList({ kind, groups, onOpen, onCreate, onToggleActive, onDelete }) {
+function DCGroupList({ kind, groups, onOpen, onCreate, onDelete }) {
   const isDep = kind === 'deposit';
   const [tab, setTab] = useSD('all');
   const [q, setQ] = useSD('');
@@ -687,8 +697,6 @@ function DCGroupList({ kind, groups, onOpen, onCreate, onToggleActive, onDelete 
                       <RowMenu items={[
                         { icon:'↗', label:'View', onClick:() => onOpen(g) },
                         { icon:'✎', label:'Edit', onClick:() => onOpen(g, true) },
-                        { sep:true },
-                        g.isActive ? { icon:'⊘', label:'Deactivate', danger:true, onClick:() => onToggleActive(g) } : { icon:'✓', label:'Activate', success:true, onClick:() => onToggleActive(g) },
                         { sep:true },
                         { icon:'⌫', label:'Delete', danger:true, disabled:g.parents.some(p => p.usedIn > 0), title: g.parents.some(p => p.usedIn > 0) ? 'Cannot delete — parent policies are in use.' : undefined, onClick:() => onDelete(g) },
                       ]}/>

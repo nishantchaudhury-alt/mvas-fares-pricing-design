@@ -183,7 +183,7 @@ function ChargePreview({ bands, depParents }) {
 }
 
 /* ═════════ Parent panel ═════════ */
-function DCParentPanel({ kind, group, parent, depParents, initialTab, initialEdit, onClose, onSave, onToggleActive, onDelete }) {
+function DCParentPanel({ kind, group, parent, depParents, initialTab, initialEdit, onClose, onSave, onDelete }) {
   const isDep = kind === 'deposit';
   const isCreate = !parent;
   const label = isDep ? 'Deposit Policy' : 'Cancellation Policy';
@@ -262,9 +262,8 @@ function DCParentPanel({ kind, group, parent, depParents, initialTab, initialEdi
           {isCreate && <button onClick={save} style={btnPrimary}><IcCheck/>Create Policy</button>}
           {!isCreate && !isEditing && (<>
             <button onClick={() => { snap.current = JSON.stringify(form); setIsEditing(true); }} style={btnPrimary}><IcEdit/>Edit</button>
-            <button onClick={() => onToggleActive(parent)} style={form.isActive ? btnDanger : btnGreen}>{form.isActive ? 'Deactivate' : 'Activate'}</button>
-            <button onClick={() => onDelete(parent)} disabled={inUse} title={inUse ? `Used in ${parent.usedIn} records` : undefined}
-              style={{ ...btnGhost, color: inUse ? T.inkFaint : T.inkSoft, cursor: inUse ? 'not-allowed' : 'pointer' }}>Delete</button>
+            <DeleteIconButton onClick={() => onDelete(parent)} disabled={inUse} label={`Delete ${form.code}`}
+              title={inUse ? `Used in ${parent.usedIn} records` : 'Delete Policy'} />
           </>)}
           {!isCreate && isEditing && (<>
             <button onClick={() => guard(() => { setForm(build()); setErrors({}); setShowIssues(false); setIsEditing(false); })} style={btnGhost}>Cancel</button>

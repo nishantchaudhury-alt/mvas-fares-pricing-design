@@ -1514,7 +1514,7 @@ function FaretypePolicyEligibilityEditor({ form, set, errors, policies, faretype
   );
 }
 
-function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate, policies, faretypes = [] }) {
+function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate, onDelete, policies, faretypes = [] }) {
   const buildInit = () => ({
     ...DEFAULT_FORM(),
     ...(editData || {})
@@ -1600,6 +1600,7 @@ function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                 Edit
               </button>}
+              {mode === 'view' && !isEditing && <DeleteIconButton onClick={() => onDelete(editData)} label={`Delete ${editData?.code || 'Policy Eligibility'}`} title="Delete Policy Eligibility" />}
               <button onClick={handleClose} aria-label="Close Policy Eligibility drawer" style={{ width: 32, height: 32, borderRadius: 7, border: `1.5px solid ${T.line}`, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkSoft }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
@@ -1728,7 +1729,7 @@ const COLS = [
 
 /* Thin adapter over the shared <DataTable/> in ui-list.jsx — this module now owns only its
    columns and cell content; all table chrome, density and selection is the shared kit's. */
-function FaretypeTable({ rows, selected, onToggleRow, onToggleAll, sortCol, sortDir, onSort, onViewDetail }) {
+function FaretypeTable({ rows, selected, onToggleRow, onToggleAll, sortCol, sortDir, onSort, onViewDetail, onDelete }) {
   const cell = (row, key) => {
     if (key === 'code') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 700, color: T.primary }}>{row.code}</span>;
     if (key === 'basis') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12, color: T.inkSoft }}>{row.basis}</span>;
@@ -1749,6 +1750,7 @@ function FaretypeTable({ rows, selected, onToggleRow, onToggleAll, sortCol, sort
     cols={COLS} rows={rows} cell={cell}
     sortCol={sortCol} sortDir={sortDir} onSort={onSort}
     onRowClick={onViewDetail}
+    rowActions={(row) => [{ label: 'Delete Faretype', icon: '×', danger: true, onClick: () => onDelete(row) }]}
     emptyTitle="No faretypes match your filters" />);
 
 }
@@ -1763,7 +1765,7 @@ const POLICY_ELIGIBILITY_COLS = [
 { key: 'mod', label: 'Last Modified', sort: true, width: '135px' }
 ];
 
-function PolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen }) {
+function PolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen, onDelete }) {
   const cell = (row, key) => {
     if (key === 'code') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 700, color: T.primary }}>{row.code}</span>;
     if (key === 'name') return <span style={{ fontWeight: 650, color: T.ink }}>{row.name}</span>;
@@ -1773,7 +1775,9 @@ function PolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen }) {
     if (key === 'mod') return <span style={{ color: T.inkSoft, fontSize: 12.5 }}>{row.mod}</span>;
     return null;
   };
-  return <DataTable cols={POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} sortCol={sortCol} sortDir={sortDir} onSort={onSort} onRowClick={onOpen} emptyTitle="No Policy Eligibility templates match your filters" minWidth={1080} />;
+  return <DataTable cols={POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} sortCol={sortCol} sortDir={sortDir} onSort={onSort} onRowClick={onOpen}
+    rowActions={(row) => [{ label: 'Delete Policy Eligibility', icon: '×', danger: true, onClick: () => onDelete(row) }]}
+    emptyTitle="No Policy Eligibility templates match your filters" minWidth={1080} />;
 }
 
 /* ── Faretype Detail Panel ─────────────────── */
@@ -1873,7 +1877,7 @@ function FFlag({ label, on, locked }) {
       </span>
     </div>);
 }
-function DetailOverviewTab({ row, detail, policies }) {
+function DetailOverviewTab({ row, detail }) {
   const vis = detail.channels.filter((c) => c.on).map((c) => c.k);
   const hid = detail.channels.filter((c) => !c.on).map((c) => c.k);
   const activeSupps = detail.supps.filter((s) => s.enabled);
@@ -1894,36 +1898,8 @@ function DetailOverviewTab({ row, detail, policies }) {
         </div>
       </SCard>
 
-      {/* 02 Policy Eligibility */}
-      <SCard num={2} title="Policy Eligibility">
-        <div>
-          <DLbl>Assigned Policies</DLbl>
-          <div style={{ display: 'flex', gap: 14, marginTop: 8 }}>
-            <RField label="Cancellation Policy" value={polLabel(policies, 'cancel', detail.cancellation)} mono />
-            <RField label="Deposit Policy" value={polLabel(policies, 'deposit', detail.deposit)} mono />
-          </div>
-        </div>
-        <div style={{ paddingTop: 12, borderTop: `1px solid ${T.lineSoft}` }}>
-          <DLbl>Guest Eligibility</DLbl>
-        </div>
-        <div style={{ display: 'flex', gap: 14 }}>
-          <RField label="Residency" value={detail.residency} locked />
-          <RField label="Min Age" value={detail.minAge ? String(detail.minAge) : null} locked />
-        </div>
-        <div style={{ display: 'flex', gap: 14 }}>
-          <RField label="Min Occupancy" value={detail.minOcc !== '—' ? detail.minOcc : null} locked />
-          <RField label="Max Occupancy" value={detail.maxOcc !== '—' ? detail.maxOcc : null} locked />
-        </div>
-        <RField label="Advanced Purchase" value={detail.advPurchase !== '—' ? `${detail.advPurchase} days` : null} locked />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-          <FFlag label="Standby Eligible" on={detail.standby} locked />
-          <FFlag label="Upgrade Eligible" on={detail.upgrade} locked />
-          <FFlag label="Coupon Eligible" on={detail.coupon} locked />
-        </div>
-      </SCard>
-
-      {/* 03 Channel Access */}
-      <SCard num={3} title="Channel Access">
+      {/* 02 Channel Access */}
+      <SCard num={2} title="Channel Access">
         <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, background: T.panel, padding: '11px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1958,8 +1934,8 @@ function DetailOverviewTab({ row, detail, policies }) {
         </div>
       </SCard>
 
-      {/* 04 Partner Access */}
-      <SCard num={4} title="Partner Access">
+      {/* 03 Partner Access */}
+      <SCard num={3} title="Partner Access">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 10 }}>
           <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, padding: '11px 12px', background: T.fill }}>
             <DLbl>MVAS B2B Channel</DLbl>
@@ -1975,8 +1951,8 @@ function DetailOverviewTab({ row, detail, policies }) {
         </div>
       </SCard>
 
-      {/* 05 Marketing */}
-      <SCard num={5} title="Marketing">
+      {/* 04 Marketing */}
+      <SCard num={4} title="Marketing">
         {detail.mktEmpty ?
           <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px', border: `1px dashed ${T.line}`, borderRadius: 8, background: T.fill }}>
             <div style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${T.line}`, background: '#fff', color: T.inkSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>✦</div>
@@ -1999,8 +1975,8 @@ function DetailOverviewTab({ row, detail, policies }) {
         }
       </SCard>
 
-      {/* 06 Taxes & Privacy */}
-      <SCard num={6} title="Taxes & Privacy">
+      {/* 05 Taxes & Privacy */}
+      <SCard num={5} title="Taxes & Privacy">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
           <FFlag label="Government Tax Waiver" on={detail.waiveGov} locked />
           <FFlag label="Cruise Expense Waiver" on={detail.waiveCruise} locked />
@@ -2016,8 +1992,8 @@ function DetailOverviewTab({ row, detail, policies }) {
         </div>
       </SCard>
 
-      {/* 07 Supplements */}
-      <SCard num={7} title="Supplements">
+      {/* 06 Supplements */}
+      <SCard num={6} title="Supplements">
         {activeSupps.length === 0 ?
           <div style={{ padding: '13px 14px', border: `1px dashed ${T.line}`, borderRadius: 8, background: T.fill }}>
             <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>No supplements included</div>
@@ -2166,11 +2142,10 @@ function DetailAuditTab() {
 
 }
 
-function FaretypeDetailPanel({ row, onClose, onEdit, onToggleStatus, policies }) {
+function FaretypeDetailPanel({ row, onClose, onEdit, onDelete, policies }) {
   const [tab, setTab] = useState('overview');
   const [mounted, setMounted] = useState(false);
   const detail = getDtl(row.code);
-  const isActive = row.status === 'Active';
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -2229,12 +2204,7 @@ function FaretypeDetailPanel({ row, onClose, onEdit, onToggleStatus, policies })
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                 Edit
               </button>
-              <button onClick={() => onToggleStatus(row)}
-              style={{ padding: '7px 14px', border: `1.5px solid ${isActive ? '#FCA5A5' : '#A7F3D0'}`, borderRadius: 7, background: '#fff', fontSize: 13, fontWeight: 600, color: isActive ? T.red : T.tealDark, cursor: 'pointer', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => e.currentTarget.style.background = isActive ? T.redLight : T.tealLight}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
-                {isActive ? 'Deactivate' : 'Activate'}
-              </button>
+              <DeleteIconButton onClick={() => onDelete(row)} label={`Delete ${row.code}`} title="Delete Faretype" />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 1, marginTop: 6, fontSize: 11.5, color: T.inkFaint }}>
@@ -2269,7 +2239,7 @@ function FaretypeDetailPanel({ row, onClose, onEdit, onToggleStatus, policies })
 
         {/* ⑤ Scrollable tab content */}
         <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: '16px 22px 28px' }}>
-          {tab === 'overview' && <DetailOverviewTab row={row} detail={detail} policies={policies} />}
+          {tab === 'overview' && <DetailOverviewTab row={row} detail={detail} />}
           {tab === 'farecodes' && <DetailFarecodesTab fcCount={row.fc} />}
           {tab === 'audit' && <DetailAuditTab />}
         </div>
@@ -2295,11 +2265,12 @@ function FaretypeListScreen({ policies }) {
   const [panelKind, setPanelKind] = useState('faretype');
   const [chooser, setChooser] = useState(false);
   const [editData, setEditData] = useState(null);
-  const [pendingDeactivate, setPendingDeactivate] = useState(null);
   const nextId = useRef(9);
   const nextPolicyEligibilityId = useRef(7);
 
-  const sourceRows = view === 'faretype' ? data : policyEligibility;
+  const activeData = data.filter((row) => row.status === 'Active');
+  const activePolicyEligibility = policyEligibility.filter((row) => row.status === 'Active');
+  const sourceRows = view === 'faretype' ? activeData : activePolicyEligibility;
   let rows = sourceRows.filter((r) => {
     const q = search.trim().toLowerCase();
     const searchable = view === 'faretype' ? `${r.code} ${r.basis} ${r.group}` : `${r.code} ${r.name} ${r.cancellationPolicy} ${r.depositPolicy}`;
@@ -2332,26 +2303,22 @@ function FaretypeListScreen({ policies }) {
     const all = vr.every((r) => selected.has(r.id));
     setSelected((p) => {const n = new Set(p);vr.forEach((r) => all ? n.delete(r.id) : n.add(r.id));return n;});
   };
-  const toggleStatus = (id) => setData((p) => p.map((r) => r.id === id ? { ...r, status: r.status === 'Active' ? 'Inactive' : 'Active' } : r));
-  /* Activating is low-risk and stays instant. Deactivating removes the faretype from
-     assignment pickers, so it routes through a confirmation instead of firing immediately. */
-  const handleToggleStatus = (row) => {
-    if (row.status === 'Active') {setPendingDeactivate(row);return;}
-    toggleStatus(row.id);
-    if (panelMode === 'detail' && editData && editData.id === row.id) closePanel();
-  };
-  const confirmDeactivate = () => {
-    if (pendingDeactivate) {
-      toggleStatus(pendingDeactivate.id);
-      if (panelMode === 'detail' && editData && editData.id === pendingDeactivate.id) closePanel();
-    }
-    setPendingDeactivate(null);
-  };
-  const cancelDeactivate = () => setPendingDeactivate(null);
   const openCreate = (kind) => {setPanelKind(kind);setPanelMode('create');setEditData(null);setChooser(false);setPanelOpen(true);};
   const openDetail = (row) => {setPanelKind('faretype');setPanelMode('detail');setEditData(row);setPanelOpen(true);};
   const openPolicyEligibility = (row) => {setPanelKind('policyEligibility');setPanelMode('view');setEditData(row);setPanelOpen(true);};
   const closePanel = () => {setPanelOpen(false);setEditData(null);};
+  const deleteFaretype = (row) => {
+    if (!window.confirm(`Delete ${row.code}? Its linked Policy Eligibility configuration will also be deleted.`)) return;
+    setData((previous) => previous.filter((item) => item.id !== row.id));
+    setPolicyEligibility((previous) => previous.filter((item) => item.faretypeCode !== row.code));
+    setSelected((previous) => { const next = new Set(previous); next.delete(row.id); return next; });
+    if (editData?.id === row.id) closePanel();
+  };
+  const deletePolicyEligibility = (row) => {
+    if (!window.confirm(`Delete ${row.code}? This action cannot be undone.`)) return;
+    setPolicyEligibility((previous) => previous.filter((item) => item.id !== row.id));
+    if (editData?.id === row.id) closePanel();
+  };
   const TODAY = '18 Jun 2026';
 
   const handleSaveDraft = (form) => {
@@ -2397,9 +2364,6 @@ function FaretypeListScreen({ policies }) {
     closePanel();
   };
 
-  const bulkActivate = () => {setData((p) => p.map((r) => selected.has(r.id) ? { ...r, status: 'Active' } : r));setSelected(new Set());};
-  const bulkDeactivate = () => {setData((p) => p.map((r) => selected.has(r.id) ? { ...r, status: 'Inactive' } : r));setSelected(new Set());};
-
   return (
     <>
       <div className="pscroll" style={{ gridColumn: 2, gridRow: 2, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -2422,11 +2386,9 @@ function FaretypeListScreen({ policies }) {
                 <div role="menu" aria-label="Choose template type" style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', width: 310, background: '#fff', border: `1px solid ${T.line}`, borderRadius: 10, boxShadow: '0 12px 32px rgba(15,23,42,.14)', zIndex: 400, overflow: 'hidden' }}>
                   <div style={{ padding: '9px 14px', fontSize: 10.5, fontWeight: 750, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.6px', background: T.fill, borderBottom: `1px solid ${T.lineSoft}` }}>Choose a template type</div>
                   <button role="menuitem" onClick={() => openCreate('faretype')} style={{ width: '100%', display: 'flex', gap: 11, alignItems: 'flex-start', padding: '13px 14px', background: '#fff', border: 'none', borderBottom: `1px solid ${T.lineSoft}`, textAlign: 'left', cursor: 'pointer' }}>
-                    <span style={{ width: 28, height: 28, borderRadius: 7, background: T.primary, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>F</span>
                     <span><span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: T.ink }}>Faretype</span><span style={{ display: 'block', marginTop: 3, fontSize: 11.5, lineHeight: 1.4, color: T.inkFaint }}>Define systemic identity, access, marketing, taxes, and supplements.</span></span>
                   </button>
                   <button role="menuitem" onClick={() => openCreate('policyEligibility')} style={{ width: '100%', display: 'flex', gap: 11, alignItems: 'flex-start', padding: '13px 14px', background: '#fff', border: 'none', textAlign: 'left', cursor: 'pointer' }}>
-                    <span style={{ width: 28, height: 28, borderRadius: 7, background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, flexShrink: 0 }}>PE</span>
                     <span><span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: T.ink }}>Policy Eligibility</span><span style={{ display: 'block', marginTop: 3, fontSize: 11.5, lineHeight: 1.4, color: T.inkFaint }}>Create reusable policy assignments and guest booking requirements.</span></span>
                   </button>
                 </div>
@@ -2440,8 +2402,8 @@ function FaretypeListScreen({ policies }) {
             <div style={{ padding: '14px 16px 0', background: T.fill }}>
               <div role="tablist" aria-label="Faretype template views" style={{ display: 'inline-flex', padding: 3, borderRadius: 9, border: `1px solid ${T.line}`, background: '#EEF2F7', gap: 3 }}>
                 {[
-                  ['faretype', 'Faretype', data.length],
-                  ['policyEligibility', 'Policy Eligibility', policyEligibility.length]
+                  ['faretype', 'Faretype', activeData.length],
+                  ['policyEligibility', 'Policy Eligibility', activePolicyEligibility.length]
                 ].map(([key, label, count]) => {
                   const activeView = view === key;
                   return <button key={key} role="tab" aria-selected={activeView} onClick={() => setView(key)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 32, padding: '6px 12px', borderRadius: 7, border: activeView ? `1px solid ${T.primary}` : '1px solid transparent', background: activeView ? T.primary : 'transparent', color: activeView ? '#fff' : T.inkSoft, fontSize: 12.5, fontWeight: activeView ? 700 : 600, cursor: 'pointer' }}>
@@ -2461,8 +2423,8 @@ function FaretypeListScreen({ policies }) {
             </ListToolbar>
 
             {view === 'faretype' ?
-              <FaretypeTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onViewDetail={openDetail} /> :
-              <PolicyEligibilityTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onOpen={openPolicyEligibility} />}
+              <FaretypeTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onViewDetail={openDetail} onDelete={deleteFaretype} /> :
+              <PolicyEligibilityTable rows={pageRows} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} onOpen={openPolicyEligibility} onDelete={deletePolicyEligibility} />}
 
             <ListPager page={page} setPage={setPage} total={rows.length} pageSize={PAGE_SIZE} noun={view === 'faretype' ? 'faretypes' : 'Policy Eligibility templates'} />
           </ListCard>
@@ -2474,7 +2436,7 @@ function FaretypeListScreen({ policies }) {
         row={editData}
         onClose={closePanel}
         onEdit={() => setPanelMode('edit')}
-        onToggleStatus={handleToggleStatus}
+        onDelete={deleteFaretype}
         policies={policies} />
 
       }
@@ -2483,39 +2445,7 @@ function FaretypeListScreen({ policies }) {
       }
 
       {panelOpen && panelKind === 'policyEligibility' &&
-      <PolicyEligibilityPanel mode={panelMode} editData={editData} policies={policies} faretypes={data} onClose={closePanel} onActivate={handlePolicyEligibilityActivate} />
-      }
-
-      {pendingDeactivate &&
-      <Modal width={460} title="Deactivate this faretype?" icon={<IcWarn color={T.red} />} onClose={cancelDeactivate}
-      actions={<>
-            <button style={polGhost} onClick={cancelDeactivate}>Cancel</button>
-            <button style={{ ...polBtn, background: '#B91C1C', color: '#fff', padding: '9px 15px' }} onClick={confirmDeactivate}>Deactivate Faretype</button>
-          </>}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ fontSize: 13, color: T.inkSoft }}>
-              You’re about to deactivate <strong style={{ fontFamily: "'SF Mono',Menlo,monospace", color: T.ink }}>{pendingDeactivate.code}</strong>.
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '92px 1fr', gap: 12, padding: '11px 12px', borderRadius: 8, background: T.redLight, border: '1px solid #FECACA' }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: '#991B1B', textTransform: 'uppercase', letterSpacing: '.65px' }}>Immediate impact</span>
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>New assignments stop</div>
-                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>This Faretype is removed from pickers and cannot be assigned to new bookings.</div>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '92px 1fr', gap: 12, padding: '11px 12px', borderRadius: 8, background: T.fill, border: `1px solid ${T.line}` }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: T.inkLabel, textTransform: 'uppercase', letterSpacing: '.65px' }}>Existing use</span>
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>{pendingDeactivate.fc > 0 ? `${pendingDeactivate.fc} linked Farecode${pendingDeactivate.fc === 1 ? '' : 's'} continue` : 'No linked Farecodes'}</div>
-                <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 2 }}>{pendingDeactivate.fc > 0 ? 'Existing Farecodes and bookings keep working under their current terms.' : 'There are no existing Farecode assignments to preserve.'}</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 8, background: T.primaryBg, border: `1px solid ${T.primaryLine}`, color: T.primary, fontSize: 11.5, fontWeight: 600 }}>
-              <span style={{ width: 18, height: 18, borderRadius: '50%', background: T.primary, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>↺</span>
-              This action is reversible. You can reactivate the Faretype later.
-            </div>
-          </div>
-        </Modal>
+      <PolicyEligibilityPanel mode={panelMode} editData={editData} policies={policies} faretypes={data} onClose={closePanel} onActivate={handlePolicyEligibilityActivate} onDelete={deletePolicyEligibility} />
       }
     </>);
 

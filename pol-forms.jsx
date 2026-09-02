@@ -54,6 +54,22 @@ function TextField({ label, value, onChange, placeholder, error, helper, width }
   );
 }
 
+function CompactSectionBar({ step, title, summary, titleId, action }) {
+  return (
+    <div style={{ minHeight:38, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'8px 12px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
+        {step && <span aria-hidden="true" style={{ padding:'2px 6px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9, fontWeight:800, lineHeight:1.4, flexShrink:0 }}>{step}</span>}
+        <h3 id={titleId} style={{ margin:0, color:T.ink, fontSize:12.5, fontWeight:700, lineHeight:1.35, whiteSpace:'nowrap' }}>{title}</h3>
+        {summary && <>
+          <span aria-hidden="true" style={{ width:1, height:14, background:T.line, flexShrink:0 }}/>
+          <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:T.inkSoft, fontSize:11, lineHeight:1.35 }}>{summary}</span>
+        </>}
+      </div>
+      {action && <div style={{ flexShrink:0 }}>{action}</div>}
+    </div>
+  );
+}
+
 /* 1.3 Group fields */
 function GroupSettingRow({ label, help, on, onChange, dis, stateLabel, disabledLabel = 'Requires policy', first }) {
   const state = dis ? disabledLabel : stateLabel || (on ? 'On' : 'Off');
@@ -79,55 +95,74 @@ function GroupSettingRow({ label, help, on, onChange, dis, stateLabel, disabledL
   );
 }
 
+function GroupBehaviorRow({ eyebrow, label, help, on, onChange, stateLabel, toggleLabel, last, readOnly = false }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, padding:'9px 12px', borderBottom:last ? 'none' : `1px solid ${T.lineSoft}`, background:'#fff' }}>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'baseline', gap:8, minWidth:0, flexWrap:'wrap' }}>
+          <span style={{ fontSize:12.5, fontWeight:700, color:T.ink, lineHeight:1.35 }}>{label}</span>
+          <span style={{ fontSize:9, fontWeight:800, color:T.inkFaint, textTransform:'uppercase', letterSpacing:'.65px' }}>{eyebrow}</span>
+        </div>
+        <div style={{ maxWidth:700, marginTop:2, fontSize:10.5, color:T.inkSoft, lineHeight:1.4 }}>{help}</div>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:10, flexShrink:0 }}>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:5, minHeight:22, padding:'2px 7px', borderRadius:999, border:`1px solid ${on && !readOnly ? T.primaryLine : T.line}`, background:on && !readOnly ? T.primaryBg : T.fill, color:on && !readOnly ? T.primary : T.inkSoft, fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>
+          {readOnly && <svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>}
+          {stateLabel}
+        </span>
+        {!readOnly && <Toggle on={on} onChange={onChange} label={toggleLabel || label}/>}
+      </div>
+    </div>
+  );
+}
+
 function GroupFields({ type, form, set, err, canActivate, step }) {
   const isCan = type === 'cancel';
   const uid = React.useId().replace(/:/g, '');
   const titleId = `group-details-${uid}`;
+  const identityId = `group-identity-${uid}`;
+  const behaviorId = `group-behavior-${uid}`;
   const typeLabel = isCan ? 'Cancellation policies' : 'Deposit policies';
   return (
     <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
-      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
-        {step && <span aria-hidden="true" style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>{step}</span>}
-        <div style={{ minWidth:0 }}>
-          <h3 id={titleId} style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Group details</h3>
-          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Define the reusable container that keeps related {isCan ? 'cancellation' : 'deposit'} policies together.</p>
-        </div>
-      </div>
+      <CompactSectionBar step={step} titleId={titleId} title="Group setup" summary="Name the group and define its assignment behavior."/>
 
-      <div style={{ display:'flex', flexDirection:'column', gap:16, padding:'16px' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:8, background:T.primaryBg, border:`1px solid ${T.primaryLine}` }}>
-          <span aria-hidden="true" style={{ width:28, height:28, borderRadius:7, background:'#fff', border:`1px solid ${T.primaryLine}`, color:T.primary, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-          </span>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>Policy type</div>
-            <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginTop:1 }}>{typeLabel}</div>
+      <div style={{ display:'flex', flexDirection:'column', gap:20, padding:'17px 16px 18px' }}>
+        <section aria-labelledby={identityId}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, marginBottom:11 }}>
+            <div style={{ minWidth:0 }}>
+              <h4 id={identityId} style={{ margin:0, color:T.ink, fontSize:12.5, fontWeight:700 }}>Identity</h4>
+              <p style={{ margin:'2px 0 0', color:T.inkSoft, fontSize:11.5, lineHeight:1.45 }}>How teams will find this group in assignment, reporting, and history.</p>
+            </div>
+            <div aria-label={`${typeLabel}, fixed after creation`} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'5px 8px', border:`1px solid ${T.line}`, borderRadius:6, background:T.fill, color:T.inkSoft, flexShrink:0 }}>
+              <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <span style={{ fontSize:10.5, fontWeight:700, whiteSpace:'nowrap' }}>{typeLabel}</span>
+              <span aria-hidden="true" style={{ color:T.inkFaint }}>·</span>
+              <span style={{ fontSize:10, whiteSpace:'nowrap' }}>Fixed type</span>
+            </div>
           </div>
-          <span style={{ padding:'3px 8px', borderRadius:999, background:'#fff', border:`1px solid ${T.primaryLine}`, color:T.inkSoft, fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>Fixed after creation</span>
-        </div>
-
-        <div>
-          <div style={{ marginBottom:10 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Group identity</div>
-            <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>Use a clear name that teams can recognize in policy assignment and reporting.</div>
-          </div>
-          <div style={{ padding:'12px', border:`1px solid ${err?.name ? '#FCA5A5' : T.line}`, borderRadius:8, background:'#fff' }}>
-            <TextField label={isCan ? 'Cancellation group name' : 'Deposit group name'} value={form.name} onChange={v => set({ name:v })} error={err?.name}
-              placeholder={isCan ? 'e.g. Standard' : 'e.g. IS 5-Night Retail Std'} helper={`Must be unique among active ${isCan ? 'cancellation' : 'deposit'} groups.`}/>
-          </div>
-        </div>
+          <TextField label={isCan ? 'Cancellation group name' : 'Deposit group name'} value={form.name} onChange={v => set({ name:v })} error={err?.name}
+            placeholder={isCan ? 'e.g. Standard' : 'e.g. IS 5-Night Retail Std'} helper={`Must be unique among active ${isCan ? 'cancellation' : 'deposit'} groups.`}/>
+        </section>
 
         {step ? (
-          isCan && <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
+          <section aria-labelledby={behaviorId} style={{ paddingTop:17, borderTop:`1px solid ${T.line}` }}>
             <div style={{ marginBottom:10 }}>
-              <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy terms</div>
-              <div style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, marginTop:3 }}>Set the commercial terms this group applies to every policy beneath it.</div>
+              <h4 id={behaviorId} style={{ margin:0, color:T.ink, fontSize:12.5, fontWeight:700 }}>Behavior</h4>
+              <p style={{ margin:'2px 0 0', color:T.inkSoft, fontSize:11.5, lineHeight:1.45 }}>
+                {isCan ? 'Review the assignment fallback and the commercial term inherited by every policy.' : 'Choose how this group participates in Farecode assignment.'}
+              </p>
             </div>
             <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
-              <GroupSettingRow first label="Refundable" on={form.refundable} onChange={v => set({ refundable:v })}
-                stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} help="Turning this off requires every band, from booking through sailing, to charge a percentage of cabin fare or the full deposit."/>
+              <GroupBehaviorRow eyebrow="Assignment fallback" label="Use as default group" on={form.isDefault} onChange={v => set({ isDefault:v })}
+                stateLabel={form.isDefault ? 'Default group' : 'Not default'} toggleLabel="Use as default group"
+                help={form.isDefault ? 'Becomes the fallback after activation and replaces the current default group.' : `The current default remains the fallback unless a Farecode explicitly selects this ${isCan ? 'cancellation' : 'deposit'} group.`}
+                last={!isCan}/>
+              {isCan && <GroupBehaviorRow eyebrow="Inherited policy term" label="Refundability" on={form.refundable} onChange={v => set({ refundable:v })}
+                stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} toggleLabel="Refundability" last
+                help={form.refundable ? 'Policies may include a no-charge cancellation window; this term is inherited by every policy in the group.' : 'Every cancellation band must charge a percentage of cabin fare or the full deposit.'}/>}
             </div>
-          </div>
+          </section>
         ) : (
           <div style={{ paddingTop:14, borderTop:`1px solid ${T.lineSoft}` }}>
             <div style={{ marginBottom:10 }}>
@@ -139,8 +174,8 @@ function GroupFields({ type, form, set, err, canActivate, step }) {
                 stateLabel={form.active ? 'Active' : 'Inactive'} help={canActivate ? 'Available for assignment on Faretypes and Farecodes.' : 'Available after the group contains at least one active policy.'}/>
               <GroupSettingRow label="Default group" on={form.isDefault} onChange={v => set({ isDefault:v })}
                 stateLabel={form.isDefault ? 'Default' : 'Not default'} help="Used when a Farecode leaves this policy type unset."/>
-              {isCan && <GroupSettingRow label="Refundable" on={form.refundable} onChange={v => set({ refundable:v })}
-                stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} help="Turning this off requires every band to charge a percentage of cabin fare or the full deposit."/>}
+              {isCan && <GroupSettingRow label="Refundability" on={form.refundable} onChange={v => set({ refundable:v })}
+                stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} help="Inherited by every policy in this group. Non-refundable groups require every band to charge a percentage of cabin fare or the full deposit."/>}
             </div>
           </div>
         )}
@@ -157,13 +192,7 @@ function ParentFields({ type, form, set, err, step, context, children }) {
   const policyType = isCan ? 'cancellation' : 'deposit';
   return (
     <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
-      <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'13px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
-        {step && <span aria-hidden="true" style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>{step}</span>}
-        <div style={{ minWidth:0 }}>
-          <h3 id={titleId} style={{ fontSize:16, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Policy details</h3>
-          <p style={{ fontSize:12, color:T.inkSoft, lineHeight:1.45, margin:0 }}>Define the assignable {policyType} policy that Farecodes reference. Its ordered {isCan ? 'bands are' : 'milestone lines are'} configured {step ? 'below' : 'with the policy'}.</p>
-        </div>
-      </div>
+      <CompactSectionBar step={step} titleId={titleId} title="Policy setup" summary={`Name the ${policyType} policy and configure its ${isCan ? 'bands' : 'milestone lines'}.`}/>
 
       <div style={{ display:'flex', flexDirection:'column', padding:'0 16px 16px' }}>
         {context && (
@@ -200,22 +229,21 @@ function ParentFields({ type, form, set, err, step, context, children }) {
   );
 }
 
-function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, activationLabel, creation = false, embedded = false }) {
+function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, activationLabel, groupRefundable = true, creation = false, embedded = false }) {
   const isCan = type === 'cancel';
   const policyType = isCan ? 'cancellation' : 'deposit';
   const childName = isCan ? 'band' : 'milestone line';
+  const inheritedRefundable = groupRefundable !== false;
   const uid = React.useId().replace(/:/g, '');
   const titleId = `policy-assignment-${uid}`;
   const settings = creation ? (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, padding:'10px 12px', border:`1px solid ${T.lineSoft}`, borderRadius:8, background:T.fill }}>
-      <div style={{ minWidth:0, flex:1 }}>
-        <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>Use as default {policyType} policy</div>
-        <div style={{ marginTop:2, maxWidth:520, color:T.inkSoft, fontSize:10.75, lineHeight:1.4 }}>Applied when a Farecode has no explicit {policyType} policy. Enabling this replaces the current default.</div>
-      </div>
-      <div style={{ display:'flex', alignItems:'center', gap:9, flexShrink:0 }}>
-        <span style={{ minWidth:62, textAlign:'right', fontSize:10.5, fontWeight:700, color:form.isDefault ? T.primary : T.inkSoft }}>{form.isDefault ? 'Default' : 'Optional'}</span>
-        <Toggle on={form.isDefault} onChange={v => set({ isDefault:v })} label={`Use as default ${policyType} policy`}/>
-      </div>
+    <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
+      <GroupBehaviorRow eyebrow="Assignment fallback" label={`Use as default ${policyType} policy`} on={form.isDefault} onChange={v => set({ isDefault:v })}
+        stateLabel={form.isDefault ? 'Default policy' : 'Not default'} toggleLabel={`Use as default ${policyType} policy`} last={!isCan}
+        help={form.isDefault ? 'Becomes the fallback after activation and replaces the current default policy.' : `The current default remains the fallback unless a Farecode explicitly selects this ${policyType} policy.`}/>
+      {isCan && <GroupBehaviorRow eyebrow="Inherited from group" label="Refundability" on={inheritedRefundable} onChange={() => {}} readOnly last
+        stateLabel={inheritedRefundable ? 'Refundable' : 'Non-refundable'}
+        help="Controlled at group level and applied consistently to every cancellation policy in this group."/>}
     </div>
   ) : (
     <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
@@ -224,8 +252,8 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
               help={canActivate ? 'Available for assignment on Farecodes.' : activateHelp}/>
             <GroupSettingRow label="Default in group" on={form.isDefault} onChange={v => set({ isDefault:v })}
               stateLabel={form.isDefault ? 'Default' : 'Not default'} help="Used when a Farecode leaves this policy unset within the parent group."/>
-            {isCan && <GroupSettingRow label="Refundable" on={form.refundable} onChange={v => set({ refundable:v })}
-              stateLabel={form.refundable ? 'Refundable' : 'Non-refundable'} help="Applies only to this policy and must remain consistent with its cancellation bands."/>}
+            {isCan && <GroupSettingRow label="Refundability" on={inheritedRefundable} dis onChange={() => {}}
+              disabledLabel={`Inherited · ${inheritedRefundable ? 'Refundable' : 'Non-refundable'}`} help="Inherited from the parent group and locked at policy level."/>}
     </div>
   );
   const sectionTitle = creation ? 'Default selection' : 'Assignment behavior';
@@ -233,7 +261,7 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
     <div style={{ marginBottom:8 }}>
       <h4 id={titleId} style={{ fontSize:12.5, fontWeight:700, color:T.ink, margin:'0 0 2px' }}>{sectionTitle}</h4>
       <p style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, margin:0 }}>
-        {creation ? 'Optional fallback behavior for unassigned Farecodes.' : 'Control availability, default selection, and policy-specific behavior.'}
+        {creation ? 'Choose fallback behavior and confirm the group-owned terms inherited by this policy.' : 'Control availability and default selection; group-owned terms are shown as inherited.'}
       </p>
     </div>
   );
@@ -247,12 +275,8 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
   }
   return (
     <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
-      <div style={{ padding:'12px 16px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
-        <h3 id={titleId} style={{ fontSize:14.5, fontWeight:700, color:T.ink, margin:'0 0 3px' }}>Assignment behavior</h3>
-        <p style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, margin:0 }}>
-          {creation ? `Choose whether this becomes the fallback ${policyType} policy when a Farecode does not select one.` : 'Control availability, default selection, and policy-specific behavior.'}
-        </p>
-      </div>
+      <CompactSectionBar titleId={titleId} title="Assignment behavior"
+        summary={creation ? `Choose whether this becomes the fallback ${policyType} policy.` : 'Control availability, default selection, and inherited terms.'}/>
       <div style={{ padding:'14px 16px' }}>
         {settings}
       </div>
@@ -306,4 +330,4 @@ function CodeChip({ level, children }) {
   return <span style={{ ...s, fontFamily:MONO, fontWeight:700, borderRadius:5, whiteSpace:'nowrap', letterSpacing:'-.2px' }}>{children}</span>;
 }
 
-Object.assign(window, { PolStatusBadge, TypeBadge, Caret, Stem, Rails, TREE, CodeChip, StepPill, FormBar, ToggleRow, TextField, GroupSettingRow, GroupFields, ParentFields, ParentAssignmentFields, IssueList, polBtn, polGhost, polDark, ActionRow });
+Object.assign(window, { PolStatusBadge, TypeBadge, Caret, Stem, Rails, TREE, CodeChip, StepPill, FormBar, ToggleRow, TextField, CompactSectionBar, GroupSettingRow, GroupFields, ParentFields, ParentAssignmentFields, IssueList, polBtn, polGhost, polDark, ActionRow });

@@ -112,7 +112,7 @@ function PolSidebar({ screen, onNav }) {
   );
 }
 
-function PolDialogs({ dlg, setDlg, onDiscardFlow, onDiscardEdit, onDeactivateGroup, onDeactivateParent, onDeleteGroup, onDeleteParent }) {
+function PolDialogs({ dlg, setDlg, onDiscardFlow, onDiscardEdit, onDeleteGroup, onDeleteParent }) {
   if (!dlg) return null;
   const close = () => setDlg(null);
   const dark = { ...polBtn, background:T.primary, color:'#fff' };
@@ -153,20 +153,6 @@ function PolDialogs({ dlg, setDlg, onDiscardFlow, onDiscardEdit, onDeactivateGro
             <span>Open <strong>Edit policy</strong> to fix the following, then activate.</span>
             <IssueList issues={dlg.issues} title="Blocking validation"/>
           </div>
-        </Modal>
-      );
-    case 'deactivateGroup':
-      return (
-        <Modal title="Deactivate group in use?" icon={<IcWarn color={T.amber}/>} onClose={close}
-          actions={<><button style={polGhost} onClick={close}>Cancel</button><button style={red} onClick={() => onDeactivateGroup(g)}>Deactivate</button></>}>
-          Policies inside <strong>{g.name}</strong> are referenced by {usedInGroup(g)} active Faretype and Farecode records. Existing bookings keep their current terms, but this group will no longer appear in assignment pickers.
-        </Modal>
-      );
-    case 'deactivateParent':
-      return (
-        <Modal title="Deactivate policy in use?" icon={<IcWarn color={T.amber}/>} onClose={close}
-          actions={<><button style={polGhost} onClick={close}>Cancel</button><button style={red} onClick={() => onDeactivateParent(g, p)}>Deactivate</button></>}>
-          <strong style={{ fontFamily:MONO }}>{p.code}</strong> is used in {p.usedIn} records. Existing bookings continue under current terms; the policy will not be available for new Farecodes.
         </Modal>
       );
     case 'confirmDeleteGroup':

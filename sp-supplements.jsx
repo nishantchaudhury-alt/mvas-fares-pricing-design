@@ -359,7 +359,7 @@ function HistoryTab({ status }) {
 }
 
 /* ── Slide-over panel ───────────────────────── */
-function SupplementPanel({ mode, viewRow, initialEdit, onClose, onSaveDraft, onActivate, onSaveChanges, onToggleStatus, onDelete }) {
+function SupplementPanel({ mode, viewRow, initialEdit, onClose, onSaveDraft, onActivate, onSaveChanges, onDelete }) {
   const buildForm = () => mode === 'view' && viewRow ?
   { code: viewRow.code, name: viewRow.name, type: viewRow.type, description: viewRow.description || '', price: String(viewRow.price), cabins: viewRow.cabins, status: viewRow.status === 'Draft' ? 'Active' : viewRow.status, effFrom: viewRow.effFrom || '', effTo: viewRow.effTo || '' } :
   DEFAULT_FORM();
@@ -419,7 +419,6 @@ function SupplementPanel({ mode, viewRow, initialEdit, onClose, onSaveDraft, onA
     setTimeout(() => {setSaved(false);snapRef.current = JSON.stringify(form);setIsEditing(false);setErrors({});}, 800);
   };
 
-  const isActive = viewRow?.status === 'Active';
   const canDelete = mode === 'view' ? (viewRow?.usedIn || 0) === 0 : true;
   const readOnly = mode === 'view' && !isEditing;
 
@@ -462,13 +461,8 @@ function SupplementPanel({ mode, viewRow, initialEdit, onClose, onSaveDraft, onA
                   <button onClick={enterEdit} style={{ padding: '7px 15px', border: 'none', borderRadius: 7, background: T.primary, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <IcEditSm />Edit
                   </button>
-                  <button onClick={onToggleStatus} style={{ padding: '7px 14px', border: `1.5px solid ${isActive ? '#FCA5A5' : '#A7F3D0'}`, borderRadius: 7, background: '#fff', fontSize: 13, fontWeight: 600, color: isActive ? T.red : T.tealDark, cursor: 'pointer' }}>
-                    {isActive ? 'Deactivate' : 'Activate'}
-                  </button>
-                  <button onClick={onDelete} disabled={!canDelete} title={!canDelete ? `Used in ${viewRow.usedIn} active farecode${viewRow.usedIn === 1 ? '' : 's'}` : undefined}
-                style={{ padding: '7px 14px', border: `1.5px solid ${T.line}`, borderRadius: 7, background: '#fff', fontSize: 13, fontWeight: 500, color: canDelete ? T.inkSoft : T.inkFaint, cursor: canDelete ? 'pointer' : 'not-allowed' }}>
-                    Delete
-                  </button>
+                  <DeleteIconButton onClick={onDelete} disabled={!canDelete} label={`Delete ${viewRow?.code || 'Supplement'}`}
+                    title={!canDelete ? `Used in ${viewRow.usedIn} active farecode${viewRow.usedIn === 1 ? '' : 's'}` : 'Delete Supplement'} />
                 </>
               }
               {mode === 'view' && isEditing &&
@@ -576,7 +570,6 @@ function SupplementListScreen() {
   const [page, setPage] = useState(1);
   const [panel, setPanel] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
-  const [pendingDeactivate, setPendingDeactivate] = useState(null);
   const nextId = useRef(6);
 
   let rows = data.filter((r) => {
@@ -599,20 +592,6 @@ function SupplementListScreen() {
 
   const clearFilters = () => {setSearch('');setTypeF([]);setCabinF([]);};
   const handleSort = (col) => {if (sortCol === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');else {setSortCol(col);setSortDir('asc');}};
-  const setStatus = (id, status) => setData((p) => p.map((r) => r.id === id ? { ...r, status, mod: TODAY } : r));
-
-  /* Activating is low-risk and applies immediately. Deactivating pulls the supplement out of
-     new bookings, so it routes through a confirmation first — same rule as Faretypes. */
-  const requestToggle = (row) => {
-    if (row.status === 'Active') {setPendingDeactivate(row);return;}
-    setStatus(row.id, 'Active');
-    setPanel(null);
-  };
-  const confirmDeactivate = () => {
-    if (pendingDeactivate) setStatus(pendingDeactivate.id, 'Inactive');
-    setPendingDeactivate(null);
-    setPanel(null);
-  };
   const confirmDelete = () => {setData((p) => p.filter((r) => r.id !== deleteRow.id));setDeleteRow(null);setPanel(null);};
 
   const nextCode = (id) => `SUP-${String(10000 + id).slice(1)}`;
@@ -695,23 +674,7 @@ function SupplementListScreen() {
         onSaveDraft={(f) => commit(f, 'Draft')}
         onActivate={(f) => commit(f, 'Active')}
         onSaveChanges={saveChanges}
-        onToggleStatus={() => requestToggle(data.find((r) => r.id === panel.row.id) || panel.row)}
         onDelete={() => setDeleteRow(panel.row)} />
-      }
-
-      {pendingDeactivate &&
-      <Modal title="Deactivate this supplement?" icon={<IcWarn color={T.amber} />} onClose={() => setPendingDeactivate(null)}
-      actions={<>
-            <button style={polGhost} onClick={() => setPendingDeactivate(null)}>Cancel</button>
-            <button style={{ ...polBtn, background: T.red, color: '#fff' }} onClick={confirmDeactivate}>Deactivate</button>
-          </>}>
-          Deactivating <strong style={{ fontFamily: MONO }}>{pendingDeactivate.code}</strong> removes it from
-          supplement pickers, so it can no longer be added to new bookings.
-          {pendingDeactivate.usedIn > 0 ?
-        <> It's currently attached to <strong>{pendingDeactivate.usedIn}</strong> active farecode{pendingDeactivate.usedIn === 1 ? '' : 's'}, which keep their existing terms.</> :
-        <> It isn't attached to any farecodes yet.</>}
-          {' '}You can reactivate it at any time.
-        </Modal>
       }
 
       {deleteRow && (deleteRow.usedIn > 0 ?
