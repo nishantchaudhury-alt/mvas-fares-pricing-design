@@ -147,9 +147,10 @@ const continuationBeginDts = endDts => {
 
 // Returns blocking cell/issues plus non-blocking DTS continuity warnings.
 // Warnings are deliberately separate so an intentional override can be activated.
-function validateRows(rows) {
+function validateRows(rows, { policyCoverage } = {}) {
   const cell = {}, warnCell = {}, issues = [], warnings = [];
   if (!rows.length) return { cell, warnCell, issues:[{ level:'error', text:'At least one line is required.' }], warnings };
+  const policyScopedCoverage = Array.isArray(policyCoverage);
   const isDepositPlan = rows.some(r => r.depositType !== undefined || r.marketingName !== undefined);
   const planLabel = isDepositPlan ? 'deposit plan' : 'cancellation plan';
   const rowLabel = isDepositPlan ? 'Line' : 'Band';
@@ -160,7 +161,7 @@ function validateRows(rows) {
   rows.forEach((r, i) => {
     if (isBlank(r.endDts) || isNaN(num(r.endDts)) || num(r.endDts) < 0) cell[`${i}:endDts`] = 'Required, ≥ 0';
     if (!isBlank(r.beginDts) && (isNaN(num(r.beginDts)) || num(r.beginDts) <= num(r.endDts))) cell[`${i}:beginDts`] = 'Must exceed End DTS';
-    if (!r.cats || r.cats.length === 0) cell[`${i}:cats`] = 'Pick at least one';
+    if (!policyScopedCoverage && (!r.cats || r.cats.length === 0)) cell[`${i}:cats`] = 'Pick at least one';
     if (r.marketingName !== undefined && !r.marketingName) cell[`${i}:marketingName`] = 'Required';
     if (r.depositType !== undefined) {
       if (isBlank(r.amount) || isNaN(num(r.amount)) || num(r.amount) < 0) cell[`${i}:amount`] = 'Required';
@@ -188,12 +189,14 @@ function validateRows(rows) {
     }
   });
 
-  groups.forEach((g, gi) => {
-    const covered = new Set();
-    g.rows.forEach(r => catsCover(r.cats || []).forEach(c => covered.add(c)));
-    const missing = CATS.filter(c => !covered.has(c));
-    if (missing.length) issues.push({ level:'error', text:`Stateroom coverage gap in ${g.endDts}–${g.beginDts === Infinity ? '∞' : g.beginDts} days: ${missing.join(', ')} not covered.` });
-  });
+  if (!policyScopedCoverage) {
+    groups.forEach(g => {
+      const covered = new Set();
+      g.rows.forEach(r => catsCover(r.cats || []).forEach(c => covered.add(c)));
+      const missing = CATS.filter(c => !covered.has(c));
+      if (missing.length) issues.push({ level:'error', text:`Stateroom coverage gap in ${g.endDts}–${g.beginDts === Infinity ? '∞' : g.beginDts} days: ${missing.join(', ')} not covered.` });
+    });
+  }
   const last = groups[groups.length - 1];
   if (last && last.endDts !== 0) {
     const lastRow = rows.reduce((best, r, i) => num(r.endDts) < num(rows[best].endDts) ? i : best, 0);

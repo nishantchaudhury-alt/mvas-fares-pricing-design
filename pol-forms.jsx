@@ -54,6 +54,19 @@ function TextField({ label, value, onChange, placeholder, error, helper, width }
   );
 }
 
+function PolicyIdentityFields({ type, form, set, err }) {
+  const isCan = type === 'cancel';
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1fr) minmax(0, 1fr)', gap:10, alignItems:'start' }}>
+      <TextField label={isCan ? 'Cancellation policy name' : 'Deposit policy name'} value={form.name} onChange={v => set({ name:v })} error={err?.name}
+        placeholder={isCan ? 'e.g. Standard Cancellation' : 'e.g. 5 Night Standard Deposit'}/>
+      <Field label="Stateroom coverage" required error={err?.cats} helper={`Applies to every ${isCan ? 'cancellation band' : 'milestone line'} in this policy.`}>
+        <CatSelect value={form.cats || []} onChange={value => set({ cats:value })}/>
+      </Field>
+    </div>
+  );
+}
+
 function CompactSectionBar({ step, title, summary, titleId, action }) {
   return (
     <div style={{ minHeight:38, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'8px 12px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
@@ -192,7 +205,7 @@ function ParentFields({ type, form, set, err, step, context, children }) {
   const policyType = isCan ? 'cancellation' : 'deposit';
   return (
     <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
-      <CompactSectionBar step={step} titleId={titleId} title="Policy setup" summary={`Name the ${policyType} policy and configure its ${isCan ? 'bands' : 'milestone lines'}.`}/>
+      <CompactSectionBar step={step} titleId={titleId} title="Policy setup" summary={`Name the ${policyType} policy, set its stateroom coverage, and configure its ${isCan ? 'bands' : 'milestone lines'}.`}/>
 
       <div style={{ display:'flex', flexDirection:'column', padding:'0 16px 16px' }}>
         {context && (
@@ -220,8 +233,7 @@ function ParentFields({ type, form, set, err, step, context, children }) {
             <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy identity</div>
             <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.35, textAlign:'right' }}>Used in assignment, reporting, and history</div>
           </div>
-          <TextField label={isCan ? 'Cancellation policy name' : 'Deposit policy name'} value={form.name} onChange={v => set({ name:v })} error={err?.name}
-            placeholder={isCan ? 'e.g. Standard Cancellation' : 'e.g. 5 Night Standard Deposit'}/>
+          <PolicyIdentityFields type={type} form={form} set={set} err={err}/>
         </div>
         {children}
       </div>
@@ -231,6 +243,7 @@ function ParentFields({ type, form, set, err, step, context, children }) {
 
 function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, activationLabel, groupRefundable = true, creation = false, embedded = false }) {
   const isCan = type === 'cancel';
+  const [open, setOpen] = React.useState(false);
   const policyType = isCan ? 'cancellation' : 'deposit';
   const childName = isCan ? 'band' : 'milestone line';
   const inheritedRefundable = groupRefundable !== false;
@@ -257,29 +270,33 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
     </div>
   );
   const sectionTitle = creation ? 'Default selection' : 'Assignment behavior';
-  const heading = (
-    <div style={{ marginBottom:8 }}>
-      <h4 id={titleId} style={{ fontSize:12.5, fontWeight:700, color:T.ink, margin:'0 0 2px' }}>{sectionTitle}</h4>
-      <p style={{ fontSize:11.5, color:T.inkSoft, lineHeight:1.45, margin:0 }}>
-        {creation ? 'Choose fallback behavior and confirm the group-owned terms inherited by this policy.' : 'Control availability and default selection; group-owned terms are shown as inherited.'}
-      </p>
-    </div>
+  const summary = [
+    ...(creation ? [] : [form.active ? 'Active' : 'Inactive']),
+    form.isDefault ? 'Default' : 'Not default',
+    ...(isCan ? [inheritedRefundable ? 'Refundable' : 'Non-refundable'] : []),
+  ].join(' · ');
+  const panelId = `${titleId}-panel`;
+  const accordion = (
+    <>
+      <h4 style={{ margin:0 }}>
+        <button id={titleId} type="button" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(value => !value)}
+          style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'11px 12px', border:'none', background:open ? '#fff' : T.fill, color:T.ink, textAlign:'left', cursor:'pointer' }}>
+          <span style={{ minWidth:0, flex:1 }}>
+            <span style={{ display:'block', fontSize:12.5, fontWeight:700 }}>{sectionTitle}</span>
+            <span style={{ display:'block', marginTop:2, fontSize:11.5, fontWeight:400, color:T.inkSoft, lineHeight:1.45 }}>
+              {creation ? 'Choose fallback behavior and confirm the group-owned terms inherited by this policy.' : 'Control availability and default selection; group-owned terms are shown as inherited.'}
+            </span>
+          </span>
+          <span style={{ flexShrink:0, padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>{summary}</span>
+          <span aria-hidden="true" style={{ flexShrink:0, color:T.inkSoft, display:'inline-flex' }}><IcChevron up={open}/></span>
+        </button>
+      </h4>
+      {open && <div id={panelId} role="region" aria-labelledby={titleId} style={{ padding:'10px 12px 12px', borderTop:`1px solid ${T.lineSoft}`, background:'#fff' }}>{settings}</div>}
+    </>
   );
-  if (embedded) {
-    return (
-      <div aria-labelledby={titleId} style={{ paddingTop:15, borderTop:`1px solid ${T.lineSoft}` }}>
-        {heading}
-        {settings}
-      </div>
-    );
-  }
   return (
-    <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
-      <CompactSectionBar titleId={titleId} title="Assignment behavior"
-        summary={creation ? `Choose whether this becomes the fallback ${policyType} policy.` : 'Control availability, default selection, and inherited terms.'}/>
-      <div style={{ padding:'14px 16px' }}>
-        {settings}
-      </div>
+    <section style={{ marginTop:embedded ? 15 : 0, background:T.panel, border:`1px solid ${T.line}`, borderRadius:embedded ? 8 : 10, boxShadow:embedded ? 'none' : '0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
+      {accordion}
     </section>
   );
 }
@@ -330,4 +347,4 @@ function CodeChip({ level, children }) {
   return <span style={{ ...s, fontFamily:MONO, fontWeight:700, borderRadius:5, whiteSpace:'nowrap', letterSpacing:'-.2px' }}>{children}</span>;
 }
 
-Object.assign(window, { PolStatusBadge, TypeBadge, Caret, Stem, Rails, TREE, CodeChip, StepPill, FormBar, ToggleRow, TextField, CompactSectionBar, GroupSettingRow, GroupFields, ParentFields, ParentAssignmentFields, IssueList, polBtn, polGhost, polDark, ActionRow });
+Object.assign(window, { PolStatusBadge, TypeBadge, Caret, Stem, Rails, TREE, CodeChip, StepPill, FormBar, ToggleRow, TextField, PolicyIdentityFields, CompactSectionBar, GroupSettingRow, GroupFields, ParentFields, ParentAssignmentFields, IssueList, polBtn, polGhost, polDark, ActionRow });

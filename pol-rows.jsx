@@ -37,6 +37,99 @@ const rcVal = txt => <span style={{ fontSize:12.5, color:T.ink }}>{txt}</span>;
 
 const ROW_DEP_TYPES = DEP_TYPES;
 const ROW_PEN_TYPES = [['NONE','No charge'],['FIXED','Fixed amount'],['PCT_CABIN_FARE','Percentage of cabin fare'],['FULL_DEPOSIT','Full deposit']];
+const PENALTY_TYPE_REFERENCE = [
+  { code:'NONE', title:'No penalty', detail:'Apply no cancellation penalty for this band.' },
+  { code:'FIXED', title:'Fixed amount', detail:'Apply the configured fixed cancellation amount.' },
+  { code:'PCT_CABIN_FARE', title:'Cabin-fare percentage', detail:'Apply the configured percentage to the booking’s applicable cabin fare.' },
+  { code:'FULL_DEPOSIT', title:'Deposit amount', detail:'Use the booking’s applicable deposit amount as the cancellation penalty.' },
+];
+const DEPOSIT_TYPE_TITLES = {
+  'Fixed per Cabin':'One amount for the cabin',
+  'Fixed per Person':'One amount for each person',
+  Percentage:'A share of the amount due',
+};
+const DEPOSIT_TYPE_REFERENCE = DEP_HELP.map(([code, detail]) => ({ code, title:DEPOSIT_TYPE_TITLES[code], detail }));
+
+function PolicyTypeHeader({ type }) {
+  const isDeposit = type === 'deposit';
+  const label = isDeposit ? 'Type' : 'Penalty Type';
+  const title = isDeposit ? 'Deposit type reference' : 'Penalty type reference';
+  const description = isDeposit
+    ? 'How each selection calculates the deposit amount.'
+    : 'How each selection calculates the cancellation charge.';
+  const entries = isDeposit ? DEPOSIT_TYPE_REFERENCE : PENALTY_TYPE_REFERENCE;
+  const [open, setOpen] = useSRC(false);
+  const [pos, setPos] = useSRC(null);
+  const triggerRef = useRRC(null);
+  const uid = React.useId().replace(/:/g, '');
+  const tooltipId = `policy-type-reference-${uid}`;
+  const syncPosition = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const edge = 12;
+    const gap = 10;
+    const width = Math.min(468, window.innerWidth - edge * 2);
+    const estimatedHeight = 78 + entries.length * 58;
+    const below = rect.bottom + gap + estimatedHeight <= window.innerHeight;
+    const top = below ? rect.bottom + gap : Math.max(edge, rect.top - estimatedHeight - gap);
+    const left = Math.max(edge, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - edge));
+    const arrowLeft = Math.max(22, Math.min(width - 22, rect.left + rect.width / 2 - left));
+    setPos({ top, left, width, below, arrowLeft });
+  };
+  const show = () => { syncPosition(); setOpen(true); };
+  const hide = () => setOpen(false);
+  useERC(() => {
+    if (!open) return;
+    const reposition = () => syncPosition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [open]);
+
+  return (<>
+    <span onMouseEnter={show} onMouseLeave={hide} style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
+      <span>{label}</span>
+      <button ref={triggerRef} type="button" aria-label={`${title}. Hover or focus for definitions.`}
+        aria-describedby={open ? tooltipId : undefined} onFocus={show} onBlur={hide}
+        onKeyDown={event => { if (event.key === 'Escape') { hide(); event.currentTarget.blur(); } }}
+        style={{ width:16, height:16, padding:0, border:'none', borderRadius:'50%', background:open ? T.primaryBg : 'transparent', color:open ? T.primary : T.inkFaint, cursor:'help', display:'inline-flex', alignItems:'center', justifyContent:'center', outlineOffset:2 }}>
+        <IcInfo color="currentColor" size={11}/>
+      </button>
+    </span>
+    {open && pos && ReactDOM.createPortal(
+      <div id={tooltipId} role="tooltip" style={{ position:'fixed', top:pos.top, left:pos.left, width:pos.width, zIndex:2100, color:T.ink, textAlign:'left', textTransform:'none', letterSpacing:'normal', whiteSpace:'normal', pointerEvents:'none' }}>
+        <span aria-hidden="true" style={{ position:'absolute', left:pos.arrowLeft - 6, [pos.below ? 'top' : 'bottom']:-6, width:12, height:12, transform:'rotate(45deg)', background:'#fff', borderLeft:pos.below ? `1px solid ${T.line}` : 'none', borderTop:pos.below ? `1px solid ${T.line}` : 'none', borderRight:pos.below ? 'none' : `1px solid ${T.line}`, borderBottom:pos.below ? 'none' : `1px solid ${T.line}`, zIndex:1 }}/>
+        <div style={{ position:'relative', overflow:'hidden', border:`1px solid ${T.line}`, borderRadius:12, background:T.panel, boxShadow:'0 18px 45px rgba(15,23,42,.16), 0 4px 12px rgba(15,23,42,.08)' }}>
+          <div style={{ height:3, background:T.primary }}/>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'11px 13px', background:'#fff', borderBottom:`1px solid ${T.line}` }}>
+            <span style={{ display:'flex', alignItems:'center', gap:9, minWidth:0 }}>
+              <span aria-hidden="true" style={{ width:26, height:26, flexShrink:0, display:'inline-flex', alignItems:'center', justifyContent:'center', borderRadius:7, background:T.primaryBg, border:`1px solid ${T.primaryLine}`, color:T.primary }}><IcInfo color="currentColor" size={13}/></span>
+              <span style={{ minWidth:0 }}>
+                <span style={{ display:'block', fontSize:12.5, fontWeight:750, lineHeight:1.25 }}>{title}</span>
+                <span style={{ display:'block', marginTop:2, color:T.inkSoft, fontSize:10.5, fontWeight:500, lineHeight:1.3 }}>{description}</span>
+              </span>
+            </span>
+            <span style={{ flexShrink:0, padding:'3px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:T.fill, color:T.inkSoft, fontSize:9.5, fontWeight:750 }}>{entries.length} options</span>
+          </div>
+          <div role="list" aria-label={`${title} definitions`}>
+            {entries.map((entry, index) => (
+              <div role="listitem" key={entry.code} style={{ display:'grid', gridTemplateColumns:'126px minmax(0,1fr)', gap:12, alignItems:'start', padding:'10px 13px', background:index % 2 ? '#FBFCFE' : '#fff', borderBottom:index < entries.length - 1 ? `1px solid ${T.lineSoft}` : 'none' }}>
+                <span style={{ width:'fit-content', maxWidth:'100%', minHeight:23, display:'inline-flex', alignItems:'center', padding:'3px 7px', borderRadius:6, border:`1px solid ${T.line}`, background:T.fill, color:T.primary, fontFamily:MONO, fontSize:9.5, fontWeight:800, lineHeight:1.35, overflowWrap:'anywhere' }}>{entry.code}</span>
+                <span style={{ minWidth:0 }}>
+                  <span style={{ display:'block', fontSize:11.75, fontWeight:750, lineHeight:1.3 }}>{entry.title}</span>
+                  <span style={{ display:'block', marginTop:2, color:T.inkSoft, fontSize:10.75, lineHeight:1.4 }}>{entry.detail}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>, document.body
+    )}
+  </>);
+}
 
 function InlineRowField({ error, errorId, children }) {
   return (
@@ -58,80 +151,16 @@ function InlineRowInput({ value, onChange, error, errorId, label, placeholder, s
   );
 }
 
-function PolicyTableCatSelect({ value = [], onChange, error, errorId, label }) {
-  const [open, setOpen] = useSRC(false);
-  const [pos, setPos] = useSRC(null);
-  const buttonRef = useRRC(null), menuRef = useRRC(null);
-  const selectedAll = value.includes('All');
-  const syncPosition = () => {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const width = Math.max(210, rect.width);
-    const menuHeight = 228;
-    const top = rect.bottom + 4 + menuHeight > window.innerHeight ? Math.max(8, rect.top - menuHeight - 4) : rect.bottom + 4;
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-    setPos({ top, left, width });
-  };
-  useERC(() => {
-    if (!open) return;
-    syncPosition();
-    const closeOutside = e => {
-      if (!buttonRef.current?.contains(e.target) && !menuRef.current?.contains(e.target)) setOpen(false);
-    };
-    const reposition = () => syncPosition();
-    document.addEventListener('mousedown', closeOutside);
-    window.addEventListener('resize', reposition);
-    window.addEventListener('scroll', reposition, true);
-    return () => {
-      document.removeEventListener('mousedown', closeOutside);
-      window.removeEventListener('resize', reposition);
-      window.removeEventListener('scroll', reposition, true);
-    };
-  }, [open]);
-  const toggle = cat => {
-    if (cat === 'All') return onChange(selectedAll ? [] : ['All']);
-    const next = (selectedAll ? CATS.slice() : value.slice()).filter(x => x !== 'All');
-    const at = next.indexOf(cat);
-    at === -1 ? next.push(cat) : next.splice(at, 1);
-    onChange(CATS.every(x => next.includes(x)) ? ['All'] : next);
-  };
-  return (<>
-    <button ref={buttonRef} type="button" aria-label={label} aria-haspopup="dialog" aria-expanded={open} aria-invalid={!!error || undefined} aria-describedby={error ? errorId : undefined}
-      onClick={() => setOpen(v => !v)} style={{ ...iS(error), height:34, padding:'6px 24px 6px 8px', borderRadius:6, fontSize:12, textAlign:'left', cursor:'pointer', position:'relative', overflow:'hidden' }}>
-      <span style={{ display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{value.length ? catLabel(value) : 'Select coverage…'}</span>
-      <span aria-hidden="true" style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', color:T.inkFaint, display:'flex' }}><IcChevron up={open}/></span>
-    </button>
-    {open && pos && ReactDOM.createPortal(
-      <div ref={menuRef} role="dialog" aria-label={`${label} options`} style={{ position:'fixed', top:pos.top, left:pos.left, width:pos.width, maxHeight:220, overflowY:'auto', zIndex:1800, background:'#fff', border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 8px 24px rgba(15,23,42,.14)' }}>
-        {['All', ...CATS].map(cat => {
-          const checked = cat === 'All' ? selectedAll : selectedAll || value.includes(cat);
-          return (
-            <label key={cat} style={{ display:'flex', alignItems:'center', gap:9, padding:'8px 11px', borderBottom:cat === 'All' ? `1px solid ${T.lineSoft}` : 'none', color:T.ink, fontSize:12, cursor:'pointer' }}>
-              <input type="checkbox" checked={checked} onChange={() => toggle(cat)} style={{ width:13, height:13, accentColor:T.primary }}/>{cat === 'All' ? 'All stateroom types' : cat}
-            </label>
-          );
-        })}
-      </div>, document.body
-    )}
-  </>);
-}
-
 function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing = true, validationAttempt = 0 }) {
   const isDep = type === 'deposit', meta = POL_META[type];
   const dragI = useRRC(null);
   const cellRefs = useRRC({});
-  const pendingFocus = useRRC(null);
   const upd = (i, k, v) => setRows(rows.map((r, ri) => {
     if (ri !== i) return r;
     const n = { ...r, [k]:v };
     if (k === 'penaltyType' && (v === 'NONE' || v === 'FULL_DEPOSIT')) n.penaltyValue = '';
     return n;
   }));
-  const addRow = () => {
-    const index = rows.length;
-    pendingFocus.current = `${index}:${isDep ? 'marketingName' : 'beginDts'}`;
-    setRows([...rows, blankChild(type)]);
-  };
   const removeRow = i => {
     if (rows.length <= 1) return;
     setRows(rows.filter((_, ri) => ri !== i));
@@ -156,7 +185,7 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
     control.scrollIntoView({ block:'center', inline:'center', behavior:'smooth' });
   };
   const firstErrorKey = () => {
-    const order = isDep ? ['marketingName','beginDts','endDts','depositType','amount','cats'] : ['beginDts','endDts','penaltyType','penaltyValue','cats'];
+    const order = isDep ? ['marketingName','beginDts','endDts','depositType','amount'] : ['beginDts','endDts','penaltyType','penaltyValue'];
     return Object.keys(cellErr).sort((a, b) => {
       const [ar, af] = a.split(':'), [br, bf] = b.split(':');
       return Number(ar) - Number(br) || order.indexOf(af) - order.indexOf(bf);
@@ -167,40 +196,26 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
     const key = firstErrorKey();
     if (key) window.requestAnimationFrame(() => focusCell(key));
   }, [validationAttempt]);
-  useERC(() => {
-    if (!pendingFocus.current) return;
-    const key = pendingFocus.current;
-    pendingFocus.current = null;
-    const id = window.requestAnimationFrame(() => focusCell(key));
-    return () => window.cancelAnimationFrame(id);
-  }, [rows.length]);
-
   if (!rows.length) return (
     <div role="group" aria-label={`Empty ${meta.childWords.toLowerCase()} configuration`} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', border:`1px solid ${T.line}`, borderRadius:7, background:T.fill }}>
       <span aria-hidden="true" style={{ width:24, height:24, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, borderRadius:6, border:`1px solid ${T.primaryLine}`, background:'#fff', color:T.primary, fontSize:14, fontWeight:600 }}>+</span>
       <div style={{ minWidth:0, flex:1 }}>
         <div style={{ color:T.ink, fontSize:11.5, fontWeight:700 }}>No {meta.childWords.toLowerCase()} configured</div>
-        <div style={{ marginTop:1, color:T.inkSoft, fontSize:10.25, lineHeight:1.35 }}>Add the first row to define DTS, {isDep ? 'deposit amount' : 'penalty'}, and coverage.</div>
+        <div style={{ marginTop:1, color:T.inkSoft, fontSize:10.25, lineHeight:1.35 }}>Add the first row to define DTS and its {isDep ? 'deposit amount' : 'penalty'}.</div>
       </div>
-      {editing && <button type="button" onClick={addRow} style={{ flexShrink:0, padding:'5px 9px', border:'none', borderRadius:6, background:T.primary, color:'#fff', fontSize:10.5, fontWeight:700, cursor:'pointer' }}>+ Add {meta.childWord}</button>}
     </div>
   );
 
   const dataHeader = isDep
-    ? ['Line ID','Marketing Name','Begin DTS','End DTS','Type','Amount','Stateroom Coverage','Cancel Applies']
-    : ['Band ID','Begin DTS','End DTS','Penalty Type','Penalty Value','Stateroom Coverage'];
-  const dataWidths = isDep ? [76,170,86,86,150,110,180,112] : [76,86,86,190,116,180];
+    ? ['Line ID','Marketing Name','Begin DTS','End DTS','Type','Amount','Cancel Applies']
+    : ['Band ID','Begin DTS','End DTS','Penalty Type','Penalty Value'];
+  const dataWidths = isDep ? [76,210,94,94,170,130,120] : [76,108,108,230,150];
   const header = editing ? ['', ...dataHeader, ''] : dataHeader;
   const colSpan = header.length;
   const widths = editing ? [38, ...dataWidths, 58] : dataWidths;
   const minWidth = widths.reduce((sum, width) => sum + width, 0);
   const thStyle = { position:'sticky', top:0, zIndex:2, padding:'8px', textAlign:'left', color:T.inkLabel, background:'#F8FAFC', fontSize:9.25, fontWeight:800, textTransform:'uppercase', letterSpacing:'.62px', whiteSpace:'nowrap', borderBottom:`1px solid ${T.line}` };
   const tdStyle = { padding:'9px 8px', color:T.ink, fontSize:12, lineHeight:1.3, borderBottom:`1px solid ${T.lineSoft}`, verticalAlign:'top' };
-  const headerHelp = label => label === 'Penalty Type'
-    ? 'Final charges are calculated using the booking’s fare and applicable deposit.'
-    : isDep && label === 'Type'
-      ? 'Deposit amounts use the selected method and the booking’s applicable fare or cabin context.'
-      : null;
   const errorId = (i, field) => `policy-row-${type}-${i}-${field}-error`;
   const fieldCell = (i, field, control, extra = {}) => {
     const error = cellErr[`${i}:${field}`];
@@ -217,20 +232,13 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
         <table aria-label={`${meta.childWords} configuration`} style={{ width:'100%', minWidth, borderCollapse:'collapse', tableLayout:'fixed' }}>
           <colgroup>{widths.map((width, i) => <col key={i} style={{ width }}/>)}</colgroup>
           <thead style={{ background:T.fill }}>
-            <tr>{header.map((label, i) => {
-              const help = headerHelp(label);
-              return (
+            <tr>{header.map((label, i) => (
                 <th key={`${label}-${i}`} scope="col" aria-label={!label ? (i === 0 ? 'Reorder' : 'Remove') : undefined} style={thStyle}>
-                  <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}>
-                    {label}
-                    {help && <span tabIndex="0" role="note" aria-label={help} title={help}
-                      style={{ width:15, height:15, display:'inline-flex', alignItems:'center', justifyContent:'center', borderRadius:'50%', color:T.inkFaint, cursor:'help', outlineOffset:2 }}>
-                      <IcInfo color="currentColor" size={11}/>
-                    </span>}
-                  </span>
+                  {label === 'Penalty Type' || (isDep && label === 'Type') ? <PolicyTypeHeader type={type}/> : (
+                    <span>{label}</span>
+                  )}
                 </th>
-              );
-            })}</tr>
+            ))}</tr>
           </thead>
           <tbody>
             {rows.map((r, i) => {
@@ -271,9 +279,6 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
                           error={error} errorId={id} label={`${isDep ? 'Amount' : 'Penalty value'} for ${meta.childWord.toLowerCase()} ${i + 1}`}
                           suffix={isDep ? (r.depositType === 'PCT' ? '%' : '$') : r.penaltyType === 'PCT_CABIN_FARE' ? '%' : r.penaltyType === 'FIXED' ? '$' : '—'} inputMode="decimal"/>)
                       : <td style={{ ...tdStyle, fontWeight:650 }}>{isDep ? depAmountLabel(r) : penAmountLabel(r)}</td>}
-                    {editing
-                      ? fieldCell(i, 'cats', (error, id) => <PolicyTableCatSelect value={r.cats || []} onChange={v => upd(i, 'cats', v)} error={error} errorId={id} label={`Stateroom coverage for ${meta.childWord.toLowerCase()} ${i + 1}`}/>)
-                      : <td style={tdStyle}>{catSentence(r.cats || [])}</td>}
                     {isDep && <td style={{ ...tdStyle, textAlign:'center', paddingTop:editing ? 14 : 8 }}>{editing
                       ? <Toggle on={r.cancelApplies} dis={false} onChange={v => upd(i, 'cancelApplies', v)} label={`Cancellation policy applies to line ${i + 1}`}/>
                       : <span style={{ display:'inline-flex', padding:'2px 7px', borderRadius:999, background:r.cancelApplies ? T.primaryBg : T.fill, color:r.cancelApplies ? T.primary : T.inkFaint, fontSize:10.5, fontWeight:700 }}>{r.cancelApplies ? 'Yes' : 'No'}</span>}
@@ -289,12 +294,6 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
           </tbody>
         </table>
       </div>
-      {editing && <div style={{ display:'flex', alignItems:'center', minHeight:42, padding:'6px 9px', borderTop:`1px solid ${T.lineSoft}`, background:'#F8FAFC' }}>
-        <button type="button" onClick={addRow} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'5px 9px', border:`1px solid ${T.line}`, borderRadius:6, background:'#fff', color:T.primary, fontSize:10.5, fontWeight:800, cursor:'pointer', boxShadow:'0 1px 1px rgba(15,23,42,.03)' }}>
-          <span aria-hidden="true" style={{ fontSize:14, lineHeight:1 }}>+</span> Add {meta.childWord}
-        </button>
-        <span style={{ marginLeft:8, color:T.inkFaint, fontSize:9.75 }}>Adds a new row to this schedule.</span>
-      </div>}
     </div>
   );
 }
@@ -320,7 +319,7 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
     <div style={{ border:`1px dashed ${T.line}`, borderRadius:9, padding:'26px 16px', textAlign:'center', color:T.inkSoft, background:T.fill }}>
       <span aria-hidden="true" style={{ width:30, height:30, margin:'0 auto 8px', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', background:'#fff', border:`1px solid ${T.line}`, color:T.primary, fontSize:18 }}>+</span>
       <div style={{ fontSize:13, fontWeight:700, color:T.ink }}>No {meta.childWords.toLowerCase()} configured</div>
-      <div style={{ fontSize:11, marginTop:3 }}>Add the first {meta.childWord.toLowerCase()} to define pricing and stateroom coverage.</div>
+      <div style={{ fontSize:11, marginTop:3 }}>Add the first {meta.childWord.toLowerCase()} to define its schedule and pricing.</div>
       {editing && <div style={{ marginTop:12 }}><button type="button" onClick={() => setRows([blankChild(type)])} style={{ ...polDark, padding:'7px 12px' }}>{meta.addChild}</button></div>}
     </div>
   );
@@ -338,8 +337,8 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
           ? (isBlank(r.amount) ? 'Amount required' : depAmountLabel(r))
           : (!valDis && isBlank(r.penaltyValue) ? 'Value required' : penAmountLabel(r));
         const summaries = isDep
-          ? [range, r.marketingName || 'Name required', chargeSummary, catSentence(r.cats || [])]
-          : [range, chargeSummary, catSentence(r.cats || [])];
+          ? [range, r.marketingName || 'Name required', chargeSummary]
+          : [range, chargeSummary];
         return (
           <div key={i} {...dragProps(i)} style={{ border:`1px solid ${fieldsReady ? T.line : '#FCD34D'}`, borderRadius:10, background:'#fff', overflow:'hidden', boxShadow:'0 1px 2px rgba(15,23,42,.06)' }}>
             <div style={{ display:'grid', gridTemplateColumns:`${editing ? '28px ' : ''}minmax(0,1fr) auto`, alignItems:'start', gap:10, padding:'11px 12px', background:fieldsReady ? '#fff' : '#FFFBEB', borderBottom:`1px solid ${fieldsReady ? T.line : '#FDE68A'}` }}>
@@ -386,11 +385,8 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
                     {editing ? rcIn(r.amount, v => upd(i, 'amount', v.replace(/[^0-9.]/g, '')), cellErr[`${i}:amount`], '', r.depositType === 'PCT' ? '%' : '$') : rcVal(depAmountLabel(r))}
                   </RCField>
                 </RCGroup>
-                <RCGroup divided label="Applicability" helper="Choose who the line covers and whether it affects cancellation charges." columns={1}>
-                  <RCField required label="Stateroom types" err={cellErr[`${i}:cats`]}>
-                    {editing ? <CatSelect value={r.cats} onChange={v => upd(i, 'cats', v)} err={cellErr[`${i}:cats`]}/> : rcVal(catSentence(r.cats || []))}
-                  </RCField>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, paddingTop:10, borderTop:`1px solid ${T.line}` }}>
+                <RCGroup divided label="Cancellation behavior" helper="Choose whether the deposit affects cancellation charges." columns={1}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
                     <div style={{ minWidth:0 }}>
                       <div style={{ fontSize:12, fontWeight:700, color:T.ink }}>Cancellation policy applies</div>
                       <div style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.4, marginTop:2 }}>Deposit paid can act as the cancellation-charge floor.</div>
@@ -410,7 +406,7 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
                     {editing ? <Sel compact value={r.penaltyType} onChange={v => upd(i, 'penaltyType', v)} opts={PEN_TYPES}/> : rcVal(r.penaltyType)}
                   </RCField>
                 </RCGroup>
-                <RCGroup divided label="Penalty & scope" helper="Set the charge value and stateroom coverage.">
+                <RCGroup divided label="Penalty amount" helper="Set the charge applied by this band." columns={1}>
                   <RCField label="Penalty value" err={cellErr[`${i}:penaltyValue`]}>
                     {editing
                       ? <div style={{ position:'relative' }}>
@@ -419,9 +415,6 @@ function RowCards({ type, codeNum, rows, setRows, cellErr = {}, editing }) {
                           <span style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', fontSize:11, color:T.inkFaint, pointerEvents:'none' }}>{r.penaltyType === 'PCT_CABIN_FARE' ? '%' : r.penaltyType === 'FIXED' ? '$' : '—'}</span>
                         </div>
                       : rcVal(penAmountLabel(r))}
-                  </RCField>
-                  <RCField required label="Stateroom types" err={cellErr[`${i}:cats`]}>
-                    {editing ? <CatSelect value={r.cats} onChange={v => upd(i, 'cats', v)} err={cellErr[`${i}:cats`]}/> : rcVal(catSentence(r.cats || []))}
                   </RCField>
                 </RCGroup>
               </>)}

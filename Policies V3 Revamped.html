@@ -24,21 +24,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel" src="dc-shell.jsx?v=19"></script>
+<script type="text/babel" src="dc-shell.jsx?v=21"></script>
 <script type="text/babel" src="ui-list.jsx?v=13"></script>
 <script type="text/babel" src="dc-group-panel.jsx?v=15"></script>
 <script type="text/babel" src="dc-parent-panel.jsx?v=14"></script>
 <script type="text/babel" src="dc-farecode.jsx?v=10"></script>
 <script type="text/babel" src="dc-booking.jsx?v=11"></script>
-<script type="text/babel" src="pol-data.jsx?v=14"></script>
-<script type="text/babel" src="pol-forms.jsx?v=26"></script>
+<script type="text/babel" src="pol-data.jsx?v=16"></script>
+<script type="text/babel" src="pol-forms.jsx?v=29"></script>
 <script type="text/babel" src="pol-chrome.jsx?v=13"></script>
-<script type="text/babel" src="pol-rows.jsx?v=25"></script>
-<script type="text/babel" src="pol-drawer.jsx?v=37"></script>
-<script type="text/babel" src="pol-detail.jsx?v=35"></script>
-<script type="text/babel" src="pol-list.jsx?v=23"></script>
-<script type="text/babel" src="fc-farecode.jsx?v=69"></script>
-<script type="text/babel" src="ft-faretype.jsx?v=56"></script>
+<script type="text/babel" src="pol-rows.jsx?v=31"></script>
+<script type="text/babel" src="pol-drawer.jsx?v=41"></script>
+<script type="text/babel" src="pol-detail.jsx?v=39"></script>
+<script type="text/babel" src="pol-list.jsx?v=25"></script>
+<script type="text/babel" src="fc-farecode.jsx?v=78"></script>
+<script type="text/babel" src="ft-faretype.jsx?v=63"></script>
 <script type="text/babel" src="sp-supplements.jsx?v=16"></script>
 <script type="text/babel">
 const { useState: useSApp } = React;
@@ -46,6 +46,9 @@ const { useState: useSApp } = React;
 function App() {
   const [screen, setScreen] = useSApp('policies');
   const [policies, setPolicies] = useSApp(POLICIES_INIT);
+  const [faretypes, setFaretypes] = useSApp(() => FARETYPE_INITIAL_ROWS.map(row => ({ ...row })));
+  const [farecodes, setFarecodes] = useSApp(() => FARECODE_INITIAL_ROWS.map(row => ({ ...row, cabins:[...(row.cabins || [])] })));
+  const [farecodeConfigs, setFarecodeConfigs] = useSApp(() => JSON.parse(JSON.stringify(FARECODE_INITIAL_CONFIGS)));
   const depGroups = toLegacy(policies, 'deposit');
   const canGroups = toLegacy(policies, 'cancel');
   return (
@@ -53,8 +56,8 @@ function App() {
       <PolSidebar screen={screen} onNav={setScreen}/>
       <TopBar/>
       {screen === 'policies' && <PoliciesList policies={policies} setPolicies={setPolicies} onNav={setScreen}/>}
-      {screen === 'faretypes' && <FaretypeListScreen policies={policies}/>}
-      {screen === 'farecodes' && <FarecodeListScreen policies={policies}/>}
+      {screen === 'faretypes' && <FaretypeListScreen policies={policies} data={faretypes} setData={setFaretypes}/>}
+      {screen === 'farecodes' && <FarecodeListScreen policies={policies} faretypes={faretypes} data={farecodes} setData={setFarecodes} configs={farecodeConfigs} setConfigs={setFarecodeConfigs}/>}
       {screen === 'supplements' && <SupplementListScreen/>}
       {screen === 'farecode' && <DCFarecodeScreen depGroups={depGroups} canGroups={canGroups}/>}
       {screen === 'flows' && <DCBookingFlows depGroups={depGroups} canGroups={canGroups}/>}

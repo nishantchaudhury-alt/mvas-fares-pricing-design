@@ -13,10 +13,19 @@ const dtsLabel = r => isBlank(r.beginDts) ? `${r.endDts === '' ? '—' : r.endDt
 const catSentence = cats => catLabel(cats) === 'All types' ? 'All stateroom types' : catLabel(cats);
 const depLabel = r => r.depositType === 'PCT' ? `${r.amount || '—'}% of fare` : `${money(r.amount)} ${r.depositType === 'FP' ? 'per person' : 'per cabin'}`;
 const childCode = (parentCode, i) => `${String(parentCode).replace(/^[A-Z]+-/, '')}.${i + 1}`;
-const lineSummary = r => [r.marketingName || 'Untitled line', `DTS ${dtsLabel(r)}`, depLabel(r), catSentence(r.cats || [])].join(' · ') + (r.cancelApplies ? ' · cancellation applies' : '');
-const bandSummary = r => [`DTS ${dtsLabel(r)}`, penAmountLabel(r), catSentence(r.cats || [])].join(' · ');
+const lineSummary = r => [r.marketingName || 'Untitled line', `DTS ${dtsLabel(r)}`, depLabel(r)].join(' · ') + (r.cancelApplies ? ' · cancellation applies' : '');
+const bandSummary = r => [`DTS ${dtsLabel(r)}`, penAmountLabel(r)].join(' · ');
 const childSummary = (type, r) => type === 'deposit' ? lineSummary(r) : bandSummary(r);
 const kidsOf = p => p.lines || p.bands || [];
+const normalizePolicyCats = cats => {
+  const selected = CATS.filter(cat => (cats || []).includes(cat));
+  return (cats || []).includes('All') || CATS.every(cat => selected.includes(cat)) ? ['All'] : selected;
+};
+const policyCatsOf = p => {
+  if (Array.isArray(p?.cats)) return normalizePolicyCats(p.cats);
+  const derived = [...new Set(kidsOf(p || {}).flatMap(row => catsCover(row.cats || [])))];
+  return derived.length ? normalizePolicyCats(derived) : ['All'];
+};
 const usedInGroup = g => g.parents.reduce((s, p) => s + (p.usedIn || 0), 0);
 const blankLine = () => ({ marketingName:'', beginDts:'', endDts:'', depositType:'FC', amount:'', cats:['All'], cancelApplies:true });
 const blankBand = () => ({ beginDts:'', endDts:'', penaltyType:'PCT_CABIN_FARE', penaltyValue:'', cats:['All'] });
@@ -113,7 +122,7 @@ const POLICIES_INIT = [
   { id:'g4', type:'deposit', code:'DEP-GRP-02', name:'Premium Suites Only', status:'Draft', isDefault:false, mod:'04 Jun 2026', created:'04 Jun 2026', editor:'jane.doe@mvas.com',
     parents:[
       { id:'p5', code:'DEP-511', name:'Premium Deposit', status:'Draft', isDefault:false, usedIn:0, mod:'04 Jun 2026', created:'04 Jun 2026', editor:'jane.doe@mvas.com',
-        lines:[], usedInFaretypes:[], usedInFarecodes:[] },
+        cats:['Suites'], lines:[], usedInFaretypes:[], usedInFarecodes:[] },
     ]},
   { id:'g5', type:'deposit', code:'DEP-GRP-03', name:'Legacy Group Bookings', status:'Inactive', isDefault:false, mod:'02 Jun 2026', created:'15 May 2026', editor:'admin@mvas.com',
     parents:[
@@ -173,23 +182,45 @@ POLICIES_INIT.push(
   seededCancellationGroup({ number:12, name:'World Cruise', parentCode:'CANC-030', parentName:'Extended Voyage Cancellation', status:'Inactive', mod:'04 Jun 2026', created:'28 May 2026', editor:'admin@mvas.com', usedIn:0, bands:seededCancellationBands({ freeDts:180, partialDts:90, pct:25 }) }),
 );
 
+/* Stateroom applicability belongs to the parent policy. Existing seed data is migrated by
+   taking the union of its legacy line/band coverage so the visible policy-level value is stable. */
+POLICIES_INIT.forEach(group => group.parents.forEach(parent => { parent.cats = policyCatsOf(parent); }));
+
 /* Adapters — the Farecode-assignment and booking-flow screens consume the older group shape. */
+const scopeLegacyRows = (rows, policyCats) => {
+  const allowed = catsCover(policyCats || []);
+  return (rows || []).map(row => {
+    const rowCoverage = catsCover(row.cats || ['All']);
+    const scoped = CATS.filter(cat => allowed.includes(cat) && rowCoverage.includes(cat));
+    return { ...row, cats:scoped.length === CATS.length ? ['All'] : scoped };
+  });
+};
 const toLegacy = (policies, type) => policies.filter(g => g.type === type).map(g => ({
   ...g, isActive:g.status === 'Active',
-  parents:g.parents.map(p => ({ ...p, isActive:p.status === 'Active', lines:p.lines, bands:p.bands })),
+  parents:g.parents.map(p => {
+    const cats = policyCatsOf(p);
+    return {
+      ...p,
+      cats,
+      isActive:p.status === 'Active',
+      ...(Array.isArray(p.lines) ? { lines:scopeLegacyRows(p.lines, cats) } : {}),
+      ...(Array.isArray(p.bands) ? { bands:scopeLegacyRows(p.bands, cats) } : {}),
+    };
+  }),
 }));
 
 /* Full-chain validation for Activate on the merged Policy step. */
-function chainIssues({ type, policies, groupId, groupName, parentName, rows, isRefundable }) {
+function chainIssues({ type, policies, groupId, groupName, parentName, policyCats, rows, isRefundable }) {
   const out = [];
   const nm = (groupName || '').trim().toLowerCase();
   if (!nm) out.push({ level:'error', text:'Group name is required.' });
   else if (policies.some(g => g.type === type && g.id !== groupId && g.status === 'Active' && g.name.trim().toLowerCase() === nm))
     out.push({ level:'error', text:`Another active ${POL_META[type].label.toLowerCase()} group is already named "${groupName}". Names must be unique.` });
   if (!(parentName || '').trim()) out.push({ level:'error', text:'Policy name is required.' });
+  if (!policyCats?.length) out.push({ level:'error', text:'Stateroom coverage is required.' });
   if (!rows.length) out.push({ level:'error', text:`A policy needs at least one ${POL_META[type].childWord.toLowerCase()} before it can be activated.` });
   else {
-    const v = validateRows(rows);
+    const v = validateRows(rows, { policyCoverage:policyCats || [] });
     if (Object.keys(v.cell).length) out.push({ level:'error', text:'Some rows have incomplete or out-of-range fields — highlighted above.' });
     else out.push(...v.issues);
   }
@@ -199,6 +230,6 @@ function chainIssues({ type, policies, groupId, groupName, parentName, rows, isR
 
 Object.assign(window, {
   POL_META, POL_STATUS, POLICIES_INIT, dtsLabel, catSentence, depLabel, childCode,
-  lineSummary, bandSummary, childSummary, kidsOf, usedInGroup, blankLine, blankBand, blankChild,
+  lineSummary, bandSummary, childSummary, kidsOf, normalizePolicyCats, policyCatsOf, usedInGroup, blankLine, blankBand, blankChild,
   toLegacy, chainIssues,
 });

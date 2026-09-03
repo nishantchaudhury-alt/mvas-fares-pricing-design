@@ -21,52 +21,6 @@ function PolDetailCard({ number, title, description, aside, children, pad = '14p
   );
 }
 
-const POL_RULE_REFERENCE = {
-  deposit: [
-    { code:'Fixed per Cabin', title:'One amount for the cabin', detail:'Charge one flat amount per cabin, regardless of occupancy.' },
-    { code:'Fixed per Person', title:'One amount for each person', detail:'Charge the same flat amount for each person.' },
-    { code:'Percentage', title:'A share of the amount due', detail:'Charge a percentage of the total booking amount due at this milestone.' },
-  ],
-  cancel: [
-    { code:'NONE', title:'No penalty', detail:'Apply no cancellation penalty for this band.' },
-    { code:'FIXED', title:'Fixed amount', detail:'Apply the configured fixed cancellation amount.' },
-    { code:'PCT_CABIN_FARE', title:'Cabin-fare percentage', detail:'Apply the configured percentage to the booking’s applicable cabin fare.' },
-    { code:'FULL_DEPOSIT', title:'Deposit amount', detail:'Use the booking’s applicable deposit amount as the cancellation penalty.' },
-  ],
-};
-
-function PolRuleReference({ type }) {
-  const entries = POL_RULE_REFERENCE[type];
-  const isCancel = type === 'cancel';
-  const uid = React.useId().replace(/:/g, '');
-  const titleId = `policy-rule-reference-${uid}`;
-  return (
-    <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, overflow:'hidden', boxShadow:'0 1px 2px rgba(15,23,42,.05)' }}>
-      <div style={{ padding:'11px 14px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, background:T.fill, borderBottom:`1px solid ${T.line}` }}>
-        <div style={{ display:'flex', alignItems:'flex-start', gap:9, minWidth:0 }}>
-          <span aria-hidden="true" style={{ padding:'3px 7px', borderRadius:5, background:T.primary, color:'#fff', fontSize:9.5, fontWeight:800, lineHeight:1.35, flexShrink:0 }}>02</span>
-          <div>
-            <h3 id={titleId} style={{ margin:0, color:T.ink, fontSize:13.5, fontWeight:700 }}>{isCancel ? 'Penalty type reference' : 'Deposit type reference'}</h3>
-            <p style={{ margin:'3px 0 0', color:T.inkSoft, fontSize:11.5, lineHeight:1.45 }}>How each configured value determines the amount charged.</p>
-          </div>
-        </div>
-        <span style={{ flexShrink:0, padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{entries.length} options</span>
-      </div>
-      <div>
-        {entries.map((entry, index) => (
-          <div key={entry.code} style={{ display:'grid', gridTemplateColumns:'128px minmax(0,1fr)', gap:14, alignItems:'start', padding:'11px 14px', borderBottom:index < entries.length - 1 ? `1px solid ${T.lineSoft}` : 'none' }}>
-            <span style={{ width:'fit-content', maxWidth:'100%', padding:'4px 7px', borderRadius:6, border:`1px solid ${T.line}`, background:T.fill, color:T.ink, fontFamily:MONO, fontSize:10.5, fontWeight:700, lineHeight:1.35, overflowWrap:'anywhere' }}>{entry.code}</span>
-            <div style={{ minWidth:0 }}>
-              <div style={{ color:T.ink, fontSize:12.5, fontWeight:650, lineHeight:1.35 }}>{entry.title}</div>
-              <div style={{ marginTop:2, color:T.inkSoft, fontSize:11.5, lineHeight:1.5 }}>{entry.detail}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function PolActivityHistory({ status, label }) {
   const log = AUDIT(label, status);
   const uid = React.useId().replace(/:/g, '');
@@ -184,7 +138,8 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
   const meta = POL_META[g.type];
   const isGroup = !p;
   const kids = p ? kidsOf(p) : [];
-  const v = p ? validateRows(kids) : null;
+  const parentCats = p ? policyCatsOf(p) : [];
+  const v = p ? validateRows(kids, { policyCoverage:parentCats }) : null;
   const refundIssues = p && g.type === 'cancel' ? refundabilityIssues(kids, g.isRefundable !== false) : [];
   const editBtn = { ...polBtn, background:T.primary, color:'#fff', display:'inline-flex', alignItems:'center', gap:6 };
   const isDraftTarget = g.status === 'Draft' || (p && p.status === 'Draft');
@@ -219,7 +174,7 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
             </colgroup>
             <thead>
               <tr>
-                {['Policy', 'Default', 'Status', 'Configuration', 'Coverage', 'Referenced by'].map(label => (
+                {['Policy', 'Default', 'Status', 'Configuration', 'Stateroom Coverage', 'Referenced by'].map(label => (
                   <th key={label} scope="col" style={{ padding:'9px 12px', textAlign:'left', background:T.fill, borderBottom:`1px solid ${T.line}`, color:T.inkLabel, fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:'.6px', whiteSpace:'nowrap' }}>{label}</th>
                 ))}
                 <th scope="col" aria-label="Actions" style={{ width:36, padding:'9px 6px', background:T.fill, borderBottom:`1px solid ${T.line}` }}/>
@@ -227,7 +182,7 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
             </thead>
             <tbody>
               {g.parents.map((x, index) => {
-                const k = kidsOf(x), ok = k.length > 0 && validateRows(k).issues.length === 0;
+                const k = kidsOf(x);
                 const configLabel = g.type === 'cancel'
                   ? `${k.length} cancellation ${k.length === 1 ? 'band' : 'bands'}`
                   : `${k.length} milestone ${k.length === 1 ? 'line' : 'lines'}`;
@@ -244,7 +199,7 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
                     <td style={cellStyle}>{x.isDefault ? <Pill>Default</Pill> : <span style={{ color:T.inkFaint }}>—</span>}</td>
                     <td style={cellStyle}><PolStatusBadge status={x.status}/></td>
                     <td style={{ ...cellStyle, whiteSpace:'nowrap' }}>{configLabel}</td>
-                    <td style={cellStyle}><CoverPill ok={ok} label={k.length === 0 ? 'Not configured' : ok ? 'Complete' : 'Needs attention'}/></td>
+                    <td style={cellStyle}>{catSentence(policyCatsOf(x))}</td>
                     <td style={{ ...cellStyle, whiteSpace:'nowrap' }}>{x.usedIn > 0 ? `${x.usedIn} records` : 'No records'}</td>
                     <td style={{ ...cellStyle, padding:'6px 4px', textAlign:'center' }} onClick={e => e.stopPropagation()}>
                       <button type="button" aria-label={`Open ${x.code}, ${x.name}`} onClick={openPolicy}
@@ -275,7 +230,6 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
           ? <div style={{ padding:'28px 12px', textAlign:'center', fontSize:13, color:T.inkSoft }}>No {meta.childWords.toLowerCase()} yet.</div>
           : <PolicyRowsTable type={g.type} codeNum={codeNumOf(p.code)} rows={kids} setRows={() => {}} cellErr={v.cell} editing={false}/>}
       </SCard>
-      <PolRuleReference type={g.type}/>
     </>
   );
 
@@ -299,7 +253,7 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
     <DetailShell detailLabel={isGroup ? 'Policy Group Details' : 'Policy Details'} badge={<><TypeBadge type={g.type}/>{assignmentBadge}{refundabilityBadge}</>} status={isGroup ? g.status : p.status} code={isGroup ? g.code : p.code}
       title={isGroup ? g.name : p.name}
       sub={isGroup ? `Modified ${g.mod} · ${g.editor}`
-                   : `In ${g.name} (${g.code}) · Modified ${p.mod} · ${p.editor}`}
+                   : `Stateroom coverage: ${catSentence(parentCats)} · In ${g.name} (${g.code}) · Modified ${p.mod} · ${p.editor}`}
       tabs={tabs} tab={tab} setTab={setTab} actions={actions}
       onBack={!isGroup && onBackToGroup ? () => { setTab('children'); onBackToGroup(); } : null}
       backLabel={!isGroup ? `${g.name} group` : null} onClose={onClose}>

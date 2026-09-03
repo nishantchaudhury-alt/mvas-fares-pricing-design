@@ -108,9 +108,15 @@ function PolicyRowsSubsection({ id, type, codeNum, rows, setRows, cellErr, valid
             <h4 id={id} style={{ fontSize:12.5, fontWeight:700, color:T.ink, margin:0 }}>{meta.childWords}</h4>
             <span style={{ color:T.inkFaint, fontSize:9, fontWeight:800, letterSpacing:'.65px', textTransform:'uppercase' }}>Policy schedule</span>
           </div>
-          <p style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.4, margin:'2px 0 0' }}>Define DTS windows, {type === 'deposit' ? 'deposit amounts' : 'penalties'}, and stateroom coverage.</p>
+          <p style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.4, margin:'2px 0 0' }}>Define DTS windows and {type === 'deposit' ? 'deposit amounts' : 'penalties'} for this policy.</p>
         </div>
-        <span style={{ flexShrink:0, padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:T.fill, color:T.inkSoft, fontSize:10, fontWeight:700 }}>{rows.length} {rows.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}</span>
+        <div style={{ display:'flex', alignItems:'center', gap:7, flexShrink:0 }}>
+          <span style={{ padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:T.fill, color:T.inkSoft, fontSize:10, fontWeight:700 }}>{rows.length} {rows.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}</span>
+          <button type="button" onClick={() => setRows([...rows, blankChild(type)])}
+            style={{ display:'inline-flex', alignItems:'center', gap:5, minHeight:28, padding:'5px 9px', border:`1px solid ${T.primary}`, borderRadius:6, background:'#fff', color:T.primary, fontSize:10.5, fontWeight:800, cursor:'pointer', boxShadow:'0 1px 1px rgba(15,23,42,.03)' }}>
+            <span aria-hidden="true" style={{ fontSize:13, lineHeight:1 }}>+</span> Add {meta.childWord}
+          </button>
+        </div>
       </div>
       <PolicyRowsTable type={type} codeNum={codeNum} rows={rows} setRows={setRows} cellErr={cellErr} editing={true} validationAttempt={validationAttempt}/>
       {children}
@@ -119,8 +125,8 @@ function PolicyRowsSubsection({ id, type, codeNum, rows, setRows, cellErr, valid
 }
 
 function policyDraftIsReady(type, draft, groupRefundable) {
-  if (!draft.pForm.name.trim() || !draft.rows.length) return false;
-  const validation = validateRows(draft.rows);
+  if (!draft.pForm.name.trim() || !(draft.pForm.cats || []).length || !draft.rows.length) return false;
+  const validation = validateRows(draft.rows, { policyCoverage:draft.pForm.cats });
   if (Object.keys(validation.cell).length || validation.issues.length) return false;
   return type !== 'cancel' || refundabilityIssues(draft.rows, groupRefundable !== false).length === 0;
 }
@@ -224,7 +230,7 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
       key:`draft-${parentCode}`,
       parentId:null,
       parentCode,
-      pForm:{ name:'', active:true, isDefault:false, refundable:x.gForm.refundable !== false },
+      pForm:{ ...blankPolicyForm(), refundable:x.gForm.refundable !== false },
       rows:[], issues:[], validationAttempt:0, err:null,
     };
     return { ...x, policyDrafts:[...current, draft], activePolicyIndex:current.length };
@@ -237,7 +243,7 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
     return { ...x, policyDrafts:next, activePolicyIndex:active === index ? Math.max(0, index - 1) : active > index ? active - 1 : active };
   });
   const goto = step => setFlow(x => ({ ...x, step, issues:[] }));
-  const rowValidation = validateRows(activePolicy.rows);
+  const rowValidation = validateRows(activePolicy.rows, { policyCoverage:activePolicy.pForm.cats || [] });
   const cellErr = rowValidation.cell;
   const groupLocked = f.entry === 'addPolicy';
   const groupName = f.gForm.name.trim();
@@ -261,19 +267,19 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
     ...rowValidation.issues.filter(it => it.text !== 'Some fields are incomplete or out of range.'),
     ...(f.type === 'cancel' ? refundabilityIssues(activePolicy.rows, f.gForm.refundable !== false) : []),
   ];
-  const nameIssueCount = activePolicy.pForm.name.trim() ? 0 : 1;
-  const issueCount = fieldIssueCount + structuralIssues.length + nameIssueCount;
+  const identityIssueCount = (activePolicy.pForm.name.trim() ? 0 : 1) + ((activePolicy.pForm.cats || []).length ? 0 : 1);
+  const issueCount = fieldIssueCount + structuralIssues.length + identityIssueCount;
   const ready = activePolicy.rows.length > 0 && issueCount === 0 && activatable;
   const showReadiness = activePolicy.rows.length > 0 || (activePolicy.validationAttempt || 0) > 0 || (activePolicy.issues || []).length > 0;
   const readinessHelp = ready
-    ? `${activePolicy.rows.length} ${activePolicy.rows.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()} configured with continuous DTS and stateroom coverage.`
+    ? `${activePolicy.rows.length} ${activePolicy.rows.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()} configured with a valid schedule.`
     : !activePolicy.rows.length
-      ? `Add at least one ${meta.childWord.toLowerCase()} and define continuous DTS and stateroom coverage.`
-      : nameIssueCount
-        ? 'Name the policy, then resolve any row or coverage issues before activation.'
+      ? `Add at least one ${meta.childWord.toLowerCase()} and define its DTS schedule.`
+      : identityIssueCount
+        ? 'Complete the policy name and stateroom coverage, then resolve any schedule issues.'
         : fieldIssueCount
-          ? 'Complete the highlighted row fields, then confirm continuous DTS and stateroom coverage.'
-          : 'Resolve DTS ordering, coverage, or refundability so the full policy can be activated.';
+          ? 'Complete the highlighted row fields, then confirm the DTS schedule.'
+          : 'Resolve DTS ordering or refundability so the full policy can be activated.';
 
   const body = () => {
     if (f.step === 1) return (
@@ -285,8 +291,7 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
             <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy identity</div>
             <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.35, textAlign:'right' }}>Used in assignment, reporting, and history</div>
           </div>
-          <TextField label={f.type === 'cancel' ? 'Cancellation policy name' : 'Deposit policy name'} value={activePolicy.pForm.name} onChange={v => setP({ name:v })} error={activePolicy.err?.name}
-            placeholder={f.type === 'cancel' ? 'e.g. Standard Cancellation' : 'e.g. 5 Night Standard Deposit'}/>
+          <PolicyIdentityFields type={f.type} form={activePolicy.pForm} set={setP} err={activePolicy.err}/>
         </div>
         <PolicyRowsSubsection id="policy-lines-title" type={f.type} codeNum={codeNumOf(activePolicy.parentCode)} rows={activePolicy.rows}
           setRows={setPolicyRows} cellErr={cellErr} validationAttempt={activePolicy.validationAttempt || 0}>
@@ -295,12 +300,6 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
             <span style={{ minWidth:0, flex:1, fontSize:11, color:T.inkSoft, lineHeight:1.4 }}><strong style={{ color:T.ink }}>{ready ? 'Ready for activation.' : 'Setup incomplete.'}</strong> {readinessHelp}</span>
             <span style={{ color:ready ? '#047857' : '#92400E', fontSize:9.5, fontWeight:800, whiteSpace:'nowrap' }}>{ready ? 'Ready' : `${issueCount} ${issueCount === 1 ? 'issue' : 'issues'}`}</span>
           </div>}
-          {f.type === 'cancel' && (
-            <div role="note" aria-label="Cancellation pricing rule" style={{ display:'flex', alignItems:'center', gap:7, padding:'7px 9px', marginTop:8, border:`1px solid ${T.lineSoft}`, borderRadius:6, background:T.fill, color:T.inkSoft, fontSize:10.25, lineHeight:1.4 }}>
-              <span aria-hidden="true" style={{ display:'flex', color:T.inkSoft, flexShrink:0 }}><IcInfo color={T.inkSoft} size={11}/></span>
-              <span><strong style={{ color:T.ink }}>Pricing rule:</strong> charge whichever is greater—the active band penalty plus port fees, or the applicable deposit cancellation floor.</span>
-            </div>
-          )}
           <IssueList issues={activePolicy.issues || []}/>
         </PolicyRowsSubsection>
         <ParentAssignmentFields embedded type={f.type} form={activePolicy.pForm} set={setP} creation={true} groupRefundable={f.gForm.refundable}
@@ -339,7 +338,7 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
 function PolEditDrawer({ edit, group, parent, setEdit, activatable, onCancel, onSave }) {
   const isGroup = edit.level === 'group';
   const g = group, p = parent, meta = POL_META[g.type];
-  const cellErr = isGroup ? {} : validateRows(edit.rows).cell;
+  const cellErr = isGroup ? {} : validateRows(edit.rows, { policyCoverage:edit.form.cats || [] }).cell;
   const setForm = patch => setEdit(e => ({ ...e, form:{ ...e.form, ...patch }, err:null, issues:[] }));
   return (
     <PolDrawerFrame detailLabel={isGroup ? 'Edit Policy Group' : 'Edit Policy'} code={isGroup ? g.code : p.code}
