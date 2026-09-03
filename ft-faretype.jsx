@@ -30,14 +30,33 @@ const INIT_ROWS = [
 { id: 7, code: 'FT-00107', basis: 'NR-GROUP', group: 'Non-Refundable', source: 'WC', cancellationPolicy: 'Non-Refundable', depositPolicy: '5 Night Standard Deposit', standbyEligible: false, upgradeEligible: true, couponEligible: true, fc: 6, status: 'Active', mod: '13 Jun 2026' },
 { id: 8, code: 'FT-00108', basis: 'INT-PROMO', group: 'Interline', source: 'Partner', cancellationPolicy: 'Standard Cancellation', depositPolicy: '5 Night Promo Deposit', standbyEligible: false, upgradeEligible: true, couponEligible: true, fc: 1, status: 'Active', mod: '02 Jun 2026' }];
 
+/* Legacy Policy Eligibility records could carry a Faretype association. Normalize into a
+   standalone guest-eligibility template and retain only template identity and guest rules. */
+function normalizeEligibilityTemplate(row = {}, index = 0) {
+  const id = row.id ?? index + 1;
+  return {
+    id,
+    code: row.code || `PE-${String(id).padStart(5, '0')}`,
+    name: row.name || row.faretypeCode || `Guest Eligibility ${String(id).padStart(2, '0')}`,
+    residency: row.residency || 'Any',
+    minAge: row.minAge ?? 18,
+    minOccupancy: row.minOccupancy ?? row.minOcc ?? '',
+    maxOccupancy: row.maxOccupancy ?? row.maxOcc ?? '',
+    advancedPurchase: row.advancedPurchase ?? row.advPurchase ?? '',
+    boardingPass: row.boardingPass ?? '',
+    status: row.status || 'Draft',
+    mod: row.mod || '—'
+  };
+}
+
 const INIT_POLICY_ELIGIBILITY = [
-{ id: 1, code: 'PE-00001', name: 'Retail Standard', faretypeCode: 'FT-00101', residency: 'Any', minAge: 18, status: 'Active', mod: '14 Jun 2026' },
-{ id: 2, code: 'PE-00002', name: 'Non-Refundable Retail', faretypeCode: 'FT-00102', residency: 'Any', minAge: 18, status: 'Active', mod: '12 Jun 2026' },
-{ id: 3, code: 'PE-00003', name: 'International Agency', faretypeCode: 'FT-00103', residency: 'Non-US', minAge: 18, status: 'Active', mod: '11 Jun 2026' },
-{ id: 4, code: 'PE-00004', name: 'Casino Guest', faretypeCode: 'FT-00105', residency: 'Any', minAge: 21, status: 'Draft', mod: '09 Jun 2026' },
-{ id: 5, code: 'PE-00005', name: 'Flexible Retail', faretypeCode: 'FT-00106', residency: 'Any', minAge: 18, status: 'Active', mod: '08 Jun 2026' },
-{ id: 6, code: 'PE-00006', name: 'Group Contract', faretypeCode: 'FT-00107', residency: 'Any', minAge: 18, status: 'Inactive', mod: '04 Jun 2026' }
-];
+{ id: 1, code: 'PE-00001', name: 'Retail Standard', residency: 'Any', minAge: 18, status: 'Active', mod: '14 Jun 2026' },
+{ id: 2, code: 'PE-00002', name: 'Non-Refundable Retail', residency: 'Any', minAge: 18, status: 'Active', mod: '12 Jun 2026' },
+{ id: 3, code: 'PE-00003', name: 'International Agency', residency: 'Non-US', minAge: 18, status: 'Active', mod: '11 Jun 2026' },
+{ id: 4, code: 'PE-00004', name: 'Casino Guest', residency: 'Any', minAge: 21, status: 'Draft', mod: '09 Jun 2026' },
+{ id: 5, code: 'PE-00005', name: 'Flexible Retail', residency: 'Any', minAge: 18, status: 'Active', mod: '08 Jun 2026' },
+{ id: 6, code: 'PE-00006', name: 'Group Contract', residency: 'Any', minAge: 18, status: 'Inactive', mod: '04 Jun 2026' }
+].map(normalizeEligibilityTemplate);
 
 const GROUP_S = {
   'Core': { bg: '#EEF2FF', color: '#4338CA' },
@@ -70,10 +89,9 @@ const DEFAULT_FORM = () => ({
 });
 
 const DEFAULT_ELIGIBILITY_FORM = () => ({
-  faretypeCode: '', fareBasisCode: '', faretypeGroup: '', source: '',
   residency: 'Any', minAge: 18, minOccupancy: '', maxOccupancy: '', advancedPurchase: '', boardingPass: ''
 });
-const ELIGIBILITY_KEYS = ['faretypeCode', 'fareBasisCode', 'faretypeGroup', 'source', 'residency', 'minAge', 'minOccupancy', 'maxOccupancy', 'advancedPurchase', 'boardingPass'];
+const ELIGIBILITY_KEYS = ['residency', 'minAge', 'minOccupancy', 'maxOccupancy', 'advancedPurchase', 'boardingPass'];
 const eligibilityValues = (record) => Object.fromEntries(ELIGIBILITY_KEYS.filter((key) => record && Object.prototype.hasOwnProperty.call(record, key)).map((key) => [key, record[key]]));
 
 
@@ -1373,7 +1391,7 @@ function FaretypePolicyEligibilityOverview({ form }) {
   );
 }
 
-function FaretypePolicyEligibilityEditor({ form, set, errors, faretypes = [], selectFaretype }) {
+function FaretypePolicyEligibilityEditor({ form, set }) {
   return (
     <section aria-label="Edit Policy Eligibility" style={{ width: '100%', border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', background: '#fff', boxShadow: '0 1px 2px rgba(15,23,42,.05)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '13px 16px', background: T.fill, borderBottom: `1px solid ${T.line}` }}>
@@ -1385,13 +1403,6 @@ function FaretypePolicyEligibilityEditor({ form, set, errors, faretypes = [], se
       </div>
 
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ maxWidth: 620 }}>
-          <Field label="Linked Faretype" required error={errors.faretypeCode}>
-            <Sel ariaLabel="Linked Faretype" value={form.faretypeCode || ''} onChange={selectFaretype} err={errors.faretypeCode}
-            opts={[["", "Select a Faretype…"], ...faretypes.map((row) => [row.code, `${row.code} · ${row.basis} · ${row.group}`])]} />
-          </Field>
-        </div>
-
         <div>
           <GroupHeading title="Guest eligibility" helper="Qualification and booking-window rules applied by this configuration." />
           <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
@@ -1422,43 +1433,17 @@ function FaretypePolicyEligibilityEditor({ form, set, errors, faretypes = [], se
   );
 }
 
-function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate, onDelete, faretypes = [] }) {
-  const buildInit = () => ({
+function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate, onDelete }) {
+  const buildInit = () => editData ? {
     ...DEFAULT_ELIGIBILITY_FORM(),
-    ...eligibilityValues(editData)
-  });
+    ...eligibilityValues(normalizeEligibilityTemplate(editData))
+  } : DEFAULT_ELIGIBILITY_FORM();
   const [form, setForm] = useState(buildInit);
   const initRef = useRef(JSON.stringify(buildInit()));
-  const [errors, setErrors] = useState({});
   const [showDiscard, setShowDiscard] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isEditing, setIsEditing] = useState(mode !== 'view');
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
-
-  const selectFaretype = (code) => {
-    const row = faretypes.find((item) => item.code === code);
-    if (!row) {
-      setForm({ ...DEFAULT_ELIGIBILITY_FORM(), faretypeCode: '' });
-      setErrors({});
-      return;
-    }
-    const detail = getDtl(row.code);
-    const cleanValue = (value) => value === '—' ? '' : value;
-    setForm((previous) => ({
-      ...previous,
-      faretypeCode: row.code,
-      fareBasisCode: row.basis,
-      faretypeGroup: row.group,
-      source: row.source,
-      residency: detail.residency || previous.residency,
-      minAge: detail.minAge ?? previous.minAge,
-      minOccupancy: cleanValue(detail.minOcc),
-      maxOccupancy: cleanValue(detail.maxOcc),
-      advancedPurchase: cleanValue(detail.advPurchase),
-      boardingPass: cleanValue(detail.boardingPass)
-    }));
-    setErrors((previous) => ({ ...previous, faretypeCode: undefined }));
-  };
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -1470,15 +1455,10 @@ function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate
   };
   const cancelEdit = () => {
     setForm(JSON.parse(initRef.current));
-    setErrors({});
     setIsEditing(false);
   };
-  const submit = () => {
-    const next = {};
-    if (!form.faretypeCode) next.faretypeCode = 'Select a Faretype';
-    setErrors(next);
-    if (!Object.keys(next).length) onActivate(form);
-  };
+  const submit = () => onActivate(form);
+  const identity = editData ? normalizeEligibilityTemplate(editData) : null;
 
   return (
     <>
@@ -1491,8 +1471,8 @@ function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M7 3h10a2 2 0 0 1 2 2v14l-7-4-7 4V5a2 2 0 0 1 2-2z" /></svg>
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 5 }}>{mode === 'create' ? 'Configure New Policy Eligibility Template' : isEditing ? `Edit Policy Eligibility · ${editData?.code}` : `Policy Eligibility · ${editData?.code}`}</div>
-                <div style={{ fontSize: 12, color: T.inkFaint }}>{isEditing ? 'Define reusable guest booking requirements.' : 'Review the current guest booking requirements.'}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 5 }}>{mode === 'create' ? 'Configure New Policy Eligibility Template' : isEditing ? `Edit Policy Eligibility · ${identity?.code}` : `Policy Eligibility · ${identity?.code}`}</div>
+                <div style={{ fontSize: 12, color: T.inkFaint }}>{isEditing ? 'Define a reusable guest-eligibility template.' : `${identity?.name} · Guest qualification and booking-window requirements.`}</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1510,7 +1490,7 @@ function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate
 
         <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: `26px 30px ${isEditing ? 92 : 26}px`, background: T.panel }}>
           {isEditing
-            ? <FaretypePolicyEligibilityEditor form={form} set={set} errors={errors} faretypes={faretypes} selectFaretype={selectFaretype} />
+            ? <FaretypePolicyEligibilityEditor form={form} set={set} />
             : <FaretypePolicyEligibilityOverview form={form} />}
         </div>
 
@@ -1657,9 +1637,8 @@ function FaretypeTable({ rows, selected, onToggleRow, onToggleAll, sortCol, sort
 
 const POLICY_ELIGIBILITY_COLS = [
 { key: 'code', label: 'Template Code', sort: true, width: '130px' },
-{ key: 'name', label: 'Policy Eligibility', sort: true, width: '180px' },
-{ key: 'faretypeCode', label: 'Linked Faretype', sort: true, width: '155px' },
-{ key: 'eligibility', label: 'Guest Eligibility', sort: false, width: '145px' },
+{ key: 'name', label: 'Template Name', sort: true, width: '240px' },
+{ key: 'eligibility', label: 'Guest Eligibility', sort: false, width: '220px' },
 { key: 'status', label: 'Status', sort: true, width: '105px' },
 { key: 'mod', label: 'Last Modified', sort: true, width: '135px' }
 ];
@@ -1668,7 +1647,6 @@ function PolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen, onDele
   const cell = (row, key) => {
     if (key === 'code') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 700, color: T.primary }}>{row.code}</span>;
     if (key === 'name') return <span style={{ fontWeight: 650, color: T.ink }}>{row.name}</span>;
-    if (key === 'faretypeCode') return <span style={{ fontFamily: "'SF Mono',Menlo,monospace", color: T.inkSoft }}>{row.faretypeCode}</span>;
     if (key === 'eligibility') return <span style={{ color: T.inkSoft }}>{row.residency} · Age {row.minAge}+</span>;
     if (key === 'status') return <StatusBadge status={row.status} />;
     if (key === 'mod') return <span style={{ color: T.inkSoft, fontSize: 12.5 }}>{row.mod}</span>;
@@ -1676,7 +1654,7 @@ function PolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen, onDele
   };
   return <DataTable cols={POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} sortCol={sortCol} sortDir={sortDir} onSort={onSort} onRowClick={onOpen}
     rowActions={(row) => [{ label: 'Delete Policy Eligibility', icon: <IcTrash size={13}/>, danger: true, onClick: () => onDelete(row) }]}
-    emptyTitle="No Policy Eligibility templates match your filters" minWidth={1080} />;
+    emptyTitle="No Policy Eligibility templates match your filters" minWidth={820} />;
 }
 
 /* ── Faretype Detail Panel ─────────────────── */
@@ -2176,7 +2154,7 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
   const sourceRows = view === 'faretype' ? activeData : activePolicyEligibility;
   let rows = sourceRows.filter((r) => {
     const q = search.trim().toLowerCase();
-    const searchable = view === 'faretype' ? `${r.code} ${r.basis} ${r.group}` : `${r.code} ${r.name} ${r.faretypeCode} ${r.residency} ${r.minAge}`;
+    const searchable = view === 'faretype' ? `${r.code} ${r.basis} ${r.group}` : `${r.code} ${r.name} ${r.residency} ${r.minAge} ${r.advancedPurchase || ''} ${r.boardingPass || ''}`;
     if (q && !searchable.toLowerCase().includes(q)) return false;
     if (view === 'faretype' && groupF !== 'All Groups' && r.group !== groupF) return false;
     if (view === 'faretype' && sourceF !== 'All Sources' && r.source !== sourceF) return false;
@@ -2211,9 +2189,8 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
   const openPolicyEligibility = (row) => {setPanelKind('policyEligibility');setPanelMode('view');setEditData(row);setPanelOpen(true);};
   const closePanel = () => {setPanelOpen(false);setEditData(null);};
   const deleteFaretype = (row) => {
-    if (!window.confirm(`Delete ${row.code}? Its linked Policy Eligibility configuration will also be deleted.`)) return;
+    if (!window.confirm(`Delete ${row.code}? This action cannot be undone.`)) return;
     setData((previous) => previous.filter((item) => item.id !== row.id));
-    setPolicyEligibility((previous) => previous.filter((item) => item.faretypeCode !== row.code));
     setSelected((previous) => { const next = new Set(previous); next.delete(row.id); return next; });
     if (editData?.id === row.id) closePanel();
   };
@@ -2246,13 +2223,12 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
   };
 
   const handlePolicyEligibilityActivate = (form) => {
-    if (!form.faretypeCode) return;
     if (editData) {
       setPolicyEligibility((p) => p.map((r) => r.id === editData.id ? {
+        ...eligibilityValues(form),
         id: r.id,
         code: r.code,
-        name: `${form.faretypeCode} · ${form.residency || 'Any'} ${form.minAge}+`,
-        ...eligibilityValues(form),
+        name: r.name,
         status: 'Active',
         mod: TODAY
       } : r));
@@ -2262,7 +2238,7 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
         ...eligibilityValues(form),
         id,
         code: `PE-${String(id).padStart(5, '0')}`,
-        name: `${form.faretypeCode} · ${form.residency || 'Any'} ${form.minAge}+`,
+        name: `Guest Eligibility ${String(id).padStart(2, '0')}`,
         status: 'Active',
         mod: TODAY
       }]);
@@ -2321,7 +2297,7 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
             </div>
             <ListToolbar>
               <FilterRow>
-                <ListSearch value={search} onChange={setSearch} placeholder={view === 'faretype' ? 'Filter by code, basis, group name…' : 'Filter by code, name, linked Faretype…'} />
+                <ListSearch value={search} onChange={setSearch} placeholder={view === 'faretype' ? 'Filter by code, basis, group name…' : 'Filter by template code, name, or guest rule…'} />
                 {view === 'faretype' && <SelectFilter value={groupF} onChange={setGroupF} options={['All Groups', 'Core', 'Interline', 'Brochure', 'Non-Refundable']} />}
                 {view === 'faretype' && <SelectFilter value={sourceF} onChange={setSourceF} options={['All Sources', 'WC', 'Casino', 'Partner', 'YM']} />}
                 {hasFilter && <ClearFilters onClick={() => {setSearch('');setGroupF('All Groups');setSourceF('All Sources');}} />}
@@ -2352,7 +2328,7 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
       }
 
       {panelOpen && panelKind === 'policyEligibility' &&
-      <PolicyEligibilityPanel mode={panelMode} editData={editData} faretypes={data} onClose={closePanel} onActivate={handlePolicyEligibilityActivate} onDelete={deletePolicyEligibility} />
+      <PolicyEligibilityPanel mode={panelMode} editData={editData} onClose={closePanel} onActivate={handlePolicyEligibilityActivate} onDelete={deletePolicyEligibility} />
       }
     </>);
 
