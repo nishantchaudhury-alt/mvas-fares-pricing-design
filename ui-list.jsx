@@ -134,6 +134,101 @@ function DeleteIconButton({ onClick, label = 'Delete', title, disabled = false }
   );
 }
 
+/* Record-level modification metadata. The inline treatment belongs beneath a record's
+   contextual summary; table columns use the compact date-only treatment because the
+   column heading already supplies the label. Editors are optional because not every
+   module persists one yet. */
+function LastModifiedMeta({ date, editor, variant = 'inline', align = 'left', style }) {
+  const cell = variant === 'cell';
+  const shownDate = date || '—';
+  const fullText = `Last modified ${shownDate}${editor ? ` · ${editor}` : ''}`;
+  return (
+    <span data-record-meta="last-modified" title={fullText}
+      style={{
+        display:'inline-flex', alignItems:'baseline', justifyContent:align === 'right' ? 'flex-end' : 'flex-start',
+        gap:4, maxWidth:'100%', minWidth:0, flexWrap:cell ? 'nowrap' : 'wrap',
+        color:T.inkFaint, fontSize:cell ? 12.5 : 10.5, lineHeight:cell ? 1.35 : 1.4,
+        ...(style || {}),
+      }}>
+      {!cell && <span style={{ color:T.inkSoft, fontWeight:700, whiteSpace:'nowrap' }}>Last modified</span>}
+      <span style={{ whiteSpace:'nowrap' }}>{shownDate}</span>
+      {editor && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span style={{ minWidth:0, overflowWrap:'anywhere' }}>{editor}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
+/* Shared identity header for read-only operational records. Feature modules retain their
+   own drawer lifecycle and business actions; this component standardizes only hierarchy,
+   facts, modification metadata, and tabs. */
+function RecordDetailHeader({
+  label, title, code, titleMono = false, statusNode, badges, facts = [], lastModified,
+  actions, tabs = [], activeTab, onTabChange, onClose, closeLabel,
+}) {
+  const generatedId = React.useId().replace(/:/g, '');
+  const titleId = `record-detail-title-${generatedId}`;
+  const mono = "'SF Mono',Menlo,ui-monospace,monospace";
+  return (
+    <>
+      <div style={{ height:52, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'0 22px', borderBottom:`1px solid ${T.line}`, flexShrink:0, background:T.panel }}>
+        <span style={{ minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:14, fontWeight:700, color:T.ink }}>{label}</span>
+        <button type="button" onClick={onClose} aria-label={closeLabel || `Close ${label}`}
+          style={{ width:30, height:30, padding:0, borderRadius:7, border:'none', background:'transparent', color:T.inkFaint, cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}
+          onMouseEnter={event => { event.currentTarget.style.background = T.fill; event.currentTarget.style.color = T.ink; }}
+          onMouseLeave={event => { event.currentTarget.style.background = 'transparent'; event.currentTarget.style.color = T.inkFaint; }}>
+          <IcX size={14}/>
+        </button>
+      </div>
+
+      <section aria-labelledby={titleId} style={{ padding:'14px 22px', background:T.panel, borderBottom:`1px solid ${T.line}`, flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+          <div style={{ flex:'1 1 480px', minWidth:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:0, flexWrap:'wrap' }}>
+              <h2 id={titleId} style={{ margin:0, color:T.ink, fontSize:18, fontWeight:750, lineHeight:1.25, letterSpacing:'-.15px', fontFamily:titleMono ? mono : 'inherit', overflowWrap:'anywhere' }}>{title}</h2>
+              {code && code !== title && <span style={{ color:T.inkSoft, fontFamily:mono, fontSize:11.5, fontWeight:750, whiteSpace:'nowrap' }}>{code}</span>}
+              {statusNode}
+              {badges}
+            </div>
+          </div>
+          {actions && <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8, flexShrink:0, flexWrap:'wrap' }}>{actions}</div>}
+        </div>
+
+        {facts.length > 0 && (
+          <dl style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(128px, 1fr))', gap:1, margin:'12px 0 0', padding:1, borderRadius:8, overflow:'hidden', background:T.line }}>
+            {facts.map((fact, index) => (
+              <div key={fact.key || fact.label || index} style={{ minWidth:0, padding:'8px 10px', background:T.fill }}>
+                <dt style={{ color:T.inkLabel, fontSize:9, fontWeight:800, letterSpacing:'.65px', lineHeight:1.2, textTransform:'uppercase' }}>{fact.label}</dt>
+                <dd title={typeof fact.value === 'string' ? fact.value : undefined} style={{ margin:'4px 0 0', color:fact.color || T.ink, fontSize:11.5, fontWeight:650, lineHeight:1.3, fontFamily:fact.mono ? mono : 'inherit', overflowWrap:'anywhere' }}>{fact.value ?? '—'}</dd>
+                {fact.hint && <div title={typeof fact.hint === 'string' ? fact.hint : undefined} style={{ marginTop:2, color:T.inkSoft, fontSize:10, fontWeight:500, lineHeight:1.3, fontFamily:fact.hintMono ? mono : 'inherit', overflowWrap:'anywhere' }}>{fact.hint}</div>}
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {lastModified?.date && (
+          <LastModifiedMeta date={lastModified.date} editor={lastModified.editor} style={{ marginTop:7 }}/>
+        )}
+      </section>
+
+      {tabs.length > 0 && (
+        <div role="tablist" aria-label={`${label} sections`} className="hscroll" style={{ display:'flex', padding:'0 22px', overflowX:'auto', background:T.panel, borderBottom:`1px solid ${T.line}`, flexShrink:0 }}>
+          {tabs.filter(tab => !tab.hidden).map(tab => (
+            <button key={tab.key} type="button" role="tab" aria-selected={activeTab === tab.key} onClick={() => onTabChange(tab.key)}
+              style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'11px 16px 9px', border:'none', borderBottom:activeTab === tab.key ? `2px solid ${T.primary}` : '2px solid transparent', background:'transparent', color:activeTab === tab.key ? T.ink : T.inkSoft, fontSize:13, fontWeight:activeTab === tab.key ? 650 : 500, cursor:'pointer', whiteSpace:'nowrap' }}>
+              {tab.label}
+              {tab.count !== undefined && <span style={{ padding:'1px 7px', borderRadius:999, background:activeTab === tab.key ? T.primaryBg : T.fill, color:activeTab === tab.key ? T.primary : T.inkFaint, fontSize:11, fontWeight:650 }}>{tab.count}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 /* ── The table ──
    cols:  [{ key, label, sort, width }]
    cell:  (row, key) => node — module-owned cell content
@@ -243,5 +338,5 @@ Object.assign(window, {
   LIST_TH, LIST_TD, LIST_SEL_BG, LIST_ACTION_SIZE,
   useListDropdown, ListTabs, ListSearch, FilterPill, listPopover, listOptRow,
   SelectFilter, ClearFilters, ResultCount, ListToolbar, FilterRow, ListCard,
-  DeleteIconButton, DataTable, ListPager,
+  DeleteIconButton, LastModifiedMeta, RecordDetailHeader, DataTable, ListPager,
 });

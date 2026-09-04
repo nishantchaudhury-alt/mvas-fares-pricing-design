@@ -2353,7 +2353,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, onDelete, 
   };
 
   const sectProps = { form, set, overrides, toggleOverride:toggleOvrd, errors, policies, faretypes };
-  const selFT = faretypes.find(ft => ft.code === form.faretype);
+  const headerFaretype = faretypes.find(ft => ft.code === (viewRow?.faretype || form.faretype));
   const showSectionNav = isEditing && activeTab==='overview';
   const sections = mode==='view' && isEditing ? [...SECTS, REVIEW_SECT] : SECTS;
   const reviewChanges = diffFarecodeState(reviewBaselineRef.current, { form, overrides, pricing, pricingColumns });
@@ -2361,80 +2361,68 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, onDelete, 
 
   const content = (
     <>
-        {/* ─── Header ─── */}
-        <div style={{ padding:'16px 24px 0', borderBottom:`1px solid ${T.line}`, flexShrink:0, background:T.panel }}>
-          {/* Top row: icon + identity + action buttons */}
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:14, gap:12 }}>
-            <div style={{ display:'flex', gap:12, alignItems:'flex-start', minWidth:0 }}>
-              <div style={{ width:36, height:36, borderRadius:9, background:T.primary, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
-                  {mode==='create' ? <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></> : <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>}
-                </svg>
-              </div>
-              <div style={{ minWidth:0 }}>
-                {/* Title */}
-                <div style={{ fontSize:15, fontWeight:700, color:T.ink, marginBottom:5 }}>
-                  {mode==='create' ? 'Configure New Farecode' : 'Farecode details'}
-                </div>
-                {/* Identity: code + status + faretype */}
-                {mode==='view' && (
-                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
-                    <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:13.5, fontWeight:800, color:T.ink }}>{viewRow?.code}</span>
-                    <StatusBadge status={viewRow?.status||'Draft'}/>
-                    <span style={{ fontSize:12, color:T.inkFaint }}>·</span>
-                    <span style={{ fontFamily:"'SF Mono',Menlo,monospace", fontSize:12.5, fontWeight:600, color:T.primary, cursor:'pointer' }}>{form.faretype}</span>
-                    {selFT && <span style={{ fontSize:11.5, color:T.inkFaint }}>· {selFT.basis}</span>}
-                  </div>
-                )}
-                {/* Meta line: ship · sailing · modified · editor */}
-                {mode==='view' && (
-                  <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap', fontSize:12, color:T.inkFaint }}>
-                    <span>{viewRow?.ship}</span><span>·</span>
-                    <span style={{ fontFamily:"'SF Mono',Menlo,monospace" }}>{viewRow?.sailing}</span><span>·</span>
-                    <span>Modified {viewRow?.mod}</span><span>·</span>
-                    <span>jane.doe@mvas.com</span>
-                  </div>
-                )}
-                {mode==='create' && <div style={{ fontSize:12, color:T.inkFaint }}>Configure sailing context, policy assignment, access, marketing, supplements, and pricing inherited from a Faretype.</div>}
-              </div>
-            </div>
-
-            {/* Right action buttons */}
-            <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-              {saved      && <span style={{ fontSize:12, color:T.tealDark, display:'flex', alignItems:'center', gap:5 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>{mode==='create'?'Activated!':'Saved!'}</span>}
-
-              {/* View mode: show Edit button */}
-              {mode==='view' && !isEditing && (
-                <button onClick={handleEnterEdit} style={{ padding:'7px 15px', border:'none', borderRadius:7, background:T.primary, fontSize:13, fontWeight:600, color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', gap:6, boxShadow:'0 1px 4px rgba(27,36,52,.2)' }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
-                </button>
-              )}
-              {mode==='view' && !isEditing && <DeleteIconButton onClick={() => onDelete(viewRow)} label={`Delete ${viewRow?.code || 'Farecode'}`} title="Delete Farecode" />}
-              {/* Close */}
-              <button onClick={handleClose} aria-label="Close Farecode drawer" style={{ width:32, height:32, borderRadius:7, border:`1.5px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkSoft }}
-                onMouseEnter={e => { e.currentTarget.style.background=T.fill; e.currentTarget.style.color=T.ink; }}
-                onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color=T.inkSoft; }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        {mode==='view' && !isEditing ? (
+          <RecordDetailHeader
+            label="Farecode details"
+            title={viewRow?.code || '—'}
+            titleMono
+            statusNode={<StatusBadge status={viewRow?.status || 'Draft'}/>}
+            facts={[
+              { label:'Ship', value:viewRow?.ship || '—' },
+              { label:'Sailing', value:viewRow?.sailing || '—', mono:true },
+              { label:'Parent faretype', value:viewRow?.faretype || form.faretype || '—', mono:true },
+              { label:'Farebasis code', value:headerFaretype?.basis || '—', mono:true },
+              { label:'Group', value:headerFaretype?.group || '—' }
+            ]}
+            lastModified={{ date:viewRow?.mod, editor:viewRow?.editor }}
+            actions={<>
+              <button type="button" onClick={handleEnterEdit}
+                style={{ padding:'7px 15px', border:'none', borderRadius:7, background:T.primary, fontSize:13, fontWeight:650, color:'#fff', cursor:'pointer', whiteSpace:'nowrap', display:'inline-flex', alignItems:'center', gap:6 }}
+                onMouseEnter={event => { event.currentTarget.style.opacity = '.88'; }}
+                onMouseLeave={event => { event.currentTarget.style.opacity = '1'; }}>
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit
               </button>
+              <DeleteIconButton onClick={() => onDelete(viewRow)} label={`Delete ${viewRow?.code || 'Farecode'}`} title="Delete Farecode" />
+            </>}
+            tabs={[{ key:'overview', label:'Overview' }, { key:'auditlog', label:'History', count:MOCK_AUDIT.length }]}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onClose={handleClose}
+            closeLabel="Close Farecode details"
+          />
+        ) : (
+          <div style={{ padding:'16px 24px 14px', borderBottom:`1px solid ${T.line}`, flexShrink:0, background:T.panel }}>
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12 }}>
+              <div style={{ display:'flex', gap:12, alignItems:'flex-start', minWidth:0 }}>
+                <div aria-hidden="true" style={{ width:36, height:36, borderRadius:9, background:T.primary, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
+                    {mode==='create' ? <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></> : <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>}
+                  </svg>
+                </div>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:T.ink, marginBottom:5 }}>
+                    {mode==='create' ? 'Configure New Farecode' : `Edit Farecode · ${viewRow?.code}`}
+                  </div>
+                  <div style={{ fontSize:12, color:T.inkFaint }}>
+                    {mode==='create' ? 'Configure sailing context, policy assignment, access, marketing, supplements, and pricing inherited from a Faretype.' : 'Update this Farecode and its inherited configuration.'}
+                  </div>
+                  {mode==='view' && viewRow?.mod && (
+                    <LastModifiedMeta date={viewRow.mod} editor={viewRow.editor} style={{ marginTop:5 }}/>
+                  )}
+                </div>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                {saved && <span role="status" aria-live="polite" style={{ fontSize:12, color:T.tealDark, display:'flex', alignItems:'center', gap:5 }}><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8"><polyline points="20 6 9 17 4 12"/></svg>{mode==='create' ? 'Activated!' : 'Saved!'}</span>}
+                <button type="button" onClick={handleClose} aria-label="Close Farecode drawer" style={{ width:32, height:32, borderRadius:7, border:`1.5px solid ${T.line}`, background:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:T.inkSoft }}
+                  onMouseEnter={event => { event.currentTarget.style.background=T.fill; event.currentTarget.style.color=T.ink; }}
+                  onMouseLeave={event => { event.currentTarget.style.background='#fff'; event.currentTarget.style.color=T.inkSoft; }}>
+                  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
             </div>
           </div>
-
-          {/* Tab bar (view mode only) */}
-          {mode==='view' && (
-            <div style={{ display:'flex', gap:0, marginBottom:-1 }}>
-              {[
-                { k:'overview',l:'Overview' },
-                ...(!isEditing ? [{ k:'auditlog',l:'History',badge:MOCK_AUDIT.length }] : []),
-              ].map(tab => (
-                <button key={tab.k} onClick={() => setActiveTab(tab.k)}
-                  style={{ background:'none', border:'none', padding:'0 18px 12px 0', fontSize:13.5, fontWeight:activeTab===tab.k?600:500, color:activeTab===tab.k?T.ink:T.inkFaint, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:7, borderBottom:activeTab===tab.k?`2px solid ${T.primary}`:'2px solid transparent', transition:'color .12s' }}>
-                  {tab.l}
-                  {tab.badge!==undefined && <span style={{ fontSize:11.5, fontWeight:600, padding:'1px 6px', borderRadius:999, background:activeTab===tab.k?T.primaryBg:'transparent', color:activeTab===tab.k?T.primary:T.inkFaint }}>{tab.badge}</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
         {/* ─── Body ─── */}
         <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
@@ -2666,6 +2654,9 @@ function FarecodePolicyEligibilityPanel({ mode='create', editData, onClose, onSa
               <div style={{ minWidth:0 }}>
                 <div style={{ fontSize:15, fontWeight:700, color:T.ink, marginBottom:5 }}>{mode==='create' ? 'Configure New Policy Eligibility Template' : isEditing ? `Edit Policy Eligibility · ${form.code}` : `Policy Eligibility · ${form.code}`}</div>
                 <div style={{ fontSize:12, color:T.inkFaint }}>{mode==='create' ? 'Define reusable guest qualification and booking-window requirements.' : `${form.name} · Guest qualification and booking-window requirements.`}</div>
+                {editData?.mod && (
+                  <LastModifiedMeta date={editData.mod} editor={editData.editor} style={{ marginTop:5 }}/>
+                )}
               </div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -2780,7 +2771,7 @@ function FarecodePolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen
       </span>
     );
     if (key==='status') return <StatusBadge status={row.status}/>;
-    if (key==='mod') return <span style={{ color:T.inkSoft, fontSize:12.5 }}>{row.mod}</span>;
+    if (key==='mod') return <LastModifiedMeta date={row.mod} variant="cell"/>;
     return null;
   };
   return <DataTable cols={FARECODE_POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} minWidth={820}
@@ -2940,7 +2931,7 @@ function FarecodeListScreen({
     if (key==='cabins') return <CabinsCell cabins={row.cabins}/>;
     if (key==='faretype') return <span style={{ fontFamily:mono, fontSize:12.5, fontWeight:600, color:T.primary }}>{row.faretype}</span>;
     if (key==='status') return <StatusBadge status={row.status}/>;
-    if (key==='mod') return <span style={{ color:T.inkSoft, fontSize:12.5 }}>{row.mod}</span>;
+    if (key==='mod') return <LastModifiedMeta date={row.mod} variant="cell"/>;
     return null;
   };
 

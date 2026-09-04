@@ -20,7 +20,7 @@ function StepDots({ step, labels }) {
   );
 }
 
-function PolDrawerFrame({ detailLabel, code, badge, status, title, sub, onClose, afterHeader, footer, children, canvas = '#fff' }) {
+function PolDrawerFrame({ detailLabel, code, badge, status, title, sub, headerMeta, onClose, afterHeader, footer, children, canvas = '#fff' }) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -53,6 +53,7 @@ function PolDrawerFrame({ detailLabel, code, badge, status, title, sub, onClose,
             <span>•</span>
             <span>{sub}</span>
           </div>
+          {headerMeta && <div style={{ marginTop:5, maxWidth:'100%', minWidth:0 }}>{headerMeta}</div>}
         </div>
 
         {afterHeader}
@@ -344,8 +345,9 @@ function PolEditDrawer({ edit, group, parent, setEdit, activatable, onCancel, on
     <PolDrawerFrame detailLabel={isGroup ? 'Edit Policy Group' : 'Edit Policy'} code={isGroup ? g.code : p.code}
       badge={<TypeBadge type={g.type}/>} status={isGroup ? g.status : p.status} title={isGroup ? g.name : p.name}
       sub={isGroup ? `${meta.groupLabel} · Changes apply to every policy assignment referencing this group.` : `In ${g.name} (${g.code}) · Policy fields and its ${meta.childWords.toLowerCase()} save together.`}
+      headerMeta={<LastModifiedMeta date={isGroup ? g.mod : p.mod} editor={isGroup ? g.editor : p.editor}/>}
       onClose={onCancel}
-      footer={<><span style={{ fontSize:11, color:T.inkFaint, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'38%' }}>Last modified {isGroup ? g.mod : p.mod} · {isGroup ? g.editor : p.editor}</span><div style={{ marginLeft:'auto', display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}><button style={polGhost} onClick={onCancel}>Cancel</button><button style={polDark} onClick={onSave}>Save changes</button></div></>}>
+      footer={<div style={{ marginLeft:'auto', display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}><button style={polGhost} onClick={onCancel}>Cancel</button><button style={polDark} onClick={onSave}>Save changes</button></div>}>
       <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
             {isGroup ? (
               <>

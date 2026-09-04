@@ -201,7 +201,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
       : [];
     if (inheritedTermIssues.length) { setEdit({ ...e, issues:inheritedTermIssues }); return; }
     let next = policies.map(x => x.id === g.id ? {
-      ...x, name:e.form.name.trim(), status:e.form.active ? 'Active' : g.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY,
+      ...x, name:e.form.name.trim(), status:e.form.active ? 'Active' : g.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY, editor:ME,
       ...(g.type === 'cancel' ? { isRefundable:e.form.refundable, parents:x.parents.map(p => ({ ...p, isRefundable:e.form.refundable })) } : {}),
     } : x);
     if (e.form.isDefault) next = next.map(x => x.type === g.type && x.id !== g.id ? { ...x, isDefault:false } : x);
@@ -220,10 +220,10 @@ function PoliciesList({ policies, setPolicies, onNav }) {
     }
     const key = POL_META[g.type].childKey;
     setPolicies(policies.map(x => x.id !== g.id ? x : {
-      ...x, mod:TODAY,
+      ...x, mod:TODAY, editor:ME,
       parents:x.parents.map(y => y.id !== p.id
         ? (e.form.isDefault ? { ...y, isDefault:false } : y)
-        : { ...y, name:e.form.name.trim(), cats:normalizePolicyCats(e.form.cats), status:e.form.active ? 'Active' : p.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY, [key]:e.rows, ...(g.type === 'cancel' ? { isRefundable:g.isRefundable !== false } : {}) }),
+        : { ...y, name:e.form.name.trim(), cats:normalizePolicyCats(e.form.cats), status:e.form.active ? 'Active' : p.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY, editor:ME, [key]:e.rows, ...(g.type === 'cancel' ? { isRefundable:g.isRefundable !== false } : {}) }),
     }));
     setEdit(null);
   };
@@ -283,7 +283,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
           </td>
           <td style={{ ...TD, padding:'9px 14px' }}><PolStatusBadge status={g.status}/></td>
           <td style={{ ...TD, padding:'9px 14px' }}>{editorCell(g.editor)}</td>
-          <td style={{ ...TD, padding:'9px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{g.mod}</td>
+          <td style={{ ...TD, padding:'9px 14px' }}><LastModifiedMeta date={g.mod} variant="cell"/></td>
           <td style={{ ...TD, padding:'9px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{g.created}</td>
           <td style={{ ...TD, width:44, padding:'6px 8px', textAlign:'right' }} onClick={e => e.stopPropagation()}>
             <RowMenu size={20} items={[{
@@ -321,7 +321,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
             </td>
             <td style={{ ...TD, padding:'7px 14px' }}><PolStatusBadge status={p.status}/></td>
             <td style={{ ...TD, padding:'7px 14px' }}>{editorCell(p.editor)}</td>
-            <td style={{ ...TD, padding:'7px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{p.mod}</td>
+            <td style={{ ...TD, padding:'7px 14px' }}><LastModifiedMeta date={p.mod} variant="cell"/></td>
             <td style={{ ...TD, padding:'7px 14px', color:T.inkSoft, fontSize:12.5, whiteSpace:'nowrap' }}>{p.created}</td>
             <td style={{ ...TD, width:44, padding:'5px 8px', textAlign:'right' }} onClick={e => e.stopPropagation()}>
               <RowMenu size={20} items={[{
@@ -412,7 +412,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
           <table style={{ width:'100%', minWidth:960, borderCollapse:'collapse' }}>
             <colgroup><col style={{ width:148 }}/><col style={{ width:'auto' }}/><col style={{ width:100 }}/><col style={{ width:160 }}/><col style={{ width:112 }}/><col style={{ width:112 }}/><col style={{ width:44 }}/></colgroup>
             <thead><tr>
-              <th style={TH}>Code</th><th style={TH}>Name</th><th style={TH}>Status</th><th style={TH}>Created by</th><th style={TH}>Last Modified</th><th style={TH}>Created On</th><th aria-label="Actions" style={{ ...TH, width:44, padding:'9px 8px' }}></th>
+              <th style={TH}>Code</th><th style={TH}>Name</th><th style={TH}>Status</th><th style={TH}>Modified by</th><th style={TH}>Last Modified</th><th style={TH}>Created On</th><th aria-label="Actions" style={{ ...TH, width:44, padding:'9px 8px' }}></th>
             </tr></thead>
             <tbody>
               {pageRows.length === 0 ? (

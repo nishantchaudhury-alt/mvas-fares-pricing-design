@@ -59,7 +59,7 @@ function PolActivityHistory({ status, label }) {
   );
 }
 
-function DetailShell({ detailLabel, badge, status, code, title, sub, tabs, tab, setTab, actions, onBack, backLabel, onClose, children }) {
+function DetailShell({ detailLabel, status, code, title, metaItems = [], updatedMeta, tabs, tab, setTab, actions, onBack, backLabel, onClose, children }) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -97,19 +97,30 @@ function DetailShell({ detailLabel, badge, status, code, title, sub, tabs, tab, 
         </div>
 
         <div style={{ background:'#fff', padding:'14px 22px', borderBottom:`1px solid ${T.line}`, flexShrink:0 }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:14 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:0, flexWrap:'wrap' }}>
-              <span style={{ fontFamily:MONO, fontSize:16, fontWeight:700, color:T.ink, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{code}</span>
-              <PolStatusBadge status={status}/>
-              {badge}
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+            <div style={{ flex:'1 1 520px', minWidth:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:9, minWidth:0, flexWrap:'wrap' }}>
+                <h2 style={{ margin:0, color:T.ink, fontSize:18, fontWeight:700, lineHeight:1.25, letterSpacing:'-.15px' }}>{title}</h2>
+                <span style={{ fontFamily:MONO, fontSize:11.5, fontWeight:750, color:T.inkSoft, whiteSpace:'nowrap' }}>{code}</span>
+                <PolStatusBadge status={status}/>
+              </div>
             </div>
-            <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>{actions}</div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginLeft:'auto', flexShrink:0, flexWrap:'wrap', justifyContent:'flex-end' }}>{actions}</div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:6, minWidth:0, fontSize:11.5, color:T.inkFaint, flexWrap:'wrap' }}>
-            <span style={{ color:T.ink, fontWeight:700 }}>{title}</span>
-            <span>•</span>
-            <span>{sub}</span>
-          </div>
+          {metaItems.length > 0 && (
+            <dl style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(128px, 1fr))', gap:1, margin:'12px 0 0', padding:1, borderRadius:8, overflow:'hidden', background:T.line }}>
+              {metaItems.map(item => (
+                <div key={item.label} style={{ minWidth:0, padding:'8px 10px', background:T.fill }}>
+                  <dt style={{ color:T.inkLabel, fontSize:9, fontWeight:800, letterSpacing:'.65px', lineHeight:1.2, textTransform:'uppercase' }}>{item.label}</dt>
+                  <dd title={typeof item.value === 'string' ? item.value : undefined} style={{ margin:'4px 0 0', color:item.color || T.ink, fontSize:11.5, fontWeight:650, lineHeight:1.3, fontFamily:item.mono ? MONO : 'inherit', overflowWrap:'anywhere' }}>{item.value}</dd>
+                  {item.hint && <div title={typeof item.hint === 'string' ? item.hint : undefined} style={{ marginTop:2, color:T.inkSoft, fontSize:10, fontWeight:500, lineHeight:1.3, fontFamily:item.hintMono ? MONO : 'inherit', overflowWrap:'anywhere' }}>{item.hint}</div>}
+                </div>
+              ))}
+            </dl>
+          )}
+          {updatedMeta && (
+            <LastModifiedMeta date={updatedMeta.date} editor={updatedMeta.editor} style={{ marginTop:7 }}/>
+          )}
         </div>
 
         <div role="tablist" aria-label={`${detailLabel} sections`} className="hscroll" style={{ display:'flex', padding:'0 22px', background:'#fff', borderBottom:`1px solid ${T.line}`, flexShrink:0, overflowX:'auto' }}>
@@ -244,16 +255,30 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
     </>
   );
   const isDefault = isGroup ? g.isDefault : p.isDefault;
-  const assignmentBadge = <Pill bg={isDefault ? T.primaryBg : T.fill} color={isDefault ? T.primary : T.inkSoft}>{isDefault ? (isGroup ? 'Default group' : 'Default policy') : (isGroup ? 'Optional group' : 'Optional policy')}</Pill>;
-  const refundabilityBadge = g.type === 'cancel'
-    ? <Pill bg={g.isRefundable === false ? '#FEF2F2' : '#ECFDF5'} color={g.isRefundable === false ? '#991B1B' : '#065F46'}>{g.isRefundable === false ? 'Non-refundable' : 'Refundable'}</Pill>
-    : null;
+  const assignmentLabel = isDefault ? (isGroup ? 'Default group' : 'Default policy') : (isGroup ? 'Optional group' : 'Optional policy');
+  const refundabilityLabel = g.isRefundable === false ? 'Non-refundable' : 'Refundable';
+  const activePolicies = isGroup ? g.parents.filter(policy => policy.status === 'Active').length : 0;
+  const headerMeta = isGroup
+    ? [
+        { label:'Policy type', value:meta.label },
+        { label:'Assignment', value:assignmentLabel },
+        ...(g.type === 'cancel' ? [{ label:'Refundability', value:refundabilityLabel, color:g.isRefundable === false ? '#991B1B' : '#065F46' }] : []),
+        { label:'Policies', value:`${g.parents.length} total`, hint:`${activePolicies} active` },
+      ]
+    : [
+        { label:'Policy type', value:meta.label },
+        { label:'Assignment', value:assignmentLabel },
+        ...(g.type === 'cancel' ? [{ label:'Refundability', value:refundabilityLabel, color:g.isRefundable === false ? '#991B1B' : '#065F46' }] : []),
+        { label:'Stateroom coverage', value:catSentence(parentCats) },
+        { label:'Parent group', value:g.name, hint:g.code, hintMono:true },
+      ];
+  const updatedMeta = isGroup ? { date:g.mod, editor:g.editor } : { date:p.mod, editor:p.editor };
 
   return (
-    <DetailShell detailLabel={isGroup ? 'Policy Group Details' : 'Policy Details'} badge={<><TypeBadge type={g.type}/>{assignmentBadge}{refundabilityBadge}</>} status={isGroup ? g.status : p.status} code={isGroup ? g.code : p.code}
+    <DetailShell detailLabel={isGroup ? 'Policy Group Details' : 'Policy Details'} status={isGroup ? g.status : p.status} code={isGroup ? g.code : p.code}
       title={isGroup ? g.name : p.name}
-      sub={isGroup ? `Modified ${g.mod} · ${g.editor}`
-                   : `Stateroom coverage: ${catSentence(parentCats)} · In ${g.name} (${g.code}) · Modified ${p.mod} · ${p.editor}`}
+      metaItems={headerMeta}
+      updatedMeta={updatedMeta}
       tabs={tabs} tab={tab} setTab={setTab} actions={actions}
       onBack={!isGroup && onBackToGroup ? () => { setTab('children'); onBackToGroup(); } : null}
       backLabel={!isGroup ? `${g.name} group` : null} onClose={onClose}>

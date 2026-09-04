@@ -1282,6 +1282,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
                 <div style={{ fontSize: 12, color: T.inkFaint }}>
                   {mode === 'create' ? 'Define reusable rules inherited by Farecodes.' : 'Update this Faretype template and its inherited rules.'}
                 </div>
+                {mode === 'edit' && editData?.mod && <LastModifiedMeta date={editData.mod} style={{ marginTop: 5 }} />}
               </div>
             </div>
             <button onClick={handleClose} aria-label="Close Faretype drawer"
@@ -1473,6 +1474,7 @@ function PolicyEligibilityPanel({ mode = 'create', editData, onClose, onActivate
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 5 }}>{mode === 'create' ? 'Configure New Policy Eligibility Template' : isEditing ? `Edit Policy Eligibility · ${identity?.code}` : `Policy Eligibility · ${identity?.code}`}</div>
                 <div style={{ fontSize: 12, color: T.inkFaint }}>{isEditing ? 'Define a reusable guest-eligibility template.' : `${identity?.name} · Guest qualification and booking-window requirements.`}</div>
+                {identity?.mod && <LastModifiedMeta date={identity.mod} style={{ marginTop: 5 }} />}
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1622,7 +1624,7 @@ function FaretypeTable({ rows, selected, onToggleRow, onToggleAll, sortCol, sort
         <a href="#" onClick={(e) => {e.preventDefault();e.stopPropagation();}} style={{ color: T.primary, fontWeight: 500, fontSize: 12.5 }}>View</a>
       </span>;
     if (key === 'status') return <StatusBadge status={row.status} />;
-    if (key === 'mod') return <span style={{ color: T.inkSoft, fontSize: 12.5 }}>{row.mod}</span>;
+    if (key === 'mod') return <LastModifiedMeta date={row.mod} variant="cell" />;
     return null;
   };
   return (
@@ -1649,7 +1651,7 @@ function PolicyEligibilityTable({ rows, sortCol, sortDir, onSort, onOpen, onDele
     if (key === 'name') return <span style={{ fontWeight: 650, color: T.ink }}>{row.name}</span>;
     if (key === 'eligibility') return <span style={{ color: T.inkSoft }}>{row.residency} · Age {row.minAge}+</span>;
     if (key === 'status') return <StatusBadge status={row.status} />;
-    if (key === 'mod') return <span style={{ color: T.inkSoft, fontSize: 12.5 }}>{row.mod}</span>;
+    if (key === 'mod') return <LastModifiedMeta date={row.mod} variant="cell" />;
     return null;
   };
   return <DataTable cols={POLICY_ELIGIBILITY_COLS} rows={rows} cell={cell} sortCol={sortCol} sortDir={sortDir} onSort={onSort} onRowClick={onOpen}
@@ -1959,7 +1961,7 @@ function DetailFarecodesTab({ fcCount }) {
                   </div>
                 </td>
                 <td style={{ padding: '12px', verticalAlign: 'middle' }}><StatusBadge status={fc.status} /></td>
-                <td style={{ padding: '12px', color: T.inkSoft, fontSize: 11.5, whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{fc.mod}</td>
+                <td style={{ padding: '12px', verticalAlign: 'middle' }}><LastModifiedMeta date={fc.mod} variant="cell" /></td>
                 <td style={{ padding: '8px 12px 8px 4px', textAlign: 'right', verticalAlign: 'middle' }}>
                   <button aria-label={`View ${fc.id}`} onClick={() => alert(`Navigate to farecode: ${fc.id}`)}
                 style={{ width: 28, height: 28, border: `1px solid ${T.line}`, borderRadius: 6, background: '#fff', color: T.primary, cursor: 'pointer', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>›</button>
@@ -2035,7 +2037,7 @@ function FaretypeDetailPanel({ row, onClose, onEdit, onDelete, policies }) {
 
   const TABS = [
   { key: 'overview', label: 'Overview' },
-  { key: 'farecodes', label: 'Farecodes', badge: row.fc },
+  { key: 'farecodes', label: 'Farecodes', count: row.fc },
   { key: 'audit', label: 'History' }];
 
 
@@ -2052,69 +2054,34 @@ function FaretypeDetailPanel({ row, onClose, onEdit, onDelete, policies }) {
         transform: mounted ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 220ms ease-out' }}>
 
-        {/* ① Sticky header */}
-        <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 22px', borderBottom: `1px solid ${T.line}`, flexShrink: 0, background: '#fff' }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Faretype Details</span>
-          <button onClick={onClose}
-          style={{ width: 30, height: 30, borderRadius: 7, background: 'none', border: 'none',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.inkFaint }}
-          onMouseEnter={(e) => {e.currentTarget.style.background = T.fill;e.currentTarget.style.color = T.ink;}}
-          onMouseLeave={(e) => {e.currentTarget.style.background = 'none';e.currentTarget.style.color = T.inkFaint;}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-
-        {/* ② Page header strip */}
-        <div style={{ background: '#fff', padding: '14px 22px', borderBottom: `1px solid ${T.line}`, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontFamily: "'SF Mono',Menlo,monospace", fontSize: 16, fontWeight: 700, color: T.ink }}>{row.code}</span>
-              <StatusBadge status={row.status} />
-              <GroupBadge group={row.group} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <button onClick={onEdit}
-              style={{ padding: '7px 15px', border: 'none', borderRadius: 7, background: T.primary, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = '.88'}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                Edit
-              </button>
-              <DeleteIconButton onClick={() => onDelete(row)} label={`Delete ${row.code}`} title="Delete Faretype" />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 1, marginTop: 6, fontSize: 11.5, color: T.inkFaint }}>
-            <span style={{ fontFamily: "'SF Mono',Menlo,monospace", color: T.inkFaint }}>{row.basis}</span>
-            <span style={{ margin: '0 4px' }}>•</span>
-            <span>{row.source}</span>
-            <span style={{ margin: '0 4px' }}>•</span>
-            <span>Modified {row.mod}</span>
-            <span style={{ margin: '0 4px' }}>•</span>
-            <span>jane.doe@mvas.com</span>
-          </div>
-        </div>
-
-        {/* ③ Tab bar */}
-        <div style={{ display: 'flex', padding: '0 22px', background: '#fff',
-          borderBottom: `1px solid ${T.line}`, flexShrink: 0 }}>
-          {TABS.map((t) =>
-          <button key={t.key} onClick={() => setTab(t.key)}
-          style={{ background: 'none', border: 'none', padding: '11px 16px 9px', fontSize: 13,
-            fontWeight: tab === t.key ? 600 : 500, color: tab === t.key ? T.ink : T.inkSoft,
-            borderBottom: tab === t.key ? `2px solid ${T.primary}` : '2px solid transparent',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'color .15s' }}>
-              {t.label}
-              {t.badge !== undefined &&
-            <span style={{ padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 600,
-              background: tab === t.key ? T.primaryBg : T.fill,
-              color: tab === t.key ? T.primary : T.inkFaint }}>{t.badge}</span>
-            }
+        <RecordDetailHeader
+          label="Faretype details"
+          title={row.code}
+          titleMono
+          statusNode={<StatusBadge status={row.status} />}
+          facts={[
+            { label: 'Farebasis code', value: row.basis, mono: true },
+            { label: 'Group', value: row.group },
+            { label: 'Source channel', value: row.source },
+            { label: 'Linked farecodes', value: row.fc }
+          ]}
+          lastModified={{ date: row.mod }}
+          actions={<>
+            <button type="button" onClick={onEdit}
+              style={{ padding: '7px 15px', border: 'none', borderRadius: 7, background: T.primary, fontSize: 13, fontWeight: 650, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              onMouseEnter={(event) => {event.currentTarget.style.opacity = '.88';}}
+              onMouseLeave={(event) => {event.currentTarget.style.opacity = '1';}}>
+              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+              Edit
             </button>
-          )}
-        </div>
+            <DeleteIconButton onClick={() => onDelete(row)} label={`Delete ${row.code}`} title="Delete Faretype" />
+          </>}
+          tabs={TABS}
+          activeTab={tab}
+          onTabChange={setTab}
+          onClose={onClose}
+          closeLabel="Close Faretype details"
+        />
 
         {/* ⑤ Scrollable tab content */}
         <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: '16px 22px 28px' }}>
