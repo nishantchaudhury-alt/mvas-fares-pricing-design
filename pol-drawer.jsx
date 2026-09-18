@@ -119,7 +119,9 @@ function PolicyRowsSubsection({ id, type, codeNum, rows, setRows, cellErr, valid
           </button>
         </div>
       </div>
-      <PolicyRowsTable type={type} codeNum={codeNum} rows={rows} setRows={setRows} cellErr={cellErr} editing={true} validationAttempt={validationAttempt}/>
+      <div style={{ width:'calc(100% + 32px)', marginLeft:-16, marginRight:-16, minWidth:0 }}>
+        <PolicyRowsTable type={type} codeNum={codeNum} rows={rows} setRows={setRows} cellErr={cellErr} editing={true} validationAttempt={validationAttempt}/>
+      </div>
       {children}
     </div>
   );

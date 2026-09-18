@@ -250,7 +250,7 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
   const uid = React.useId().replace(/:/g, '');
   const titleId = `policy-assignment-${uid}`;
   const settings = creation ? (
-    <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
+    <div style={{ background:'#fff' }}>
       <GroupBehaviorRow eyebrow="Assignment fallback" label={`Use as default ${policyType} policy`} on={form.isDefault} onChange={v => set({ isDefault:v })}
         stateLabel={form.isDefault ? 'Default policy' : 'Not default'} toggleLabel={`Use as default ${policyType} policy`} last={!isCan}
         help={form.isDefault ? 'Becomes the fallback after activation and replaces the current default policy.' : `The current default remains the fallback unless a Farecode explicitly selects this ${policyType} policy.`}/>
@@ -259,7 +259,7 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
         help="Controlled at group level and applied consistently to every cancellation policy in this group."/>}
     </div>
   ) : (
-    <div style={{ border:`1px solid ${T.line}`, borderRadius:8, overflow:'hidden', background:'#fff' }}>
+    <div style={{ background:'#fff' }}>
             <GroupSettingRow first label="Active" on={form.active} dis={!canActivate} onChange={v => set({ active:v })}
               disabledLabel={activationLabel || `Requires valid ${childName}`} stateLabel={form.active ? 'Active' : 'Inactive'}
               help={canActivate ? 'Available for assignment on Farecodes.' : activateHelp}/>
@@ -291,11 +291,11 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
           <span aria-hidden="true" style={{ flexShrink:0, color:T.inkSoft, display:'inline-flex' }}><IcChevron up={open}/></span>
         </button>
       </h4>
-      {open && <div id={panelId} role="region" aria-labelledby={titleId} style={{ padding:'10px 12px 12px', borderTop:`1px solid ${T.lineSoft}`, background:'#fff' }}>{settings}</div>}
+      {open && <div id={panelId} role="region" aria-labelledby={titleId} style={{ borderTop:`1px solid ${T.lineSoft}`, background:'#fff' }}>{settings}</div>}
     </>
   );
   return (
-    <section style={{ marginTop:embedded ? 15 : 0, background:T.panel, border:`1px solid ${T.line}`, borderRadius:embedded ? 8 : 10, boxShadow:embedded ? 'none' : '0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
+    <section style={{ margin:embedded ? '15px -16px 0' : 0, background:T.panel, border:embedded ? 'none' : `1px solid ${T.line}`, borderTop:`1px solid ${T.line}`, borderBottom:`1px solid ${T.line}`, borderRadius:embedded ? 0 : 10, boxShadow:embedded ? 'none' : '0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
       {accordion}
     </section>
   );
