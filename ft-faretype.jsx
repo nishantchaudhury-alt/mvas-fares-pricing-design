@@ -70,7 +70,30 @@ const STATUS_S = {
   'Inactive': { bg: '#F8FAFC', color: '#475569', dot: '#94A3B8' }
 };
 const SOURCE_CHANNELS = ['WC', 'Casino', 'Partner', 'YM'];
-const FARECODE_INHERITED_FIELDS = ['cancellationPolicy', 'depositPolicy', 'standbyEligible', 'upgradeEligible', 'couponEligible'];
+/* Keep Faretype-owned propagation semantics in one registry. Eligibility Policy is
+   deliberately absent: the current Farecode form/config has no eligibilityPolicy field
+   or source marker, so treating it as inherited here would create a false propagation path. */
+const FARECODE_PROPAGATION_FIELDS = [
+  { key:'cancellationPolicy', label:'Cancellation Policy' },
+  { key:'depositPolicy', label:'Deposit Policy' },
+  { key:'standbyEligible', label:'Standby' },
+  { key:'upgradeEligible', label:'Upgrades' },
+  { key:'couponEligible', label:'Coupons' },
+];
+const FARECODE_INHERITED_FIELDS = FARECODE_PROPAGATION_FIELDS.map((field) => field.key);
+const FARECODE_PROPAGATION_META = Object.fromEntries(FARECODE_PROPAGATION_FIELDS.map((field) => [field.key, field]));
+const hasOwn = (value, key) => !!value && Object.prototype.hasOwnProperty.call(value, key);
+const sameValue = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const farecodeFieldSource = (config, key) => config?.overrides?.[key] === 'overridden' ? 'overridden' : 'inherited';
+const effectiveFarecodeValue = (farecode, config, key, faretypeDefault) => {
+  if (farecodeFieldSource(config, key) === 'overridden' && hasOwn(config?.form, key)) return config.form[key];
+  if (hasOwn(farecode, key)) return farecode[key];
+  if (hasOwn(config?.form, key)) return config.form[key];
+  return faretypeDefault;
+};
+const divergentFarecodeFields = (farecode, config, faretypeDefaults) => FARECODE_PROPAGATION_FIELDS.filter((field) =>
+  !sameValue(effectiveFarecodeValue(farecode, config, field.key, faretypeDefaults?.[field.key]), faretypeDefaults?.[field.key])
+);
 const sourceChannelsOf = (value) => {
   const unique = [...new Set((Array.isArray(value) ? value : value ? [value] : []).map((item) => String(item).trim()).filter(Boolean))];
   return [...SOURCE_CHANNELS.filter((channel) => unique.includes(channel)), ...unique.filter((channel) => !SOURCE_CHANNELS.includes(channel))];
@@ -375,91 +398,62 @@ function MultiChip({ values, onChange, opts, placeholder, inputId, ariaLabel, ar
 
 }
 
-function ImpactFarecodeSelect({ options, selectedCodes, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const rootRef = useRef(null);
-  const triggerRef = useRef(null);
-  const searchRef = useRef(null);
-  const selectAllRef = useRef(null);
-  const dialogId = useRef(`ft-impact-${Math.random().toString(36).slice(2)}`).current;
-  const enabled = options.filter((option) => !option.disabled);
-  const selectedSet = new Set(selectedCodes);
-  const selected = enabled.filter((option) => selectedSet.has(option.code));
-  const normalizedQuery = query.trim().toLowerCase();
-  const filtered = options.filter((option) => !normalizedQuery || `${option.code} ${option.ship || ''} ${option.sailing || ''}`.toLowerCase().includes(normalizedQuery));
-  const allSelected = enabled.length > 0 && enabled.every((option) => selectedSet.has(option.code));
-  const someSelected = enabled.some((option) => selectedSet.has(option.code));
+function PropagationDecision({ field, onChange }) {
+  const choices = field.wasOverridden
+    ? [['keep-unique', 'Keep unique'], ['use-default', 'Use new default']]
+    : [['use-default', 'Auto-update'], ['keep-unique', 'Keep current · Unique']];
+  return <div role="radiogroup" aria-label={`${field.label} propagation choice`} style={{ display:'inline-flex', padding:2, border:`1px solid ${T.line}`, borderRadius:7, background:T.fill, gap:2 }}>
+    {choices.map(([value, label]) => {
+      const selected = field.decision === value;
+      return <button key={value} type="button" role="radio" aria-checked={selected} onClick={() => onChange(value)}
+        style={{ minHeight:27, padding:'5px 8px', border:selected ? `1px solid ${T.primary}` : '1px solid transparent', borderRadius:5, background:selected ? T.primary : 'transparent', color:selected ? '#fff' : T.inkSoft, boxShadow:selected ? '0 1px 2px rgba(15,23,42,.12)' : 'none', cursor:'pointer', fontSize:10, fontWeight:selected ? 750 : 650, lineHeight:1.2, whiteSpace:'nowrap' }}>
+        {label}
+      </button>;
+    })}
+  </div>;
+}
 
-  useEffect(() => {
-    if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected && !allSelected;
-  }, [someSelected, allSelected, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event) => {
-      if (!rootRef.current?.contains(event.target)) {setOpen(false);setQuery('');}
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    requestAnimationFrame(() => searchRef.current?.focus());
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [open]);
-
-  const setSelected = (codes) => onChange(options.filter((option) => !option.disabled && codes.includes(option.code)).map((option) => option.code));
-  const toggle = (code) => setSelected(selectedSet.has(code) ? selectedCodes.filter((value) => value !== code) : [...selectedCodes, code]);
-  const close = () => {setOpen(false);setQuery('');requestAnimationFrame(() => triggerRef.current?.focus());};
-  const onDialogKeyDown = (event) => {
-    if (event.key !== 'Escape') return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.nativeEvent?.stopImmediatePropagation?.();
-    close();
-  };
-  const summary = selected.length === enabled.length && enabled.length
-    ? `All ${enabled.length} eligible Farecodes selected`
-    : `${selected.length} of ${enabled.length} eligible Farecodes selected`;
-  const toggleDropdown = () => {
-    if (open) {setOpen(false);setQuery('');return;}
-    setOpen(true);
-  };
-
-  return <div ref={rootRef} style={{ width:'100%', minWidth:0 }}>
-    <button ref={triggerRef} type="button" aria-label={`Choose linked Farecodes. ${summary}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={dialogId} onClick={toggleDropdown}
-      style={{ width:'100%', minHeight:44, padding:'7px 10px', display:'flex', alignItems:'center', gap:7, flexWrap:'wrap', border:`1.5px solid ${open ? T.primary : T.line}`, borderRadius:8, background:'#fff', color:T.ink, cursor:'pointer', textAlign:'left', boxShadow:open ? '0 0 0 3px rgba(27,36,52,.08)' : 'none' }}>
-      {selected.length ? selected.slice(0, 3).map((option) =>
-        <span key={option.code} style={{ padding:'3px 7px', borderRadius:6, border:`1px solid ${T.primaryLine}`, background:T.primaryBg, color:T.primary, fontFamily:"'SF Mono',Menlo,monospace", fontSize:10.5, fontWeight:700 }}>{option.code}</span>
-      ) : <span style={{ color:T.inkFaint, fontSize:12 }}>No Farecodes selected</span>}
-      {selected.length > 3 && <span style={{ padding:'3px 7px', borderRadius:6, border:`1px solid ${T.line}`, background:T.fill, color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>+{selected.length - 3} more</span>}
-      <span style={{ marginLeft:'auto', color:T.inkFaint, fontSize:11, fontWeight:600, whiteSpace:'nowrap' }}>{summary}</span>
-      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ color:T.inkFaint, transform:open ? 'rotate(180deg)' : 'none', transition:'transform .15s' }}><polyline points="6 9 12 15 18 9" /></svg>
-    </button>
-    {open &&
-      <div id={dialogId} role="dialog" aria-label="Choose Farecodes for inherited updates" onKeyDown={onDialogKeyDown}
-        style={{ width:'100%', maxHeight:340, marginTop:6, boxSizing:'border-box', display:'flex', flexDirection:'column', overflow:'hidden', background:'#fff', border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 1px 2px rgba(15,23,42,.08)' }}>
-        <div style={{ padding:'10px 11px', borderBottom:`1px solid ${T.line}`, background:T.fill }}>
-          <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search linked Farecodes" placeholder="Search Farecode, ship, or sailing…"
-            style={{ width:'100%', height:35, boxSizing:'border-box', padding:'7px 10px', border:`1px solid ${T.line}`, borderRadius:7, outline:'none', color:T.ink, fontSize:12, background:'#fff' }} />
+function FarecodePropagationReview({ rows, onDecisionChange }) {
+  const fields = rows.flatMap((row) => row.fields);
+  const autoCount = fields.filter((field) => !field.wasOverridden && field.decision === 'use-default').length;
+  const uniqueCount = fields.filter((field) => field.decision === 'keep-unique').length;
+  const adoptedCount = fields.filter((field) => field.wasOverridden && field.decision === 'use-default').length;
+  return <div style={{ border:`1px solid ${T.line}`, borderRadius:9, overflow:'hidden', background:'#fff' }}>
+    <div style={{ display:'flex', alignItems:'center', gap:7, flexWrap:'wrap', padding:'9px 11px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+      <span style={{ color:T.inkSoft, fontSize:10.5, fontWeight:700 }}>{rows.length} linked {rows.length === 1 ? 'Farecode' : 'Farecodes'}</span>
+      {!!autoCount && <span style={{ padding:'2px 7px', borderRadius:999, border:`1px solid ${T.primaryLine}`, background:T.primaryBg, color:T.primary, fontSize:9.5, fontWeight:750 }}>{autoCount} auto-update</span>}
+      {!!uniqueCount && <span style={{ padding:'2px 7px', borderRadius:999, border:`1px solid ${T.amberBorder}`, background:T.amberLight, color:T.amberDark, fontSize:9.5, fontWeight:750 }}>{uniqueCount} kept unique</span>}
+      {!!adoptedCount && <span style={{ padding:'2px 7px', borderRadius:999, border:`1px solid ${T.primaryLine}`, background:'#fff', color:T.primary, fontSize:9.5, fontWeight:750 }}>{adoptedCount} rejoin inheritance</span>}
+    </div>
+    {rows.map((row, rowIndex) => {
+      const rowUniqueCount = row.fields.filter((field) => field.decision === 'keep-unique').length;
+      return <section key={row.code} aria-labelledby={`impact-${row.code}`} style={{ borderTop:rowIndex ? `1px solid ${T.line}` : 'none' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 11px', background:'#FBFCFE', borderBottom:`1px solid ${T.lineSoft}` }}>
+          <span id={`impact-${row.code}`} style={{ fontFamily:"'SF Mono',Menlo,monospace", color:T.ink, fontSize:11.5, fontWeight:800 }}>{row.code}</span>
+          <span style={{ color:T.inkFaint, fontSize:10.5 }}>{[row.ship, row.sailing].filter(Boolean).join(' · ')}</span>
+          {row.status && <StatusBadge status={row.status} />}
+          {!!rowUniqueCount && <span style={{ marginLeft:'auto', padding:'2px 7px', borderRadius:999, border:`1px solid ${T.amberBorder}`, background:T.amberLight, color:T.amberDark, fontSize:9.5, fontWeight:750 }}>Unique · {rowUniqueCount}</span>}
         </div>
-        <label style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 12px', borderBottom:`1px solid ${T.lineSoft}`, color:T.ink, fontSize:11.5, fontWeight:700, cursor:enabled.length ? 'pointer' : 'default' }}>
-          <input ref={selectAllRef} type="checkbox" checked={allSelected} disabled={!enabled.length} onChange={() => setSelected(allSelected ? [] : enabled.map((option) => option.code))} style={{ width:15, height:15, accentColor:T.primary }} />
-          <span>All {enabled.length} eligible Farecodes</span>
-        </label>
-        <div className="pscroll" style={{ overflowY:'auto', minHeight:0, flex:1 }}>
-          {filtered.length ? filtered.map((option) =>
-            <label key={option.code} style={{ display:'grid', gridTemplateColumns:'18px minmax(0,1fr) auto', gap:9, alignItems:'center', padding:'10px 12px', borderBottom:`1px solid ${T.lineSoft}`, background:option.disabled ? T.fill : '#fff', cursor:option.disabled ? 'not-allowed' : 'pointer', opacity:option.disabled ? .72 : 1 }}>
-              <input type="checkbox" checked={!option.disabled && selectedSet.has(option.code)} disabled={option.disabled} onChange={() => toggle(option.code)} style={{ width:15, height:15, accentColor:T.primary }} />
-              <span style={{ minWidth:0 }}>
-                <span style={{ display:'block', color:T.ink, fontFamily:"'SF Mono',Menlo,monospace", fontSize:11.5, fontWeight:750 }}>{option.code}</span>
-                <span style={{ display:'block', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:T.inkFaint, fontSize:10.5 }}>{[option.ship, option.sailing].filter(Boolean).join(' · ')}</span>
-              </span>
-              <span style={{ color:option.disabled ? T.inkFaint : T.primary, fontSize:10, fontWeight:700, textAlign:'right', whiteSpace:'nowrap' }}>
-                {option.disabled ? 'Override protected' : `${option.updateCount} ${option.updateCount === 1 ? 'update' : 'updates'}${option.protectedCount ? ` · ${option.protectedCount} protected` : ''}`}
-              </span>
-            </label>
-          ) : <div style={{ padding:'18px 12px', color:T.inkFaint, fontSize:11.5, textAlign:'center' }}>No linked Farecodes match your search.</div>}
+        <div style={{ overflowX:'auto' }} className="hscroll">
+          <div role="table" aria-label={`Changed inherited fields for ${row.code}`} style={{ minWidth:760 }}>
+            {row.fields.map((field, fieldIndex) => <div key={field.key} role="row" style={{ display:'grid', gridTemplateColumns:'minmax(140px,.8fr) minmax(130px,1fr) 20px minmax(130px,1fr) minmax(230px,1.25fr)', gap:8, alignItems:'center', padding:'9px 11px', borderTop:fieldIndex ? `1px solid ${T.lineSoft}` : 'none' }}>
+              <div role="cell" style={{ minWidth:0 }}>
+                <div style={{ color:T.ink, fontSize:10.8, fontWeight:700 }}>{field.label}</div>
+                <span style={{ display:'inline-flex', marginTop:4, padding:'1px 5px', borderRadius:4, border:`1px solid ${field.wasOverridden ? T.amberBorder : T.line}`, background:field.wasOverridden ? T.amberLight : T.fill, color:field.wasOverridden ? T.amberDark : T.inkFaint, fontSize:8.8, fontWeight:750, textTransform:'uppercase', letterSpacing:'.35px' }}>
+                  {field.wasOverridden ? 'Existing override' : 'Inherited'}
+                </span>
+              </div>
+              <div role="cell" style={{ minHeight:31, display:'flex', alignItems:'center', padding:'6px 8px', borderRadius:6, border:`1px solid ${T.line}`, background:T.fill, color:T.inkSoft, fontFamily:"'SF Mono',Menlo,monospace", fontSize:10.5, fontWeight:550, overflowWrap:'anywhere' }}>{fmtVal(field.currentValue)}</div>
+              <div aria-hidden="true" style={{ color:T.inkFaint, textAlign:'center', fontSize:13 }}>→</div>
+              <div role="cell" style={{ minHeight:31, display:'flex', alignItems:'center', padding:'6px 8px', borderRadius:6, border:`1px solid ${T.primaryLine}`, background:T.primaryBg, color:T.primary, fontFamily:"'SF Mono',Menlo,monospace", fontSize:10.5, fontWeight:700, overflowWrap:'anywhere' }}>{fmtVal(field.nextValue)}</div>
+              <div role="cell" style={{ justifySelf:'end' }}>
+                <PropagationDecision field={field} onChange={(decision) => onDecisionChange(row.code, field.key, decision, field.defaultDecision)} />
+              </div>
+            </div>)}
+          </div>
         </div>
-      </div>
-    }
+      </section>;
+    })}
   </div>;
 }
 
@@ -1123,15 +1117,14 @@ function DiffRow({ d, first }) {
 
 }
 
-function S8({ diff, demo, impactOptions, linkedFarecodeCount, hasInheritedChanges, selectedFarecodes, onSelectedFarecodesChange, onNav }) {
+function S8({ diff, demo, impactRows, linkedFarecodeCount, hasInheritedChanges, onDecisionChange, relationshipChange, onNav }) {
   const isPreview = !diff.length;
   const rows = diff.length ? diff : demo;
   const groups = SECTIONS.filter((s) => s.n <= 7).map((s) => ({ ...s, items: rows.filter((r) => r.sec === s.n) })).filter((g) => g.items.length);
   const linkedCount = linkedFarecodeCount;
-  const eligibleOptions = impactOptions.filter((option) => !option.disabled);
-  const selectedCount = eligibleOptions.filter((option) => selectedFarecodes.includes(option.code)).length;
-  const protectedCount = impactOptions.filter((option) => option.disabled).length;
-  const excludedCount = Math.max(0, eligibleOptions.length - selectedCount);
+  const impactedFields = impactRows.flatMap((row) => row.fields);
+  const existingOverrideCount = impactedFields.filter((field) => field.wasOverridden).length;
+  const keptUniqueCount = impactedFields.filter((field) => field.decision === 'keep-unique').length;
   return (
     <StepCard number={8} title="Review Changes" description="Confirm the exact field updates and linked Farecode impact before saving."
     aside={<span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 999, border: `1px solid ${isPreview ? T.amberBorder : T.primaryLine}`, background: isPreview ? T.amberLight : T.primaryBg, color: isPreview ? T.amberDark : T.primary, fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>{isPreview ? 'Preview data' : `${rows.length} ${rows.length === 1 ? 'update' : 'updates'}`}</span>}>
@@ -1183,26 +1176,24 @@ function S8({ diff, demo, impactOptions, linkedFarecodeCount, hasInheritedChange
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>Inheritance impact</div>
               <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 1 }}>
-                {!hasInheritedChanges ? `${linkedCount} linked ${linkedCount === 1 ? 'Farecode' : 'Farecodes'} — no inherited fields changed.` :
-                !eligibleOptions.length ? `All ${linkedCount} linked ${linkedCount === 1 ? 'Farecode is' : 'Farecodes are'} protected by existing overrides.` :
-                `${selectedCount} of ${eligibleOptions.length} eligible linked ${eligibleOptions.length === 1 ? 'Farecode will' : 'Farecodes will'} receive inherited updates.`}
+                {!hasInheritedChanges && !relationshipChange ? `${linkedCount} linked ${linkedCount === 1 ? 'Farecode' : 'Farecodes'} — no inherited fields changed.` :
+                !hasInheritedChanges ? `${linkedCount} linked ${linkedCount === 1 ? 'Farecode will' : 'Farecodes will'} be relinked to the renamed Faretype.` :
+                `${linkedCount} linked ${linkedCount === 1 ? 'Farecode' : 'Farecodes'} · ${impactedFields.length} field ${impactedFields.length === 1 ? 'outcome' : 'outcomes'} reviewed.`}
               </div>
             </div>
           </div>
           <div style={{ padding: '12px 13px' }}>
-            {!hasInheritedChanges ?
-              <div style={{ fontSize: 11.5, color: T.inkSoft, lineHeight: 1.5 }}>Make a Policy Assignment or Booking Permission change to choose which linked Farecodes receive it.</div> : <>
-                <div style={{ fontSize: 11.5, color: T.inkSoft, lineHeight: 1.5, marginBottom: 9 }}>Select the Farecodes that should continue inheriting these changes. Existing Farecode-level overrides remain protected.</div>
-                {eligibleOptions.length ? <ImpactFarecodeSelect options={impactOptions} selectedCodes={selectedFarecodes} onChange={onSelectedFarecodesChange} /> :
-                  <div style={{ padding:'10px 11px', border:`1px solid ${T.line}`, borderRadius:8, background:T.fill, color:T.inkSoft, fontSize:11.5, lineHeight:1.45 }}>No selection is needed. Every linked Farecode already protects the changed fields with Farecode-level overrides.</div>}
-                {!!eligibleOptions.length && <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginTop:9, padding:'8px 10px', borderRadius:7, border:`1px solid ${excludedCount ? T.amberBorder : T.primaryLine}`, background:excludedCount ? T.amberLight : T.primaryBg }}>
-                  <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={excludedCount ? T.amberDark : T.primary} strokeWidth="2.1" strokeLinecap="round" style={{ flexShrink:0, marginTop:1 }}><circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><line x1="12" y1="7.5" x2="12" y2="7.6" /></svg>
-                  <div style={{ color:excludedCount ? T.amberDark : T.inkSoft, fontSize:10.8, lineHeight:1.45 }}>
-                    {excludedCount ? `${excludedCount} deselected ${excludedCount === 1 ? 'Farecode keeps' : 'Farecodes keep'} current values as explicit overrides.` : 'All eligible linked Farecodes will continue inheriting these updates.'}
-                    {protectedCount ? ` ${protectedCount} ${protectedCount === 1 ? 'Farecode is' : 'Farecodes are'} fully protected by existing overrides.` : ''}
-                  </div>
-                </div>}
-              </>}
+            {!hasInheritedChanges ? <>
+              <div style={{ fontSize: 11.5, color: T.inkSoft, lineHeight: 1.5 }}>{relationshipChange ? `Saving will update each linked Farecode's parent reference from ${relationshipChange.from} to ${relationshipChange.to}.` : 'Make a Policy Assignment or Booking Permission change to review downstream Farecode values.'}</div>
+            </> : <>
+              <div style={{ fontSize: 11.5, color: T.inkSoft, lineHeight: 1.5, marginBottom: 9 }}>Inherited fields update automatically. Existing exceptions keep their current value unless you explicitly choose <strong style={{ color:T.ink }}>Use new default</strong>. You can also keep an inherited current value as a new Unique exception.</div>
+              {!!existingOverrideCount && <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:9, padding:'8px 10px', borderRadius:7, border:`1px solid ${T.amberBorder}`, background:T.amberLight }}>
+                <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.amberDark} strokeWidth="2.1" strokeLinecap="round" style={{ flexShrink:0, marginTop:1 }}><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.6 2.4 17.2A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.8L13.7 3.6a2 2 0 0 0-3.4 0Z"/></svg>
+                <div style={{ color:T.amberDark, fontSize:10.8, lineHeight:1.45 }}>{existingOverrideCount} existing {existingOverrideCount === 1 ? 'exception defaults' : 'exceptions default'} to Keep unique. {keptUniqueCount !== existingOverrideCount ? `${keptUniqueCount} ${keptUniqueCount === 1 ? 'field will remain' : 'fields will remain'} unique after your choices.` : 'No intentional exception will be overwritten silently.'}</div>
+              </div>}
+              <FarecodePropagationReview rows={impactRows} onDecisionChange={onDecisionChange} />
+              {relationshipChange && <div style={{ marginTop:9, padding:'8px 10px', borderRadius:7, border:`1px solid ${T.primaryLine}`, background:T.primaryBg, color:T.inkSoft, fontSize:10.8, lineHeight:1.45 }}>The same save will relink these Farecodes from <strong style={{ color:T.primary }}>{relationshipChange.from}</strong> to <strong style={{ color:T.primary }}>{relationshipChange.to}</strong>.</div>}
+            </>}
           </div>
         </div>
       }
@@ -1320,8 +1311,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const [active, setActive] = useState(1);
   const [visited, setVisited] = useState(new Set([1]));
   const [showDiscard, setShowDiscard] = useState(false);
-  const initialImpactCodesRef = useRef(JSON.stringify(linkedFarecodeCodes));
-  const [selectedImpactCodes, setSelectedImpactCodes] = useState(() => new Set(linkedFarecodeCodes));
+  const [propagationDecisions, setPropagationDecisions] = useState({});
   const [mounted, setMounted] = useState(false);
   const sections = mode === 'edit' ? SECTIONS : SECTIONS.filter((s) => s.n !== 8);
 
@@ -1341,12 +1331,42 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   };
 
   const handleClose = () => {
-    const selectedCodes = linkedFarecodeCodes.filter((code) => selectedImpactCodes.has(code));
-    const previousForm = JSON.parse(initRef.current);
-    const hasInheritedChanges = FARECODE_INHERITED_FIELDS.some((key) => JSON.stringify(previousForm[key]) !== JSON.stringify(form[key]));
-    const hasChanges = JSON.stringify(form) !== initRef.current || hasInheritedChanges && JSON.stringify(selectedCodes) !== initialImpactCodesRef.current;
+    const hasChanges = JSON.stringify(form) !== initRef.current;
     if (hasChanges) setShowDiscard(true);else onClose();
   };
+
+  const propagationDecisionKey = (code, key) => `${code}::${key}`;
+  const setPropagationDecision = (code, key, decision, defaultDecision) => {
+    const decisionKey = propagationDecisionKey(code, key);
+    setPropagationDecisions((previous) => {
+      const next = { ...previous };
+      if (decision === defaultDecision) delete next[decisionKey];else next[decisionKey] = decision;
+      return next;
+    });
+  };
+  const buildImpactRows = (previousForm, changedKeys) => linkedFarecodes.map((farecode) => {
+    const config = farecodeConfigs?.[farecode.code];
+    return {
+      code:farecode.code,
+      ship:farecode.ship,
+      sailing:farecode.sailing,
+      status:farecode.status,
+      fields:changedKeys.map((key) => {
+        const currentValue = effectiveFarecodeValue(farecode, config, key, previousForm[key]);
+        const wasOverridden = farecodeFieldSource(config, key) === 'overridden' || !sameValue(currentValue, previousForm[key]);
+        const defaultDecision = wasOverridden ? 'keep-unique' : 'use-default';
+        return {
+          key,
+          label:FARECODE_PROPAGATION_META[key]?.label || key,
+          currentValue,
+          nextValue:form[key],
+          wasOverridden,
+          defaultDecision,
+          decision:propagationDecisions[propagationDecisionKey(farecode.code, key)] || defaultDecision,
+        };
+      }),
+    };
+  });
 
   const validateS1 = () => {
     const e = {};
@@ -1391,13 +1411,19 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
       const valid = validateAll();
       if (valid) {
         const previousForm = JSON.parse(initRef.current);
-        const changedInheritedKeys = FARECODE_INHERITED_FIELDS.filter((key) => JSON.stringify(previousForm[key]) !== JSON.stringify(form[key]));
-        const eligibleCodes = linkedFarecodes.filter((farecode) => changedInheritedKeys.some((key) => farecodeConfigs?.[farecode.code]?.overrides?.[key] !== 'overridden')).map((farecode) => farecode.code);
+        const changedInheritedKeys = FARECODE_INHERITED_FIELDS.filter((key) => !sameValue(previousForm[key], form[key]));
+        const impactRows = buildImpactRows(previousForm, changedInheritedKeys);
         onActivate(form, {
           previousForm,
           changedInheritedKeys,
           linkedFarecodes:linkedFarecodeCodes,
-          selectedFarecodes:eligibleCodes.filter((code) => selectedImpactCodes.has(code))
+          fieldActions:impactRows.flatMap((row) => row.fields.map((field) => ({
+            code:row.code,
+            key:field.key,
+            decision:field.decision,
+            currentValue:field.currentValue,
+            wasOverridden:field.wasOverridden,
+          })))
         });
       } else
       if (!form.faretypeCode || !form.faretypeGroup || !hasSourceChannels(form.source)) setActive(1);else
@@ -1421,24 +1447,10 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
     if (active === 7) return <S7 form={form} setForm={setForm} />;
     if (active === 8) {
       const previousForm = JSON.parse(initRef.current);
-      const changedInheritedKeys = FARECODE_INHERITED_FIELDS.filter((key) => JSON.stringify(previousForm[key]) !== JSON.stringify(form[key]));
-      const impactOptions = linkedFarecodes.map((farecode) => {
-        const overrides = farecodeConfigs?.[farecode.code]?.overrides || {};
-        const protectedKeys = changedInheritedKeys.filter((key) => overrides[key] === 'overridden');
-        const updateKeys = changedInheritedKeys.filter((key) => overrides[key] !== 'overridden');
-        return {
-          code:farecode.code,
-          ship:farecode.ship,
-          sailing:farecode.sailing,
-          updateCount:updateKeys.length,
-          protectedCount:protectedKeys.length,
-          disabled:changedInheritedKeys.length > 0 && updateKeys.length === 0
-        };
-      });
-      const protectedCodes = impactOptions.filter((option) => option.disabled).map((option) => option.code);
-      const selectedFarecodes = impactOptions.filter((option) => !option.disabled && selectedImpactCodes.has(option.code)).map((option) => option.code);
-      const setSelectedFarecodes = (codes) => setSelectedImpactCodes(new Set([...codes, ...protectedCodes]));
-      return <S8 diff={diffForm(previousForm, form)} demo={DEMO_DIFF} impactOptions={impactOptions} linkedFarecodeCount={linkedFarecodes.length} hasInheritedChanges={changedInheritedKeys.length > 0} selectedFarecodes={selectedFarecodes} onSelectedFarecodesChange={setSelectedFarecodes} onNav={navTo} />;
+      const changedInheritedKeys = FARECODE_INHERITED_FIELDS.filter((key) => !sameValue(previousForm[key], form[key]));
+      const impactRows = buildImpactRows(previousForm, changedInheritedKeys);
+      const relationshipChange = previousForm.faretypeCode !== form.faretypeCode ? { from:previousForm.faretypeCode, to:form.faretypeCode } : null;
+      return <S8 diff={diffForm(previousForm, form)} demo={DEMO_DIFF} impactRows={impactRows} linkedFarecodeCount={linkedFarecodes.length} hasInheritedChanges={changedInheritedKeys.length > 0} onDecisionChange={setPropagationDecision} relationshipChange={relationshipChange} onNav={navTo} />;
     }
   };
 
@@ -2114,13 +2126,19 @@ const linkedFarecodesFor = (faretypeCode, source) => {
   });
 };
 
-function DetailFarecodesTab({ fcCount, faretypeCode, linkedRows }) {
+function DetailFarecodesTab({ fcCount, faretypeCode, linkedRows, farecodeConfigs = {}, faretypeDefaults = {} }) {
   const [search, setSearch] = useState('');
   const [shipFilter, setShipFilter] = useState('All Ships');
   const [sailingFilter, setSailingFilter] = useState('All Sailings');
   const [faretypeFilter, setFaretypeFilter] = useState('All Faretypes');
   const [showAll, setShowAll] = useState(false);
-  const farecodes = linkedFarecodesFor(faretypeCode, linkedRows || fcCount);
+  const farecodes = linkedFarecodesFor(faretypeCode, linkedRows || fcCount).map((farecode) => {
+    const code = farecode.code || farecode.id;
+    return {
+      ...farecode,
+      uniqueFields:divergentFarecodeFields(farecode, farecodeConfigs?.[code], faretypeDefaults),
+    };
+  });
   const shipOptions = ['All Ships', ...[...new Set(farecodes.map((farecode) => farecode.ship))].sort()];
   const sailingOptions = ['All Sailings', ...[...new Set(farecodes.map((farecode) => farecode.sailing))].sort()];
   const faretypeOptions = ['All Faretypes', ...[...new Set(farecodes.map((farecode) => farecode.faretype))].sort()];
@@ -2186,10 +2204,16 @@ function DetailFarecodesTab({ fcCount, faretypeCode, linkedRows }) {
             {visibleFarecodes.map((fc) =>
             <tr key={fc.id} style={{ borderBottom: `1px solid ${T.lineSoft}` }}>
                 <td style={{ padding: '12px', verticalAlign: 'middle' }}>
-                  <button onClick={() => alert(`Navigate to farecode: ${fc.id}`)}
-                style={{ padding: 0, border: 0, background: 'transparent', color: T.primary, cursor: 'pointer', fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 800 }}>
-                    {fc.id}
-                  </button>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+                    <button onClick={() => alert(`Navigate to farecode: ${fc.id}`)}
+                  style={{ padding: 0, border: 0, background: 'transparent', color: T.primary, cursor: 'pointer', fontFamily: "'SF Mono',Menlo,monospace", fontSize: 12.5, fontWeight: 800, whiteSpace:'nowrap' }}>
+                      {fc.id}
+                    </button>
+                    {!!fc.uniqueFields.length && <span title={`Differs from ${faretypeCode} on ${fc.uniqueFields.map((field) => field.label).join(', ')}`}
+                      style={{ display:'inline-flex', alignItems:'center', gap:4, padding:'2px 6px', borderRadius:999, border:`1px solid ${T.amberBorder}`, background:T.amberLight, color:T.amberDark, fontSize:9.5, fontWeight:750, whiteSpace:'nowrap' }}>
+                      Unique · {fc.uniqueFields.length}
+                    </span>}
+                  </div>
                 </td>
                 <td title={fc.name} style={{ padding: '12px', color: T.ink, fontSize: 12.5, fontWeight: 650, verticalAlign: 'middle', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fc.name}</td>
                 <td style={{ padding: '12px', color: T.ink, fontSize: 12.5, verticalAlign: 'middle' }}>{fc.ship}</td>
@@ -2267,7 +2291,7 @@ function DetailAuditTab() {
 
 }
 
-function FaretypeDetailPanel({ row, onClose, onEdit, onDelete, policies, eligibilityPolicies = [], farecodes = [] }) {
+function FaretypeDetailPanel({ row, onClose, onEdit, onDelete, policies, eligibilityPolicies = [], farecodes = [], farecodeConfigs = {} }) {
   const [tab, setTab] = useState('overview');
   const [mounted, setMounted] = useState(false);
   const detail = getDtl(row.code);
@@ -2332,7 +2356,7 @@ function FaretypeDetailPanel({ row, onClose, onEdit, onDelete, policies, eligibi
         {/* ⑤ Scrollable tab content */}
         <div className="pscroll" style={{ flex: 1, overflowY: 'auto', padding: '16px 22px 28px' }}>
           {tab === 'overview' && <DetailOverviewTab row={row} detail={detail} eligibilityPolicies={eligibilityPolicies} />}
-          {tab === 'farecodes' && <DetailFarecodesTab fcCount={row.fc} faretypeCode={row.code} linkedRows={farecodes.length ? farecodes : undefined} />}
+          {tab === 'farecodes' && <DetailFarecodesTab fcCount={row.fc} faretypeCode={row.code} linkedRows={farecodes.length ? farecodes : undefined} farecodeConfigs={farecodeConfigs} faretypeDefaults={row} />}
           {tab === 'audit' && <DetailAuditTab />}
         </div>
       </div>
@@ -2433,9 +2457,17 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
     if (!form.faretypeCode || !form.faretypeGroup || !hasSourceChannels(form.source) || !form.cancellationPolicy || !form.depositPolicy || !form.eligibilityPolicy) return;
     if (editData) {
       const linkedCodes = new Set(inheritancePlan.linkedFarecodes || []);
-      const selectedCodes = new Set(inheritancePlan.selectedFarecodes || []);
       const changedKeys = inheritancePlan.changedInheritedKeys || [];
       const previousForm = inheritancePlan.previousForm || {};
+      const fieldActions = new Map((inheritancePlan.fieldActions || []).map((action) => [`${action.code}::${action.key}`, action]));
+      const actionFor = (farecode, key) => {
+        const planned = fieldActions.get(`${farecode.code}::${key}`);
+        if (planned) return planned;
+        const config = farecodeConfigs?.[farecode.code];
+        const currentValue = effectiveFarecodeValue(farecode, config, key, previousForm[key]);
+        const wasOverridden = farecodeFieldSource(config, key) === 'overridden' || !sameValue(currentValue, previousForm[key]);
+        return { code:farecode.code, key, currentValue, wasOverridden, decision:wasOverridden ? 'keep-unique' : 'use-default' };
+      };
       if (setFarecodeConfigs && (linkedCodes.size || editData.code !== form.faretypeCode)) {
         setFarecodeConfigs((previous) => {
           const next = { ...(previous || {}) };
@@ -2450,13 +2482,16 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
             };
             const nextForm = { ...(current.form || {}), faretype:form.faretypeCode };
             const nextOverrides = { ...(current.overrides || {}) };
-            if (!selectedCodes.has(code)) {
-              changedKeys.forEach((key) => {
-                if (nextOverrides[key] === 'overridden') return;
-                nextForm[key] = previousForm[key];
+            changedKeys.forEach((key) => {
+              const action = actionFor(row || { code }, key);
+              if (action.decision === 'keep-unique') {
+                nextForm[key] = action.currentValue;
                 nextOverrides[key] = 'overridden';
-              });
-            }
+              } else {
+                nextForm[key] = form[key];
+                nextOverrides[key] = 'inherited';
+              }
+            });
             next[code] = { ...current, form:nextForm, overrides:nextOverrides };
           });
           return next;
@@ -2466,11 +2501,9 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
         setFarecodes((previous) => previous.map((farecode) => {
           if (!linkedCodes.has(farecode.code) && farecode.faretype !== editData.code) return farecode;
           const next = { ...farecode, faretype:form.faretypeCode };
-          const config = farecodeConfigs?.[farecode.code];
           changedKeys.forEach((key) => {
-            if (config?.overrides?.[key] === 'overridden') next[key] = config.form?.[key] ?? farecode[key];else
-            if (selectedCodes.has(farecode.code)) next[key] = form[key];else
-            next[key] = previousForm[key];
+            const action = actionFor(farecode, key);
+            next[key] = action.decision === 'keep-unique' ? action.currentValue : form[key];
           });
           return next;
         }));
@@ -2583,7 +2616,8 @@ function FaretypeListScreen({ policies, data: controlledData, setData: setContro
         onDelete={deleteFaretype}
         policies={policies}
         eligibilityPolicies={policyEligibility}
-        farecodes={farecodes} />
+        farecodes={farecodes}
+        farecodeConfigs={farecodeConfigs} />
 
       }
       {panelOpen && panelKind === 'faretype' && panelMode !== 'detail' &&
