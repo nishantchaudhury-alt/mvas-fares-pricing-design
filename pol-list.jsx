@@ -11,9 +11,12 @@ function nextParentCode(list, type) {
   return type === 'deposit' ? `DEP-${next}` : `CANC-${String(next).padStart(3, '0')}`;
 }
 const blankForm = () => ({ name:'', active:true, isDefault:false, refundable:true });
-const blankPolicyForm = () => ({ ...blankForm(), cats:['All'] });
+const blankPolicyForm = () => ({ ...blankForm(), cats:['All'], losMinNights:'1', losMaxNights:'' });
 const gFormOf = g => ({ name:g.name, active:g.status === 'Active', isDefault:!!g.isDefault, refundable:g.isRefundable !== false });
-const pFormOf = p => ({ name:p.name, cats:policyCatsOf(p), active:p.status === 'Active', isDefault:!!p.isDefault, refundable:p.isRefundable !== false });
+const pFormOf = p => {
+  const los = policyLosOf(p);
+  return { name:p.name, cats:policyCatsOf(p), losMinNights:String(los.min), losMaxNights:los.max === null ? '' : String(los.max), active:p.status === 'Active', isDefault:!!p.isDefault, refundable:p.isRefundable !== false };
+};
 const makePolicyDraft = ({ parentCode, parentId=null, pForm=null, rows=[] }) => ({
   key:parentId || `draft-${parentCode}`,
   parentId,
@@ -58,7 +61,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const hits = g => {
     if (!term) return true;
     if (`${g.code} ${g.name}`.toLowerCase().includes(term)) return true;
-    return tableParents(g).some(p => `${p.code} ${p.name}`.toLowerCase().includes(term)
+    return tableParents(g).some(p => `${p.code} ${p.name} ${losLabel(p)} ${policyLosOf(p).min} ${policyLosOf(p).max ?? ''}`.toLowerCase().includes(term)
       || kidsOf(p).some((r, i) => `${childCode(p.code, i)} ${childSummary(g.type, r)}`.toLowerCase().includes(term)));
   };
   const rows = tablePolicies.filter(g => {
@@ -77,12 +80,8 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const expandedCount = tablePolicies.filter(g => shown(g.id)).length;
 
   /* ── coverage ── */
-  const coverOk = (type, parent) => {
-    const kids = kidsOf(parent), cats = policyCatsOf(parent);
-    return kids.length > 0 && cats.length > 0 && validateRows(kids, { policyCoverage:cats }).issues.length === 0;
-  };
   const activeDepParents = policies.filter(g => g.type === 'deposit' && g.status === 'Active').flatMap(g => g.parents.filter(p => p.status === 'Active'));
-  const parentActivatable = (type, form, kids) => kids.length > 0 && (form.cats || []).length > 0 && validateRows(kids, { policyCoverage:form.cats || [] }).issues.length === 0
+  const parentActivatable = (type, form, kids) => kids.length > 0 && (form.cats || []).length > 0 && Object.keys(policyLosErrors(form)).length === 0 && validateRows(kids, { policyCoverage:form.cats || [] }).issues.length === 0
     && (type !== 'cancel' || refundabilityIssues(kids, form ? form.refundable : true).length === 0);
 
   /* ── guided flow ── */
@@ -109,7 +108,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
     setFlow({ type:g.type, entry:'resume', step:2, groupId:g.id, groupCode:g.code,
       gForm:gFormOf(g), policyDrafts:drafts, activePolicyIndex:0 });
   };
-  const flowDirty = f => f.entry === 'resume' || f.gForm.name || flowPolicyDrafts(f).some(d => d.pForm.name || d.rows.length > 0);
+  const flowDirty = f => f.entry === 'resume' || f.gForm.name || flowPolicyDrafts(f).some(d => d.pForm.name || String(d.pForm.losMinNights ?? '1') !== '1' || ![null, undefined, ''].includes(d.pForm.losMaxNights) || d.rows.length > 0);
   const askCancelFlow = () => flow && flowDirty(flow) ? setDlg({ type:'discardFlow' }) : setFlow(null);
 
   const commitFlow = status => {
@@ -120,9 +119,11 @@ function PoliciesList({ policies, setPolicies, onNav }) {
     const builtParents = drafts.map(d => {
       const existingP = existingG ? existingG.parents.find(p => p.id === d.parentId) : null;
       const pid = d.parentId || `p${++uid.current}`;
+      const los = policyLosOf(d.pForm);
       return {
         id:pid, code:d.parentCode, name:d.pForm.name.trim() || 'Untitled policy',
         cats:normalizePolicyCats(d.pForm.cats || []),
+        losMinNights:los.min, losMaxNights:los.max,
         status, isDefault:d.pForm.isDefault, usedIn:existingP?.usedIn || 0, mod:TODAY, created:existingP?.created || TODAY, editor:ME,
         [key]:d.rows, usedInFaretypes:existingP?.usedInFaretypes || [], usedInFarecodes:existingP?.usedInFarecodes || [],
         ...(f.type === 'cancel' ? { isRefundable:f.gForm.refundable !== false } : {}),
@@ -153,7 +154,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   const tryActivateFlow = () => {
     const drafts = flowPolicyDrafts(flow);
     const issueSets = drafts.map(d => chainIssues({ type:flow.type, policies, groupId:flow.groupId, groupName:flow.gForm.name,
-      parentName:d.pForm.name, policyCats:d.pForm.cats, rows:d.rows, isRefundable:flow.gForm.refundable !== false }));
+      parentName:d.pForm.name, policyCats:d.pForm.cats, losMinNights:d.pForm.losMinNights, losMaxNights:d.pForm.losMaxNights, rows:d.rows, isRefundable:flow.gForm.refundable !== false }));
     const firstInvalid = issueSets.findIndex(items => items.length > 0);
     if (firstInvalid >= 0) {
       const allIssues = issueSets.flat();
@@ -168,6 +169,8 @@ function PoliciesList({ policies, setPolicies, onNav }) {
           err:{
             name:issueSets[i].some(it => it.text === 'Policy name is required.') ? 'Policy name is required' : null,
             cats:issueSets[i].some(it => it.text === 'Stateroom coverage is required.') ? 'Select at least one stateroom type' : null,
+            losMinNights:issueSets[i].find(it => it.field === 'losMinNights')?.text || null,
+            losMaxNights:issueSets[i].find(it => it.field === 'losMaxNights')?.text || null,
           },
           issues:issueSets[i],
           validationAttempt:issueSets[i].length ? (d.validationAttempt || 0) + 1 : d.validationAttempt || 0,
@@ -209,21 +212,24 @@ function PoliciesList({ policies, setPolicies, onNav }) {
   };
   const saveParentEdit = () => {
     const e = edit, g = policies.find(x => x.id === e.groupId), p = g.parents.find(x => x.id === e.parentId);
+    const losErrors = policyLosErrors(e.form);
     const identityErrors = {
       name:e.form.name.trim() ? null : 'Policy name is required',
       cats:(e.form.cats || []).length ? null : 'Select at least one stateroom type',
+      ...losErrors,
     };
-    if (identityErrors.name || identityErrors.cats) { setEdit({ ...e, err:identityErrors }); return; }
+    if (Object.values(identityErrors).some(Boolean)) { setEdit({ ...e, err:identityErrors }); return; }
     if (e.form.active) {
-      const issues = chainIssues({ type:g.type, policies, groupId:g.id, groupName:g.name, parentName:e.form.name, policyCats:e.form.cats, rows:e.rows, isRefundable:g.isRefundable !== false });
+      const issues = chainIssues({ type:g.type, policies, groupId:g.id, groupName:g.name, parentName:e.form.name, policyCats:e.form.cats, losMinNights:e.form.losMinNights, losMaxNights:e.form.losMaxNights, rows:e.rows, isRefundable:g.isRefundable !== false });
       if (issues.length) { setEdit({ ...e, issues, validationAttempt:(e.validationAttempt || 0) + 1 }); return; }
     }
     const key = POL_META[g.type].childKey;
+    const los = policyLosOf(e.form);
     setPolicies(policies.map(x => x.id !== g.id ? x : {
       ...x, mod:TODAY, editor:ME,
       parents:x.parents.map(y => y.id !== p.id
         ? (e.form.isDefault ? { ...y, isDefault:false } : y)
-        : { ...y, name:e.form.name.trim(), cats:normalizePolicyCats(e.form.cats), status:e.form.active ? 'Active' : p.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY, editor:ME, [key]:e.rows, ...(g.type === 'cancel' ? { isRefundable:g.isRefundable !== false } : {}) }),
+        : { ...y, name:e.form.name.trim(), cats:normalizePolicyCats(e.form.cats), losMinNights:los.min, losMaxNights:los.max, status:e.form.active ? 'Active' : p.status === 'Draft' ? 'Draft' : 'Inactive', isDefault:e.form.isDefault, mod:TODAY, editor:ME, [key]:e.rows, ...(g.type === 'cancel' ? { isRefundable:g.isRefundable !== false } : {}) }),
     }));
     setEdit(null);
   };
@@ -298,7 +304,7 @@ function PoliciesList({ policies, setPolicies, onNav }) {
       if (!open) return;
       parents.forEach((p, pi) => {
         const kids = kidsOf(p), pOpen = shown(p.id);
-        const ok = coverOk(g.type, p), lastP = pi === parents.length - 1;
+        const lastP = pi === parents.length - 1;
         const closesBlock = lastP && (!pOpen || kids.length === 0);
         out.push(
           <tr key={p.id} onClick={() => setDetail({ groupId:g.id, parentId:p.id })} style={{ background:'#F7F9FC', borderBottom:`1px solid ${closesBlock ? T.line : T.lineSoft}`, cursor:'pointer' }}
@@ -314,9 +320,9 @@ function PoliciesList({ policies, setPolicies, onNav }) {
                 <span style={{ fontWeight:600, fontSize:12.5, lineHeight:1.2 }}>{p.name}</span>
               </div>
               <div style={metaLine}>
-                <span>{kids.length} {kids.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}</span>
+                <Pill compact bg={T.primaryLine} color={T.primary}>LOS · {losLabel(p)}</Pill>
+                <span>· {kids.length} {kids.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}</span>
                 <span>· {catSentence(policyCatsOf(p))}</span>
-                <CoverPill ok={ok} label={kids.length === 0 ? 'None configured' : ok ? 'Schedule complete' : 'Schedule needs attention'}/>
               </div>
             </td>
             <td style={{ ...TD, padding:'7px 14px' }}><PolStatusBadge status={p.status}/></td>

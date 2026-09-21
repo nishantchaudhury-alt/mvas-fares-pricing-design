@@ -150,8 +150,34 @@ const activePolicyParents = (policies, type) => (policies || [])
   .filter(group => group.type === type && recordIsActive(group))
   .flatMap(group => (group.parents || []).filter(recordIsActive));
 const isActivePolicySelection = (policies, type, value) => !!value && activePolicyParents(policies,type).some(policy => policy.name === value);
+const activePolicyByName = (policies, type, value) => activePolicyParents(policies,type).find(policy => policy.name === value);
+const nightValuesLabel = values => {
+  const ordered = [...new Set(values)].sort((a,b) => a-b);
+  const joined = ordered.length < 2
+    ? String(ordered[0] ?? '')
+    : ordered.length === 2
+      ? `${ordered[0]} and ${ordered[1]}`
+      : `${ordered.slice(0,-1).join(', ')}, and ${ordered[ordered.length-1]}`;
+  return `${joined} ${ordered.length === 1 && ordered[0] === 1 ? 'night' : 'nights'}`;
+};
+const policySelectionLosError = (policies, type, value, form) => {
+  const policy = activePolicyByName(policies,type,value);
+  if (!policy) return '';
+  const { min, max } = policyLosOf(policy);
+  const incompatibleNights = farecodeSailingValues(form)
+    .map(sailing => sailDates(sailing).nights)
+    .filter(nights => Number.isFinite(nights) && (nights < min || max !== null && nights > max));
+  return incompatibleNights.length
+    ? `Applies to ${losLabel(policy)}; selected sailing LOS includes ${nightValuesLabel(incompatibleNights)}.`
+    : '';
+};
+const policySelectionError = (policies, type, value, form) => {
+  if (!value) return 'Required';
+  if (!isActivePolicySelection(policies,type,value)) return 'Select an active policy';
+  return policySelectionLosError(policies,type,value,form);
+};
 const policySelectOptions = (policies, type, current) => {
-  const options = activePolicyParents(policies,type).map(policy => [policy.name, `${policy.code} · ${policy.name}`]);
+  const options = activePolicyParents(policies,type).map(policy => [policy.name, `${policy.code} · ${policy.name} · ${losLabel(policy)}`]);
   if (current && !options.some(([value]) => value === current)) options.unshift([current, `${current} · Inactive`]);
   return [['','Select policy…'], ...options];
 };
@@ -2060,7 +2086,7 @@ function FarecodeReviewStep({ changes, onNav }) {
 const bookingPermissionsComplete = form => BOOKING_PERMISSION_KEYS.every(key => typeof form?.[key] === 'boolean');
 function sComplete(n, form, pricing, policies) {
   if (n===1) return !!(form.ship && farecodeSailingValues(form).length && form.faretype);
-  if (n===2) return isActivePolicySelection(policies,'cancel',form.cancellationPolicy) && isActivePolicySelection(policies,'deposit',form.depositPolicy) && bookingPermissionsComplete(form);
+  if (n===2) return !policySelectionError(policies,'cancel',form.cancellationPolicy,form) && !policySelectionError(policies,'deposit',form.depositPolicy,form) && bookingPermissionsComplete(form);
   if (n>=3 && n<=7) return !!form.faretype;
   if (n===8) return Object.values(pricing).some(r => Object.values(r).some(v => v!==''));
   return false;
@@ -2293,10 +2319,10 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, onDelete, 
     if (!farecodeSailingValues(form).length) e.sailing = 'Select at least one sailing';
     if (!form.faretype) e.faretype = 'Required';
     else if (mode==='create' && !recordIsActive(faretypes.find(item => item.code === form.faretype))) e.faretype = 'Select an active Faretype';
-    if (!form.cancellationPolicy) e.cancellationPolicy = 'Required';
-    else if (!isActivePolicySelection(policies,'cancel',form.cancellationPolicy)) e.cancellationPolicy = 'Select an active policy';
-    if (!form.depositPolicy) e.depositPolicy = 'Required';
-    else if (!isActivePolicySelection(policies,'deposit',form.depositPolicy)) e.depositPolicy = 'Select an active policy';
+    const cancellationPolicyError = policySelectionError(policies,'cancel',form.cancellationPolicy,form);
+    const depositPolicyError = policySelectionError(policies,'deposit',form.depositPolicy,form);
+    if (cancellationPolicyError) e.cancellationPolicy = cancellationPolicyError;
+    if (depositPolicyError) e.depositPolicy = depositPolicyError;
     if (!bookingPermissionsComplete(form)) e.bookingPermissions = 'Review all booking permissions';
     if (full) {
       const pErr = {};
@@ -2315,10 +2341,10 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, onDelete, 
       else if (mode==='create' && !recordIsActive(faretypes.find(item => item.code === form.faretype))) e.faretype = 'Select an active Faretype';
     }
     if (n===2) {
-      if (!form.cancellationPolicy) e.cancellationPolicy = 'Required';
-      else if (!isActivePolicySelection(policies,'cancel',form.cancellationPolicy)) e.cancellationPolicy = 'Select an active policy';
-      if (!form.depositPolicy) e.depositPolicy = 'Required';
-      else if (!isActivePolicySelection(policies,'deposit',form.depositPolicy)) e.depositPolicy = 'Select an active policy';
+      const cancellationPolicyError = policySelectionError(policies,'cancel',form.cancellationPolicy,form);
+      const depositPolicyError = policySelectionError(policies,'deposit',form.depositPolicy,form);
+      if (cancellationPolicyError) e.cancellationPolicy = cancellationPolicyError;
+      if (depositPolicyError) e.depositPolicy = depositPolicyError;
       if (!bookingPermissionsComplete(form)) e.bookingPermissions = 'Review all booking permissions';
     }
     setErrors(e);
@@ -2468,7 +2494,7 @@ function FarecodePanel({ mode, viewRow, initialEdit, inline, onClose, onDelete, 
           <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'12px 22px', background:T.panel, borderTop:`1px solid ${T.line}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, zIndex:10 }}>
             {Object.keys(errors).length>0 ? (
               <span style={{ fontSize:11.5, color:T.amber, display:'flex', alignItems:'center', gap:5 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>Complete the required fields to continue
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>Resolve the highlighted fields to continue
               </span>
             ) : <span/>}
             <div style={{ display:'flex', alignItems:'center', gap:10, marginLeft:'auto' }}>

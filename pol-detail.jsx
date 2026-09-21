@@ -179,13 +179,13 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
         )} pad="0">
         {g.parents.length === 0 ? <div style={{ padding:'34px 20px', textAlign:'center', fontSize:13, color:T.inkSoft }}>No policies in this group yet.</div> : (
           <div className="hscroll" style={{ width:'100%', minWidth:0, overflowX:'auto' }}>
-            <table aria-label={`Policies in ${g.name}`} style={{ width:'100%', minWidth:896, tableLayout:'fixed', borderCollapse:'collapse', background:'#fff' }}>
+            <table aria-label={`Policies in ${g.name}`} style={{ width:'100%', minWidth:960, tableLayout:'fixed', borderCollapse:'collapse', background:'#fff' }}>
             <colgroup>
-              <col style={{ width:260 }}/><col style={{ width:90 }}/><col style={{ width:105 }}/><col style={{ width:150 }}/><col style={{ width:145 }}/><col style={{ width:110 }}/><col style={{ width:36 }}/>
+              <col style={{ width:220 }}/><col style={{ width:82 }}/><col style={{ width:100 }}/><col style={{ width:132 }}/><col style={{ width:145 }}/><col style={{ width:145 }}/><col style={{ width:105 }}/><col style={{ width:36 }}/>
             </colgroup>
             <thead>
               <tr>
-                {['Policy', 'Default', 'Status', 'Configuration', 'Stateroom Coverage', 'Referenced by'].map(label => (
+                {['Policy', 'Default', 'Status', 'LOS', 'Configuration', 'Stateroom Coverage', 'Referenced by'].map(label => (
                   <th key={label} scope="col" style={{ padding:'9px 12px', textAlign:'left', background:T.fill, borderBottom:`1px solid ${T.line}`, color:T.inkLabel, fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:'.6px', whiteSpace:'nowrap' }}>{label}</th>
                 ))}
                 <th scope="col" aria-label="Actions" style={{ width:36, padding:'9px 6px', background:T.fill, borderBottom:`1px solid ${T.line}` }}/>
@@ -209,6 +209,7 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
                     </th>
                     <td style={cellStyle}>{x.isDefault ? <Pill>Default</Pill> : <span style={{ color:T.inkFaint }}>—</span>}</td>
                     <td style={cellStyle}><PolStatusBadge status={x.status}/></td>
+                    <td style={{ ...cellStyle, whiteSpace:'nowrap' }}>{losLabel(x)}</td>
                     <td style={{ ...cellStyle, whiteSpace:'nowrap' }}>{configLabel}</td>
                     <td style={cellStyle}>{catSentence(policyCatsOf(x))}</td>
                     <td style={{ ...cellStyle, whiteSpace:'nowrap' }}>{x.usedIn > 0 ? `${x.usedIn} records` : 'No records'}</td>
@@ -269,6 +270,7 @@ function PolDetailDrawer({ target, policies, depParents, onClose, onOpenParent, 
         { label:'Policy type', value:meta.label },
         { label:'Assignment', value:assignmentLabel },
         ...(g.type === 'cancel' ? [{ label:'Refundability', value:refundabilityLabel, color:g.isRefundable === false ? '#991B1B' : '#065F46' }] : []),
+        { label:'Length of stay', value:losLabel(p) },
         { label:'Stateroom coverage', value:catSentence(parentCats) },
         { label:'Parent group', value:g.name, hint:g.code, hintMono:true },
       ];

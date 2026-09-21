@@ -258,8 +258,8 @@ function StatusBadge({ status }) {
   const s = STATUS_S[status] || STATUS_S.Inactive;
   return (<span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'3px 9px', borderRadius:999, fontSize:11.5, fontWeight:600, background:s.bg, color:s.color, whiteSpace:'nowrap' }}><span style={{ width:6, height:6, borderRadius:'50%', background:s.dot, flexShrink:0 }}/>{status}</span>);
 }
-function Pill({ children, bg, color, mono }) {
-  return <span style={{ display:'inline-flex', alignItems:'center', padding:'3px 9px', borderRadius:999, fontSize:11.5, fontWeight:600, background:bg || T.primaryBg, color:color || T.primary, whiteSpace:'nowrap', fontFamily:mono ? MONO : undefined }}>{children}</span>;
+function Pill({ children, bg, color, mono, compact = false }) {
+  return <span style={{ display:'inline-flex', alignItems:'center', padding:compact ? '1px 6px' : '3px 9px', borderRadius:999, fontSize:compact ? 10 : 11.5, lineHeight:compact ? 1.35 : undefined, fontWeight:compact ? 700 : 600, background:bg || T.primaryBg, color:color || T.primary, whiteSpace:'nowrap', fontFamily:mono ? MONO : undefined }}>{children}</span>;
 }
 function CoverPill({ ok, label }) {
   return <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11.5, fontWeight:600, color: ok ? T.green : T.amberDark }}>{ok ? <IcCheck size={11}/> : <IcWarn color={T.amberDark} size={12}/>}{label || (ok ? 'Complete' : 'Check windows')}</span>;

@@ -26,6 +26,46 @@ const policyCatsOf = p => {
   const derived = [...new Set(kidsOf(p || {}).flatMap(row => catsCover(row.cats || [])))];
   return derived.length ? normalizePolicyCats(derived) : ['All'];
 };
+const losValueIsBlank = value => value === '' || value === null || value === undefined;
+const wholeNightValue = value => {
+  if (typeof value === 'number') return Number.isInteger(value) ? value : null;
+  const text = String(value ?? '').trim();
+  return /^\d+$/.test(text) ? Number(text) : null;
+};
+const policyLosErrors = policy => {
+  const errors = {};
+  const minRaw = policy?.losMinNights;
+  const maxRaw = policy?.losMaxNights;
+  const min = wholeNightValue(minRaw);
+  const max = losValueIsBlank(maxRaw) ? null : wholeNightValue(maxRaw);
+  if (losValueIsBlank(minRaw)) errors.losMinNights = 'Minimum nights is required.';
+  else if (min === null || min < 1) errors.losMinNights = 'Enter a whole number of at least 1.';
+  if (!losValueIsBlank(maxRaw) && (max === null || max < 1))
+    errors.losMaxNights = 'Enter a whole number of at least 1, or leave blank.';
+  else if (!errors.losMinNights && max !== null && max < min)
+    errors.losMaxNights = 'Maximum nights must be greater than or equal to minimum nights.';
+  return errors;
+};
+const policyLosOf = policy => {
+  const minValue = wholeNightValue(policy?.losMinNights);
+  const maxValue = losValueIsBlank(policy?.losMaxNights) ? null : wholeNightValue(policy?.losMaxNights);
+  const min = minValue !== null && minValue >= 1 ? minValue : 1;
+  const max = maxValue !== null && maxValue >= min ? maxValue : null;
+  return { min, max };
+};
+const losLabel = policy => {
+  const { min, max } = policyLosOf(policy);
+  if (min === 1 && max === null) return 'All itinerary lengths';
+  if (max === null) return `${min}+ nights`;
+  if (min === max) return `${min} ${min === 1 ? 'night' : 'nights'}`;
+  return `${min}\u2013${max} nights`;
+};
+const policyAppliesToNights = (policy, nights) => {
+  const value = wholeNightValue(nights);
+  if (value === null || value < 1) return false;
+  const { min, max } = policyLosOf(policy);
+  return value >= min && (max === null || value <= max);
+};
 const usedInGroup = g => g.parents.reduce((s, p) => s + (p.usedIn || 0), 0);
 const blankLine = () => ({ marketingName:'', beginDts:'', endDts:'', depositType:'FC', amount:'', cats:['All'], cancelApplies:true });
 const blankBand = () => ({ beginDts:'', endDts:'', penaltyType:'PCT_CABIN_FARE', penaltyValue:'', cats:['All'] });
@@ -97,7 +137,7 @@ const POLICIES_INIT = [
     ]},
   { id:'g2', type:'cancel', code:'CANC-GRP-01', name:'Standard', status:'Active', isDefault:true, isRefundable:true, mod:'14 Jun 2026', created:'01 Jun 2026', editor:'jane.doe@mvas.com',
     parents:[
-      { id:'cp1', code:'CANC-014', name:'Standard Cancellation', status:'Active', isDefault:true, isRefundable:true, usedIn:12, mod:'14 Jun 2026', created:'01 Jun 2026', editor:'jane.doe@mvas.com',
+      { id:'cp1', code:'CANC-014', name:'Standard Cancellation', status:'Active', isDefault:true, isRefundable:true, losMinNights:2, losMaxNights:5, usedIn:12, mod:'14 Jun 2026', created:'01 Jun 2026', editor:'jane.doe@mvas.com',
         bands:[
           { beginDts:'', endDts:30, penaltyType:'NONE', penaltyValue:'', cats:['All'] },
           { beginDts:29, endDts:15, penaltyType:'PCT_CABIN_FARE', penaltyValue:25, cats:['All'] },
@@ -105,7 +145,7 @@ const POLICIES_INIT = [
         ],
         usedInFaretypes:[{ code:'FT-00101', name:'Core Retail', status:'Active', mod:'15 Jun 2026' }],
         usedInFarecodes:[{ code:'FC-20101', ship:'Island Escape · 12 Jul 2026', status:'Active', mod:'16 Jun 2026' }] },
-      { id:'cp2', code:'CANC-015', name:'Standard — Suites Enhanced', status:'Active', isDefault:false, isRefundable:true, usedIn:2, mod:'12 Jun 2026', created:'06 Jun 2026', editor:'jane.doe@mvas.com',
+      { id:'cp2', code:'CANC-015', name:'Standard — Suites Enhanced', status:'Active', isDefault:false, isRefundable:true, losMinNights:6, losMaxNights:10, usedIn:2, mod:'12 Jun 2026', created:'06 Jun 2026', editor:'jane.doe@mvas.com',
         bands:[
           { beginDts:'', endDts:45, penaltyType:'NONE', penaltyValue:'', cats:['All'] },
           { beginDts:44, endDts:0, penaltyType:'PCT_CABIN_FARE', penaltyValue:40, cats:['All'] },
@@ -182,9 +222,14 @@ POLICIES_INIT.push(
   seededCancellationGroup({ number:12, name:'World Cruise', parentCode:'CANC-030', parentName:'Extended Voyage Cancellation', status:'Inactive', mod:'04 Jun 2026', created:'28 May 2026', editor:'admin@mvas.com', usedIn:0, bands:seededCancellationBands({ freeDts:180, partialDts:90, pct:25 }) }),
 );
 
-/* Stateroom applicability belongs to the parent policy. Existing seed data is migrated by
-   taking the union of its legacy line/band coverage so the visible policy-level value is stable. */
-POLICIES_INIT.forEach(group => group.parents.forEach(parent => { parent.cats = policyCatsOf(parent); }));
+/* Stateroom and LOS applicability belong to the parent policy. Explicit prototype ranges are
+   preserved; records without a seeded range use the legacy-compatible all-itinerary fallback. */
+POLICIES_INIT.forEach(group => group.parents.forEach(parent => {
+  parent.cats = policyCatsOf(parent);
+  const los = policyLosOf(parent);
+  parent.losMinNights = los.min;
+  parent.losMaxNights = los.max;
+}));
 
 /* Adapters — the Farecode-assignment and booking-flow screens consume the older group shape. */
 const scopeLegacyRows = (rows, policyCats) => {
@@ -210,7 +255,7 @@ const toLegacy = (policies, type) => policies.filter(g => g.type === type).map(g
 }));
 
 /* Full-chain validation for Activate on the merged Policy step. */
-function chainIssues({ type, policies, groupId, groupName, parentName, policyCats, rows, isRefundable }) {
+function chainIssues({ type, policies, groupId, groupName, parentName, policyCats, losMinNights, losMaxNights, rows, isRefundable }) {
   const out = [];
   const nm = (groupName || '').trim().toLowerCase();
   if (!nm) out.push({ level:'error', text:'Group name is required.' });
@@ -218,6 +263,7 @@ function chainIssues({ type, policies, groupId, groupName, parentName, policyCat
     out.push({ level:'error', text:`Another active ${POL_META[type].label.toLowerCase()} group is already named "${groupName}". Names must be unique.` });
   if (!(parentName || '').trim()) out.push({ level:'error', text:'Policy name is required.' });
   if (!policyCats?.length) out.push({ level:'error', text:'Stateroom coverage is required.' });
+  Object.entries(policyLosErrors({ losMinNights, losMaxNights })).forEach(([field, text]) => out.push({ level:'error', field, text }));
   if (!rows.length) out.push({ level:'error', text:`A policy needs at least one ${POL_META[type].childWord.toLowerCase()} before it can be activated.` });
   else {
     const v = validateRows(rows, { policyCoverage:policyCats || [] });
@@ -230,6 +276,6 @@ function chainIssues({ type, policies, groupId, groupName, parentName, policyCat
 
 Object.assign(window, {
   POL_META, POL_STATUS, POLICIES_INIT, dtsLabel, catSentence, depLabel, childCode,
-  lineSummary, bandSummary, childSummary, kidsOf, normalizePolicyCats, policyCatsOf, usedInGroup, blankLine, blankBand, blankChild,
+  lineSummary, bandSummary, childSummary, kidsOf, normalizePolicyCats, policyCatsOf, policyLosOf, losLabel, policyAppliesToNights, policyLosErrors, usedInGroup, blankLine, blankBand, blankChild,
   toLegacy, chainIssues,
 });

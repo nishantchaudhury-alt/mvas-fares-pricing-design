@@ -54,16 +54,69 @@ function TextField({ label, value, onChange, placeholder, error, helper, width }
   );
 }
 
+function PolicyLosFieldset({ form, set, err }) {
+  const uid = React.useId().replace(/:/g, '');
+  const helpId = `policy-los-help-${uid}`;
+  const errorId = `policy-los-error-${uid}`;
+  const minError = err?.losMinNights;
+  const maxError = err?.losMaxNights;
+  const error = minError || maxError;
+  const describedBy = error ? errorId : helpId;
+  return (
+    <fieldset style={{ minWidth:0, margin:0, padding:0, border:0 }}>
+      <legend style={{ marginBottom:5, padding:0, fontSize:10.5, fontWeight:700, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.65px' }}>
+        Length of stay (LOS)<span aria-hidden="true" style={{ color:T.red, marginLeft:3 }}>*</span>
+      </legend>
+      <div className="policy-los-control" style={{ height:39, display:'grid', gridTemplateColumns:'minmax(0, 1fr) minmax(0, 1fr)', overflow:'hidden', border:`1.5px solid ${error ? T.red : '#D8DFE8'}`, borderRadius:7, background:'#fff' }}>
+        <label style={{ position:'relative', minWidth:0 }}>
+          <span aria-hidden="true" style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', zIndex:1, color:T.inkLabel, fontSize:9.5, fontWeight:750, textTransform:'uppercase', letterSpacing:'.35px', pointerEvents:'none' }}>Min</span>
+          <input className="policy-los-input" inputMode="numeric" value={form.losMinNights ?? ''} onChange={e => set({ losMinNights:e.target.value })}
+            aria-label="Minimum itinerary nights" aria-required="true" aria-invalid={!!minError} aria-describedby={describedBy}
+            placeholder="1" style={{ width:'100%', height:'100%', minWidth:0, padding:'0 10px 0 43px', border:0, background:'transparent', color:T.ink, fontSize:13, outline:'none' }}/>
+        </label>
+        <label style={{ position:'relative', minWidth:0, borderLeft:`1px solid ${T.line}` }}>
+          <span aria-hidden="true" style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', zIndex:1, color:T.inkLabel, fontSize:9.5, fontWeight:750, textTransform:'uppercase', letterSpacing:'.35px', pointerEvents:'none' }}>Max</span>
+          <input className="policy-los-input" inputMode="numeric" value={form.losMaxNights ?? ''} onChange={e => set({ losMaxNights:e.target.value })}
+            aria-label="Maximum itinerary nights, optional" aria-invalid={!!maxError} aria-describedby={describedBy}
+            placeholder="No limit" style={{ width:'100%', height:'100%', minWidth:0, padding:'0 10px 0 46px', border:0, background:'transparent', color:T.ink, fontSize:13, outline:'none' }}/>
+        </label>
+      </div>
+      {error
+        ? <span id={errorId} role="alert" style={{ display:'block', marginTop:5, color:T.red, fontSize:11 }}>{error}</span>
+        : <span id={helpId} style={{ display:'block', marginTop:5, color:T.inkFaint, fontSize:11, fontStyle:'italic', lineHeight:1.4 }}>Inclusive range; leave maximum blank for no upper limit.</span>}
+    </fieldset>
+  );
+}
+
 function PolicyIdentityFields({ type, form, set, err }) {
   const isCan = type === 'cancel';
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1fr) minmax(0, 1fr)', gap:10, alignItems:'start' }}>
-      <TextField label={isCan ? 'Cancellation policy name' : 'Deposit policy name'} value={form.name} onChange={v => set({ name:v })} error={err?.name}
-        placeholder={isCan ? 'e.g. Standard Cancellation' : 'e.g. 5 Night Standard Deposit'}/>
-      <Field label="Stateroom coverage" required error={err?.cats} helper={`Applies to every ${isCan ? 'cancellation band' : 'milestone line'} in this policy.`}>
-        <CatSelect value={form.cats || []} onChange={value => set({ cats:value })}/>
-      </Field>
+    <div className="policy-identity-grid">
+      <div className="policy-identity-name" style={{ minWidth:0 }}>
+        <TextField label={isCan ? 'Cancellation policy name' : 'Deposit policy name'} value={form.name} onChange={v => set({ name:v })} error={err?.name}
+          placeholder={isCan ? 'e.g. Standard Cancellation' : 'e.g. 5 Night Standard Deposit'}/>
+      </div>
+      <div className="policy-identity-los" style={{ minWidth:0 }}>
+        <PolicyLosFieldset form={form} set={set} err={err}/>
+      </div>
+      <div className="policy-identity-coverage" style={{ minWidth:0 }}>
+        <Field label="Stateroom coverage" required error={err?.cats} helper={`Applies to every ${isCan ? 'cancellation band' : 'milestone line'} in this policy.`}>
+          <CatSelect value={form.cats || []} onChange={value => set({ cats:value })}/>
+        </Field>
+      </div>
     </div>
+  );
+}
+
+function PolicyIdentitySection({ type, form, set, err }) {
+  return (
+    <section aria-label="Policy identity" className="policy-identity-section policy-editor-rail" style={{ padding:'14px 0 16px' }}>
+      <div style={{ marginBottom:11 }}>
+        <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy identity</div>
+        <div style={{ marginTop:2, color:T.inkFaint, fontSize:10.5, lineHeight:1.4 }}>Used in assignment, reporting, and history.</div>
+      </div>
+      <PolicyIdentityFields type={type} form={form} set={set} err={err}/>
+    </section>
   );
 }
 
@@ -205,7 +258,7 @@ function ParentFields({ type, form, set, err, step, context, children }) {
   const policyType = isCan ? 'cancellation' : 'deposit';
   return (
     <section aria-labelledby={titleId} style={{ background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, boxShadow:'0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
-      <CompactSectionBar step={step} titleId={titleId} title="Policy setup" summary={`Name the ${policyType} policy, set its stateroom coverage, and configure its ${isCan ? 'bands' : 'milestone lines'}.`}/>
+      <CompactSectionBar step={step} titleId={titleId} title="Policy setup" summary={`Name the ${policyType} policy, set its LOS and stateroom coverage, and configure its ${isCan ? 'bands' : 'milestone lines'}.`}/>
 
       <div style={{ display:'flex', flexDirection:'column', padding:'0 16px 16px' }}>
         {context && (
@@ -228,13 +281,7 @@ function ParentFields({ type, form, set, err, step, context, children }) {
           </div>
         )}
 
-        <div style={{ padding:'15px 0 16px' }}>
-          <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:12, marginBottom:8 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy identity</div>
-            <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.35, textAlign:'right' }}>Used in assignment, reporting, and history</div>
-          </div>
-          <PolicyIdentityFields type={type} form={form} set={set} err={err}/>
-        </div>
+        <PolicyIdentitySection type={type} form={form} set={set} err={err}/>
         {children}
       </div>
     </section>
@@ -280,14 +327,14 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
     <>
       <h4 style={{ margin:0 }}>
         <button id={titleId} type="button" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(value => !value)}
-          style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'11px 12px', border:'none', background:open ? '#fff' : T.fill, color:T.ink, textAlign:'left', cursor:'pointer' }}>
+          style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'12px 13px', border:'none', background:open ? T.fill : '#fff', color:T.ink, textAlign:'left', cursor:'pointer' }}>
           <span style={{ minWidth:0, flex:1 }}>
             <span style={{ display:'block', fontSize:12.5, fontWeight:700 }}>{sectionTitle}</span>
-            <span style={{ display:'block', marginTop:2, fontSize:11.5, fontWeight:400, color:T.inkSoft, lineHeight:1.45 }}>
+            <span style={{ display:'block', marginTop:2, fontSize:10.5, fontWeight:400, color:T.inkSoft, lineHeight:1.4 }}>
               {creation ? 'Choose fallback behavior and confirm the group-owned terms inherited by this policy.' : 'Control availability and default selection; group-owned terms are shown as inherited.'}
             </span>
           </span>
-          <span style={{ flexShrink:0, padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>{summary}</span>
+          <span style={{ flexShrink:0, padding:'3px 8px', borderRadius:999, border:`1px solid ${T.line}`, background:T.fill, color:T.inkSoft, fontSize:10, fontWeight:700, whiteSpace:'nowrap' }}>{summary}</span>
           <span aria-hidden="true" style={{ flexShrink:0, color:T.inkSoft, display:'inline-flex' }}><IcChevron up={open}/></span>
         </button>
       </h4>
@@ -295,7 +342,7 @@ function ParentAssignmentFields({ type, form, set, canActivate, activateHelp, ac
     </>
   );
   return (
-    <section style={{ margin:embedded ? '15px -16px 0' : 0, background:T.panel, border:embedded ? 'none' : `1px solid ${T.line}`, borderTop:`1px solid ${T.line}`, borderBottom:`1px solid ${T.line}`, borderRadius:embedded ? 0 : 10, boxShadow:embedded ? 'none' : '0 1px 2px rgba(15,23,42,.06)', overflow:'hidden' }}>
+    <section className={embedded ? 'policy-editor-rail' : undefined} style={{ margin:embedded ? '15px 0 0' : 0, width:embedded ? undefined : '100%', background:T.panel, border:`1px solid ${T.line}`, borderRadius:embedded ? 8 : 10, boxShadow:'0 1px 2px rgba(15,23,42,.04)', overflow:'hidden' }}>
       {accordion}
     </section>
   );
@@ -347,4 +394,4 @@ function CodeChip({ level, children }) {
   return <span style={{ ...s, fontFamily:MONO, fontWeight:700, borderRadius:5, whiteSpace:'nowrap', letterSpacing:'-.2px' }}>{children}</span>;
 }
 
-Object.assign(window, { PolStatusBadge, TypeBadge, Caret, Stem, Rails, TREE, CodeChip, StepPill, FormBar, ToggleRow, TextField, PolicyIdentityFields, CompactSectionBar, GroupSettingRow, GroupFields, ParentFields, ParentAssignmentFields, IssueList, polBtn, polGhost, polDark, ActionRow });
+Object.assign(window, { PolStatusBadge, TypeBadge, Caret, Stem, Rails, TREE, CodeChip, StepPill, FormBar, ToggleRow, TextField, PolicyLosFieldset, PolicyIdentityFields, PolicyIdentitySection, CompactSectionBar, GroupSettingRow, GroupFields, ParentFields, ParentAssignmentFields, IssueList, polBtn, polGhost, polDark, ActionRow });

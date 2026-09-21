@@ -151,7 +151,7 @@ function InlineRowInput({ value, onChange, error, errorId, label, placeholder, s
   );
 }
 
-function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing = true, validationAttempt = 0 }) {
+function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing = true, validationAttempt = 0, embedded = false }) {
   const isDep = type === 'deposit', meta = POL_META[type];
   const dragI = useRRC(null);
   const cellRefs = useRRC({});
@@ -197,7 +197,7 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
     if (key) window.requestAnimationFrame(() => focusCell(key));
   }, [validationAttempt]);
   if (!rows.length) return (
-    <div role="group" aria-label={`Empty ${meta.childWords.toLowerCase()} configuration`} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', border:`1px solid ${T.line}`, borderRadius:7, background:T.fill }}>
+    <div role="group" aria-label={`Empty ${meta.childWords.toLowerCase()} configuration`} style={{ display:'flex', alignItems:'center', gap:10, padding:embedded ? '11px 12px' : '8px 10px', border:embedded ? 'none' : `1px solid ${T.line}`, borderRadius:embedded ? 0 : 7, background:embedded ? '#fff' : T.fill }}>
       <span aria-hidden="true" style={{ width:24, height:24, display:'inline-flex', alignItems:'center', justifyContent:'center', flexShrink:0, borderRadius:6, border:`1px solid ${T.primaryLine}`, background:'#fff', color:T.primary, fontSize:14, fontWeight:600 }}>+</span>
       <div style={{ minWidth:0, flex:1 }}>
         <div style={{ color:T.ink, fontSize:11.5, fontWeight:700 }}>No {meta.childWords.toLowerCase()} configured</div>
@@ -227,8 +227,8 @@ function PolicyRowsTable({ type, codeNum, rows, setRows, cellErr = {}, editing =
   };
 
   return (
-    <div style={{ border:`1px solid ${T.line}`, borderRadius:7, background:'#fff', overflow:'hidden', boxShadow:'0 1px 2px rgba(15,23,42,.04)' }}>
-      <div className="hscroll" style={{ overflow:'auto', maxHeight:rows.length > 6 ? 'min(46vh, 520px)' : 'none', scrollbarGutter:'stable' }}>
+    <div style={{ border:embedded ? 'none' : `1px solid ${T.line}`, borderRadius:embedded ? 0 : 7, background:'#fff', overflow:'hidden', boxShadow:embedded ? 'none' : '0 1px 2px rgba(15,23,42,.04)' }}>
+      <div className="hscroll" style={{ overflow:'auto', maxHeight:rows.length > 6 ? 'min(46vh, 520px)' : 'none' }}>
         <table aria-label={`${meta.childWords} configuration`} style={{ width:'100%', minWidth, borderCollapse:'collapse', tableLayout:'fixed' }}>
           <colgroup>{widths.map((width, i) => <col key={i} style={{ width }}/>)}</colgroup>
           <thead style={{ background:T.fill }}>

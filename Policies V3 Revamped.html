@@ -17,6 +17,14 @@ a{text-decoration:none;color:#1B2434}a:hover{color:#475569}
 .fi:focus{outline:none;border-color:#1B2434 !important;box-shadow:0 0 0 3px rgba(27,36,52,.1)}
 .price-input:focus{outline:none;border-color:#1B2434 !important}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role="button"]:focus-visible,[role="switch"]:focus-visible,[role="combobox"]:focus-visible{outline:2px solid #fff !important;outline-offset:2px;box-shadow:0 0 0 4px #1B2434 !important}
+.policy-editor-rail{width:100%}
+.policy-identity-section{container:policyIdentity / inline-size}
+.policy-identity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"name name" "los coverage";gap:14px 16px;align-items:start}
+.policy-identity-name{grid-area:name}.policy-identity-coverage{grid-area:coverage}.policy-identity-los{grid-area:los;min-width:0}
+.policy-identity-grid input.fi,.policy-identity-coverage button[aria-haspopup="dialog"]{height:39px}
+.policy-los-control:focus-within{border-color:#1B2434 !important;box-shadow:0 0 0 3px rgba(27,36,52,.1)}
+.policy-identity-coverage button[aria-haspopup="dialog"]{padding:9px 24px 9px 12px !important;font-size:13px !important}
+@container policyIdentity (max-width:500px){.policy-identity-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"name" "los" "coverage"}}
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
@@ -24,21 +32,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel" src="dc-shell.jsx?v=21"></script>
+<script type="text/babel" src="dc-shell.jsx?v=22"></script>
 <script type="text/babel" src="ui-list.jsx?v=15"></script>
 <script type="text/babel" src="dc-group-panel.jsx?v=15"></script>
 <script type="text/babel" src="dc-parent-panel.jsx?v=14"></script>
 <script type="text/babel" src="dc-farecode.jsx?v=10"></script>
 <script type="text/babel" src="dc-booking.jsx?v=11"></script>
-<script type="text/babel" src="pol-data.jsx?v=16"></script>
-<script type="text/babel" src="pol-forms.jsx?v=30"></script>
+<script type="text/babel" src="pol-data.jsx?v=17"></script>
+<script type="text/babel" src="pol-forms.jsx?v=35"></script>
 <script type="text/babel" src="pol-chrome.jsx?v=13"></script>
-<script type="text/babel" src="pol-rows.jsx?v=31"></script>
-<script type="text/babel" src="pol-drawer.jsx?v=45"></script>
+<script type="text/babel" src="pol-rows.jsx?v=33"></script>
+<script type="text/babel" src="pol-drawer.jsx?v=52"></script>
 <script type="text/babel" src="pol-detail.jsx?v=42"></script>
-<script type="text/babel" src="pol-list.jsx?v=26"></script>
+<script type="text/babel" src="pol-list.jsx?v=30"></script>
 <script type="text/babel" src="fc-farecode.jsx?v=82"></script>
-<script type="text/babel" src="ft-faretype.jsx?v=66"></script>
+<script type="text/babel" src="ft-faretype.jsx?v=76"></script>
 <script type="text/babel" src="sp-supplements.jsx?v=16"></script>
 <script type="text/babel">
 const { useState: useSApp } = React;
@@ -46,7 +54,10 @@ const { useState: useSApp } = React;
 function App() {
   const [screen, setScreen] = useSApp('policies');
   const [policies, setPolicies] = useSApp(POLICIES_INIT);
-  const [faretypes, setFaretypes] = useSApp(() => FARETYPE_INITIAL_ROWS.map(row => ({ ...row })));
+  const [faretypes, setFaretypes] = useSApp(() => FARETYPE_INITIAL_ROWS.map(row => ({
+    ...row,
+    source: Array.isArray(row.source) ? [...row.source] : row.source ? [row.source] : []
+  })));
   const [farecodes, setFarecodes] = useSApp(() => FARECODE_INITIAL_ROWS.map(row => ({ ...row, cabins:[...(row.cabins || [])] })));
   const [farecodeConfigs, setFarecodeConfigs] = useSApp(() => JSON.parse(JSON.stringify(FARECODE_INITIAL_CONFIGS)));
   const depGroups = toLegacy(policies, 'deposit');
@@ -56,7 +67,7 @@ function App() {
       <PolSidebar screen={screen} onNav={setScreen}/>
       <TopBar/>
       {screen === 'policies' && <PoliciesList policies={policies} setPolicies={setPolicies} onNav={setScreen}/>}
-      {screen === 'faretypes' && <FaretypeListScreen policies={policies} data={faretypes} setData={setFaretypes}/>}
+      {screen === 'faretypes' && <FaretypeListScreen policies={policies} data={faretypes} setData={setFaretypes} farecodes={farecodes} setFarecodes={setFarecodes} farecodeConfigs={farecodeConfigs} setFarecodeConfigs={setFarecodeConfigs}/>}
       {screen === 'farecodes' && <FarecodeListScreen policies={policies} faretypes={faretypes} data={farecodes} setData={setFarecodes} configs={farecodeConfigs} setConfigs={setFarecodeConfigs}/>}
       {screen === 'supplements' && <SupplementListScreen/>}
       {screen === 'farecode' && <DCFarecodeScreen depGroups={depGroups} canGroups={canGroups}/>}

@@ -102,25 +102,27 @@ function FlowContext({ items }) {
 function PolicyRowsSubsection({ id, type, codeNum, rows, setRows, cellErr, validationAttempt = 0, children }) {
   const meta = POL_META[type];
   return (
-    <div aria-labelledby={id} style={{ padding:'12px 0 13px', borderTop:`1px solid ${T.lineSoft}` }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8 }}>
-        <div style={{ minWidth:0 }}>
-          <div style={{ display:'flex', alignItems:'baseline', gap:8, minWidth:0, flexWrap:'wrap' }}>
-            <h4 id={id} style={{ fontSize:12.5, fontWeight:700, color:T.ink, margin:0 }}>{meta.childWords}</h4>
-            <span style={{ color:T.inkFaint, fontSize:9, fontWeight:800, letterSpacing:'.65px', textTransform:'uppercase' }}>Policy schedule</span>
+    <div aria-labelledby={id} className="policy-editor-rail" style={{ padding:'14px 0 12px' }}>
+      <div style={{ overflow:'hidden', background:'#fff', border:`1px solid ${T.line}`, borderRadius:8, boxShadow:'0 1px 2px rgba(15,23,42,.04)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'10px 12px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+          <div style={{ minWidth:0 }}>
+            <div style={{ display:'flex', alignItems:'baseline', gap:8, minWidth:0, flexWrap:'wrap' }}>
+              <h4 id={id} style={{ fontSize:12.5, fontWeight:700, color:T.ink, margin:0 }}>{meta.childWords}</h4>
+              <span style={{ color:T.inkFaint, fontSize:9, fontWeight:800, letterSpacing:'.65px', textTransform:'uppercase' }}>Policy schedule</span>
+            </div>
+            <p style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.4, margin:'2px 0 0' }}>Define DTS windows and {type === 'deposit' ? 'deposit amounts' : 'penalties'} for this policy.</p>
           </div>
-          <p style={{ fontSize:10.5, color:T.inkSoft, lineHeight:1.4, margin:'2px 0 0' }}>Define DTS windows and {type === 'deposit' ? 'deposit amounts' : 'penalties'} for this policy.</p>
+          <div style={{ display:'flex', alignItems:'center', gap:7, flexShrink:0 }}>
+            <span style={{ padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:10, fontWeight:700 }}>{rows.length} {rows.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}</span>
+            <button type="button" onClick={() => setRows([...rows, blankChild(type)])}
+              style={{ display:'inline-flex', alignItems:'center', gap:5, minHeight:28, padding:'5px 9px', border:`1px solid ${T.primary}`, borderRadius:6, background:'#fff', color:T.primary, fontSize:10.5, fontWeight:800, cursor:'pointer', boxShadow:'0 1px 1px rgba(15,23,42,.03)' }}>
+              <span aria-hidden="true" style={{ fontSize:13, lineHeight:1 }}>+</span> Add {meta.childWord}
+            </button>
+          </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:7, flexShrink:0 }}>
-          <span style={{ padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:T.fill, color:T.inkSoft, fontSize:10, fontWeight:700 }}>{rows.length} {rows.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}</span>
-          <button type="button" onClick={() => setRows([...rows, blankChild(type)])}
-            style={{ display:'inline-flex', alignItems:'center', gap:5, minHeight:28, padding:'5px 9px', border:`1px solid ${T.primary}`, borderRadius:6, background:'#fff', color:T.primary, fontSize:10.5, fontWeight:800, cursor:'pointer', boxShadow:'0 1px 1px rgba(15,23,42,.03)' }}>
-            <span aria-hidden="true" style={{ fontSize:13, lineHeight:1 }}>+</span> Add {meta.childWord}
-          </button>
+        <div style={{ width:'100%', minWidth:0 }}>
+          <PolicyRowsTable embedded type={type} codeNum={codeNum} rows={rows} setRows={setRows} cellErr={cellErr} editing={true} validationAttempt={validationAttempt}/>
         </div>
-      </div>
-      <div style={{ width:'calc(100% + 32px)', marginLeft:-16, marginRight:-16, minWidth:0 }}>
-        <PolicyRowsTable type={type} codeNum={codeNum} rows={rows} setRows={setRows} cellErr={cellErr} editing={true} validationAttempt={validationAttempt}/>
       </div>
       {children}
     </div>
@@ -128,7 +130,7 @@ function PolicyRowsSubsection({ id, type, codeNum, rows, setRows, cellErr, valid
 }
 
 function policyDraftIsReady(type, draft, groupRefundable) {
-  if (!draft.pForm.name.trim() || !(draft.pForm.cats || []).length || !draft.rows.length) return false;
+  if (!draft.pForm.name.trim() || !(draft.pForm.cats || []).length || Object.keys(policyLosErrors(draft.pForm)).length || !draft.rows.length) return false;
   const validation = validateRows(draft.rows, { policyCoverage:draft.pForm.cats });
   if (Object.keys(validation.cell).length || validation.issues.length) return false;
   return type !== 'cancel' || refundabilityIssues(draft.rows, groupRefundable !== false).length === 0;
@@ -179,6 +181,7 @@ function PolicyDraftAccordion({ type, drafts, activeIndex, onSelect, onAdd, onRe
               const selected = i === activeIndex;
               const complete = policyDraftIsReady(type, draft, groupRefundable);
               const rowLabel = `${draft.rows.length} ${draft.rows.length === 1 ? meta.childWord.toLowerCase() : meta.childWords.toLowerCase()}`;
+              const losSummary = Object.keys(policyLosErrors(draft.pForm)).length ? 'LOS needs setup' : losLabel(draft.pForm);
               const name = draft.pForm.name.trim() || `Untitled ${type === 'cancel' ? 'cancellation' : 'deposit'} policy`;
               return (
                 <div key={draft.key} ref={selected ? activeRowRef : undefined} style={{ display:'flex', alignItems:'stretch', borderBottom:`1px solid ${T.line}`, background:selected ? T.primaryBg : '#fff', boxShadow:selected ? `inset 3px 0 0 ${T.primary}` : 'none' }}>
@@ -186,10 +189,10 @@ function PolicyDraftAccordion({ type, drafts, activeIndex, onSelect, onAdd, onRe
                     style={{ minWidth:0, flex:1, padding:'10px 8px 10px 12px', border:'none', background:'transparent', textAlign:'left', cursor:'pointer', color:T.ink }}>
                     <span style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
                       <span style={{ fontFamily:MONO, color:selected ? T.primary : T.inkSoft, fontSize:10, fontWeight:800 }}>{draft.parentCode}</span>
-                      <span style={{ display:'inline-flex', alignItems:'center', gap:4, color:complete ? '#047857' : '#92400E', fontSize:9.5, fontWeight:800, whiteSpace:'nowrap' }}><span aria-hidden="true">{complete ? '✓' : '!'}</span>{complete ? 'Ready' : 'Needs setup'}</span>
+                      <Pill bg={complete ? POL_STATUS.Active.bg : meta.badgeBg} color={complete ? POL_STATUS.Active.color : meta.badgeColor}>{complete ? 'Ready' : 'Needs setup'}</Pill>
                     </span>
                     <span style={{ display:'block', marginTop:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:T.ink, fontSize:11.5, fontWeight:700 }} title={name}>{name}</span>
-                    <span style={{ display:'block', marginTop:3, color:T.inkFaint, fontSize:10 }}>{rowLabel}</span>
+                    <span style={{ display:'block', marginTop:3, color:T.inkFaint, fontSize:10 }}>{rowLabel} · {losSummary}</span>
                   </button>
                   {!draft.parentId && drafts.length > 1 && selected && (
                     <button type="button" aria-label={`Remove ${draft.pForm.name.trim() || `policy ${i + 1}`}`} onClick={() => onRemove(i)} title="Remove policy"
@@ -270,7 +273,8 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
     ...rowValidation.issues.filter(it => it.text !== 'Some fields are incomplete or out of range.'),
     ...(f.type === 'cancel' ? refundabilityIssues(activePolicy.rows, f.gForm.refundable !== false) : []),
   ];
-  const identityIssueCount = (activePolicy.pForm.name.trim() ? 0 : 1) + ((activePolicy.pForm.cats || []).length ? 0 : 1);
+  const losIssueCount = Object.keys(policyLosErrors(activePolicy.pForm)).length;
+  const identityIssueCount = (activePolicy.pForm.name.trim() ? 0 : 1) + ((activePolicy.pForm.cats || []).length ? 0 : 1) + losIssueCount;
   const issueCount = fieldIssueCount + structuralIssues.length + identityIssueCount;
   const ready = activePolicy.rows.length > 0 && issueCount === 0 && activatable;
   const showReadiness = activePolicy.rows.length > 0 || (activePolicy.validationAttempt || 0) > 0 || (activePolicy.issues || []).length > 0;
@@ -279,7 +283,7 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
     : !activePolicy.rows.length
       ? `Add at least one ${meta.childWord.toLowerCase()} and define its DTS schedule.`
       : identityIssueCount
-        ? 'Complete the policy name and stateroom coverage, then resolve any schedule issues.'
+        ? 'Complete the policy name, LOS, and stateroom coverage, then resolve any schedule issues.'
         : fieldIssueCount
           ? 'Complete the highlighted row fields, then confirm the DTS schedule.'
           : 'Resolve DTS ordering or refundability so the full policy can be activated.';
@@ -289,13 +293,7 @@ function PolFlowDrawer({ flow, setFlow, policies = [], activatable, onCancel, on
       <GroupFields step="01" type={f.type} form={f.gForm} err={f.err} canActivate={false} set={setG}/>
     );
     const activeBody = (<>
-        <div style={{ padding:'14px 0 16px' }}>
-          <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:12, marginBottom:8 }}>
-            <div style={{ fontSize:10, fontWeight:800, color:T.inkLabel, textTransform:'uppercase', letterSpacing:'.7px' }}>Policy identity</div>
-            <div style={{ fontSize:10.5, color:T.inkFaint, lineHeight:1.35, textAlign:'right' }}>Used in assignment, reporting, and history</div>
-          </div>
-          <PolicyIdentityFields type={f.type} form={activePolicy.pForm} set={setP} err={activePolicy.err}/>
-        </div>
+        <PolicyIdentitySection type={f.type} form={activePolicy.pForm} set={setP} err={activePolicy.err}/>
         <PolicyRowsSubsection id="policy-lines-title" type={f.type} codeNum={codeNumOf(activePolicy.parentCode)} rows={activePolicy.rows}
           setRows={setPolicyRows} cellErr={cellErr} validationAttempt={activePolicy.validationAttempt || 0}>
           {showReadiness && <div aria-live="polite" style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 9px', marginTop:9, borderRadius:6, background:ready ? '#F0FDF4' : '#FFF7ED', borderLeft:`3px solid ${ready ? '#059669' : '#D97706'}` }}>
