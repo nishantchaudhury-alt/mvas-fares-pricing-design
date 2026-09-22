@@ -444,20 +444,15 @@ function AutomaticFieldRow({ field, first }) {
 function FarecodePropagationReview({ rows }) {
   const fields = rows.flatMap((row) => row.fields);
   const noun = (count, singular, plural = `${singular}s`) => count === 1 ? singular : plural;
-  return <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-    <div role="status" aria-live="polite" style={{ display:'flex', alignItems:'center', gap:9, padding:'9px 11px', border:`1px solid ${T.primaryLine}`, borderRadius:8, background:T.primaryBg }}>
-      <span style={{ width:25, height:25, borderRadius:'50%', display:'inline-flex', alignItems:'center', justifyContent:'center', border:`1px solid ${T.primaryLine}`, background:'#fff', color:T.primary, flexShrink:0 }}>
-        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="14 7 19 12 14 17"/></svg>
-      </span>
-      <span style={{ color:T.inkSoft, fontSize:10.8, lineHeight:1.45 }}><strong style={{ color:T.ink }}>{rows.length} {noun(rows.length, 'Farecode')} will change</strong> · {fields.length} saved {noun(fields.length, 'change')} will be applied.</span>
-    </div>
-    <section style={{ border:`1px solid ${T.line}`, borderRadius:9, overflow:'hidden', background:'#fff' }}>
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, padding:'10px 11px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
-        <div>
-          <div style={{ color:T.ink, fontSize:11.5, fontWeight:750 }}>Farecode changes</div>
-          <div style={{ marginTop:2, color:T.inkSoft, fontSize:10.5, lineHeight:1.4 }}>Only Farecodes with saved value or inheritance-source changes are shown.</div>
+  return <section style={{ border:`1px solid ${T.line}`, borderRadius:9, overflow:'hidden', background:'#fff' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, padding:'10px 11px', background:T.fill, borderBottom:`1px solid ${T.line}` }}>
+        <div style={{ color:T.ink, fontSize:11.5, fontWeight:750 }}>Farecode changes</div>
+        <div role="status" aria-live="polite" aria-label={`${rows.length} ${noun(rows.length, 'Farecode')} affected; ${fields.length} ${noun(fields.length, 'change')} on save`}
+          style={{ display:'inline-flex', alignItems:'stretch', border:`1px solid ${T.line}`, borderRadius:7, background:'#fff', overflow:'hidden', whiteSpace:'nowrap' }}>
+          <span style={{ padding:'5px 8px', color:T.inkSoft, fontSize:10.2, lineHeight:1.2 }}><strong style={{ color:T.ink, fontWeight:800 }}>{rows.length}</strong> {noun(rows.length, 'Farecode')} affected</span>
+          <span aria-hidden="true" style={{ width:1, background:T.line }} />
+          <span style={{ padding:'5px 8px', color:T.inkSoft, fontSize:10.2, lineHeight:1.2 }}><strong style={{ color:T.ink, fontWeight:800 }}>{fields.length}</strong> {noun(fields.length, 'change')} on save</span>
         </div>
-        <span style={{ padding:'2px 7px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:9.5, fontWeight:750, whiteSpace:'nowrap' }}>{rows.length} {noun(rows.length, 'Farecode')}</span>
       </div>
       {rows.map((row, rowIndex) => <div key={row.code} style={{ borderTop:rowIndex ? `1px solid ${T.line}` : 'none' }}>
           <FarecodeImpactHeader row={row} trailing={`${row.fields.length} ${noun(row.fields.length, 'change')}`} />
@@ -467,8 +462,7 @@ function FarecodePropagationReview({ rows }) {
             </div>
           </div>
         </div>)}
-    </section>
-  </div>;
+    </section>;
 }
 
 function WarnBanner({ children }) {
@@ -483,7 +477,7 @@ function WarnBanner({ children }) {
 
 }
 
-function StepCard({ number, title, description, aside, children }) {
+function StepCard({ number, title, description, aside, children, flush = false }) {
   return (
     <section style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: '0 1px 3px rgba(15,23,42,.06)', overflow: 'visible' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, padding: '15px 16px', background: '#FBFCFE', borderBottom: `1px solid ${T.line}`, borderRadius: '12px 12px 0 0' }}>
@@ -498,7 +492,7 @@ function StepCard({ number, title, description, aside, children }) {
         </div>
         {aside && <div style={{ flexShrink: 0 }}>{aside}</div>}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: flush ? 0 : 16, padding: flush ? 0 : 16 }}>
         {children}
       </div>
     </section>);
@@ -1135,7 +1129,7 @@ function S8({ faretypeCode, linkedFarecodes, linkedFarecodeCount, farecodeConfig
   const count = linkedFarecodes.length || linkedFarecodeCount || 0;
   return (
     <StepCard number={8} title="Change management" description="Review and manage the Farecodes linked to this Faretype before saving."
-    aside={<span style={{ display:'inline-flex', alignItems:'center', padding:'3px 9px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:10.5, fontWeight:700, whiteSpace:'nowrap' }}>{count} linked {count === 1 ? 'Farecode' : 'Farecodes'}</span>}>
+    aside={<span style={{ display:'inline-flex', alignItems:'center', padding:'3px 9px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:10.5, fontWeight:700, whiteSpace:'nowrap' }}>{count} linked {count === 1 ? 'Farecode' : 'Farecodes'}</span>} flush>
       <DetailFarecodesTab
         fcCount={linkedFarecodeCount}
         faretypeCode={faretypeCode}
@@ -1145,7 +1139,8 @@ function S8({ faretypeCode, linkedFarecodes, linkedFarecodeCount, farecodeConfig
         impactRows={impactRows}
         relationshipChange={relationshipChange}
         onApplyDecisions={onApplyDecisions}
-        changeManagement />
+        changeManagement
+        embedded />
     </StepCard>);
 }
 
@@ -2248,16 +2243,12 @@ function FarecodeChangeDetailsModal({ farecode, impactRow, relationshipChange, a
   const editableFields = affectedFields.filter((field) => allowDecisions && field.wasOverridden && !field.compatibilityError && !field.relationshipChange);
   const overrideCount = affectedFields.filter((field) => field.wasOverridden && !field.compatibilityError).length;
   const conflictCount = affectedFields.filter((field) => !!field.compatibilityError).length;
+  const automaticCount = Math.max(0, affectedFields.length - overrideCount - conflictCount);
   const inheritanceOnlyCount = editableFields.filter((field) => sameValue(field.currentValue, field.nextValue)).length;
   const inheritanceOnlyReview = affectedFields.length > 0 && inheritanceOnlyCount === affectedFields.length;
   const impactSummaryTitle = inheritanceOnlyReview
     ? `${inheritanceOnlyCount} inheritance ${inheritanceOnlyCount === 1 ? 'decision' : 'decisions'} for this Farecode`
-    : `${affectedFields.length} pending ${affectedFields.length === 1 ? 'change affects' : 'changes affect'} this Farecode`;
-  const impactSummaryDetail = inheritanceOnlyReview
-    ? `The ${inheritanceOnlyCount === 1 ? 'value already matches' : 'values already match'} the Faretype. Choose whether future Faretype changes should continue to flow to this Farecode.`
-    : overrideCount || conflictCount
-    ? `${overrideCount ? `${overrideCount} ${overrideCount === 1 ? 'override needs' : 'overrides need'} review. ` : ''}${conflictCount ? `${conflictCount} ${conflictCount === 1 ? 'change is' : 'changes are'} protected by compatibility rules.` : 'Choices are staged immediately and applied when you save the Faretype.'}`
-    : 'No decision is required; these changes apply automatically when the Faretype is saved.';
+    : `${affectedFields.length} ${affectedFields.length === 1 ? 'change' : 'changes'} to review`;
   const farecodeId = farecode?.code || farecode?.id || 'Farecode';
   const metadata = [farecode?.name, farecode?.ship, farecode?.sailing].filter(Boolean).join(' · ');
 
@@ -2322,16 +2313,12 @@ function FarecodeChangeDetailsModal({ farecode, impactRow, relationshipChange, a
         </div>
         <div className="pscroll" style={{ minHeight:220, padding:18, overflowY:'auto' }}>
           {affectedFields.length ? <>
-            <div role="status" aria-live="polite" style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 12px', marginBottom:12, borderRadius:8, border:`1px solid ${T.primaryLine}`, background:T.primaryBg }}>
-              <span aria-hidden="true" style={{ width:26, height:26, display:'inline-flex', alignItems:'center', justifyContent:'center', borderRadius:'50%', background:'#fff', border:`1px solid ${T.primaryLine}`, color:T.primary, flexShrink:0 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="14 7 19 12 14 17"/></svg>
-              </span>
-              <div style={{ minWidth:0 }}>
-                <div style={{ color:T.ink, fontSize:11.8, fontWeight:750 }}>{impactSummaryTitle}</div>
-                <div style={{ marginTop:2, color:T.inkSoft, fontSize:10.6, lineHeight:1.45 }}>
-                  {impactSummaryDetail}
-                </div>
-              </div>
+            <div role="status" aria-live="polite" style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8, padding:'8px 10px', marginBottom:10, borderRadius:8, border:`1px solid ${T.line}`, background:T.fill }}>
+              <div style={{ color:T.ink, fontSize:11.5, fontWeight:750 }}>{impactSummaryTitle}</div>
+              {!!(conflictCount || automaticCount) && <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:6 }}>
+                {!!conflictCount && <span style={{ display:'inline-flex', alignItems:'center', padding:'3px 7px', borderRadius:999, border:'1px solid #FECACA', background:T.redLight, color:'#B91C1C', fontSize:9.5, fontWeight:750, whiteSpace:'nowrap' }}>{conflictCount} protected</span>}
+                {!!automaticCount && <span style={{ display:'inline-flex', alignItems:'center', padding:'3px 7px', borderRadius:999, border:`1px solid ${T.primaryLine}`, background:T.primaryBg, color:T.primary, fontSize:9.5, fontWeight:750, whiteSpace:'nowrap' }}>{automaticCount} automatic</span>}
+              </div>}
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {affectedFields.map((field) => {
@@ -2392,7 +2379,7 @@ function FarecodeChangeDetailsModal({ farecode, impactRow, relationshipChange, a
   );
 }
 
-function DetailFarecodesTab({ fcCount, faretypeCode, linkedRows, farecodeConfigs = {}, faretypeDefaults = {}, impactRows = [], relationshipChange = null, onApplyDecisions, changeManagement = false }) {
+function DetailFarecodesTab({ fcCount, faretypeCode, linkedRows, farecodeConfigs = {}, faretypeDefaults = {}, impactRows = [], relationshipChange = null, onApplyDecisions, changeManagement = false, embedded = false }) {
   const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [shipFilter, setShipFilter] = useState('All Ships');
@@ -2446,14 +2433,17 @@ function DetailFarecodesTab({ fcCount, faretypeCode, linkedRows, farecodeConfigs
   };
 
   return (<>
-    <div style={{ background: T.panel, border: `1px solid ${T.line}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)' }}>
+    <div style={embedded
+      ? { background:T.panel, borderRadius:'0 0 11px 11px', overflow:'hidden' }
+      : { background:T.panel, border:`1px solid ${T.line}`, borderRadius:10, overflow:'hidden', boxShadow:'0 1px 2px rgba(15,23,42,.04)' }}>
+      {!embedded &&
       <div style={{ padding: '10px 12px', background: T.fill, borderBottom: `1px solid ${T.line}` }}>
         <div>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>Linked farecodes</div>
           <div style={{ marginTop: 2, fontSize: 11.5, color: T.inkSoft }}>{hasFilters ? `${filteredFarecodes.length} of ${farecodes.length} match` : `${farecodes.length} linked ${farecodes.length === 1 ? 'farecode' : 'farecodes'}`}</div>
         </div>
-      </div>
-      <div role="search" aria-label="Filter linked farecodes" style={{ padding: '10px 12px', background: '#fff', borderBottom: `1px solid ${T.line}` }}>
+      </div>}
+      <div role="search" aria-label="Filter linked farecodes" style={{ padding: embedded ? '12px 16px' : '10px 12px', background:'#fff', borderBottom:`1px solid ${T.line}` }}>
         <FilterRow>
           <ListSearch value={search} onChange={updateSearch} placeholder="Search Farecode ID or name…" />
           <SelectFilter value={shipFilter} onChange={updateShipFilter} options={shipOptions} />
