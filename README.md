@@ -24,9 +24,9 @@ Internet access is required unless the browser has already cached React 18, Reac
 
 - Search, filter, inspect, create, edit, and delete Faretype templates.
 - Configure Basics & Grouping, Policy Assignment, Channel Access, Partner Access, Marketing, Taxes & Privacy, and Supplements.
-- Assign active cancellation and deposit policies in Step 2.
+- Assign active cancellation, deposit, and eligibility policies in Step 2.
 - Configure Standby, Upgrades, and Coupons alongside policy assignment.
-- Review field-level changes and linked-Farecode impact before saving an edit.
+- Review automatic inherited updates separately from protected Farecode exceptions before saving an edit.
 - Inspect overview, linked Farecodes, and history from a consistent detail drawer.
 
 ### Farecodes
@@ -36,6 +36,8 @@ Internet access is required unless the browser has already cached React 18, Reac
 - Assign cancellation and deposit policies and configure booking permissions in Step 2.
 - Configure the cabin-category and guest-position pricing matrix separately.
 - Review value changes and inheritance/override changes before saving an edit.
+- Identify Farecodes that use defaults, hold pinned choices, or contain divergent Unique values; filter by exception state.
+- Select Active Farecodes, configure one cancellation or deposit policy change, then review routine updates, protected exceptions, unchanged records, and LOS-blocked records before applying the exact scope.
 - Inspect overview and history from the shared record-detail header pattern.
 
 ### Policies
@@ -137,8 +139,10 @@ After a change, verify at minimum:
 1. Policy group and policy rows open without a blank drawer.
 2. Cancellation and deposit create/edit flows preserve schedules and stateroom coverage.
 3. Faretype Step 2 saves policy assignment and booking permissions.
-4. Farecode Step 2 correctly inherits, overrides, and restores Faretype values.
-5. Farecode pricing can be viewed and edited without losing values.
-6. Policy Eligibility shows guest-eligibility fields only and creates independent templates.
-7. Supplements open, edit, and enforce their deletion guard.
-8. Browser console contains no runtime errors.
+4. Faretype Review preserves Unique Farecode exceptions by default and prevents LOS-incompatible policy propagation.
+5. Farecode Step 2 correctly inherits, overrides, and restores Faretype values.
+6. Farecode bulk policy updates use a two-stage Configure → Review journey, preserve existing exceptions by default, and require blocked Farecodes to be explicitly excluded before applying an exact scope.
+7. Farecode pricing can be viewed and edited without losing values.
+8. Policy Eligibility shows guest-eligibility fields only and creates independent templates.
+9. Supplements open, edit, and enforce their deletion guard.
+10. Browser console contains no runtime errors.
