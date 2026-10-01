@@ -1065,8 +1065,17 @@ function DiffRow({ d, first }) {
 function S8({ faretypeCode, linkedFarecodes, linkedFarecodeCount, farecodeConfigs, faretypeDefaults, impactRows, relationshipChange, onApplyDecisions, number = 9 }) {
   const count = linkedFarecodes.length || linkedFarecodeCount || 0;
   return (
-    <StepCard number={number} title="Change management" description="Select the Farecodes to update, then choose Apply changes. Unapplied Farecodes keep their current values."
+    <StepCard number={number} title="Change management" description="Review the linked Farecodes affected by these policy changes."
     aside={<span style={{ display:'inline-flex', alignItems:'center', padding:'3px 9px', borderRadius:999, border:`1px solid ${T.line}`, background:'#fff', color:T.inkSoft, fontSize:10.5, fontWeight:700, whiteSpace:'nowrap' }}>{count} linked {count === 1 ? 'Farecode' : 'Farecodes'}</span>} flush>
+      <div role="note" aria-label="Apply Farecode updates before saving" style={{ display:'flex', alignItems:'flex-start', gap:9, margin:'12px 16px 0', padding:'10px 12px', borderRadius:9, border:`1px solid ${T.amberBorder}`, background:T.amberLight }}>
+        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.amberDark} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginTop:1 }}>
+          <circle cx="12" cy="12" r="9" /><line x1="12" y1="11" x2="12" y2="16" /><line x1="12" y1="7.5" x2="12" y2="7.6" />
+        </svg>
+        <div style={{ minWidth:0 }}>
+          <div style={{ color:T.amberDark, fontSize:11.5, fontWeight:750, lineHeight:1.35 }}>Apply Farecode updates before saving</div>
+          <div style={{ marginTop:2, color:T.amberDark, fontSize:11, lineHeight:1.45 }}>Select the Farecodes to update, then choose <strong>Apply changes</strong>. Saving without this step leaves their current cancellation and deposit policies unchanged.</div>
+        </div>
+      </div>
       <DetailFarecodesTab
         fcCount={linkedFarecodeCount}
         faretypeCode={faretypeCode}
@@ -1238,6 +1247,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const [active, setActive] = useState(1);
   const [visited, setVisited] = useState(new Set([1]));
   const [showDiscard, setShowDiscard] = useState(false);
+  const [showUnappliedWarning, setShowUnappliedWarning] = useState(false);
   const [propagationDecisions, setPropagationDecisions] = useState({});
   const [mounted, setMounted] = useState(false);
   const initialForm = JSON.parse(initRef.current);
@@ -1355,6 +1365,25 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
     return !Object.keys(e).length;
   };
 
+  const saveFaretype = () => {
+    const previousForm = JSON.parse(initRef.current);
+    const changedInheritedKeys = FARECODE_INHERITED_FIELDS.filter((key) => !sameValue(previousForm[key], form[key]));
+    const impactRows = buildImpactRows(previousForm, changedInheritedKeys);
+    onActivate(form, {
+      previousForm,
+      changedInheritedKeys,
+      selectionDriven:hasPolicyChanges,
+      linkedFarecodes:linkedFarecodeCodes,
+      fieldActions:impactRows.flatMap((row) => row.fields.map((field) => ({
+        code:row.code,
+        key:field.key,
+        decision:field.decision,
+        currentValue:field.currentValue,
+        wasOverridden:field.wasOverridden,
+      })))
+    });
+  };
+
   const handleNext = () => {
     if (active === 1 && !validateS1()) return;
     if (active === 2 && !validateS2()) return;
@@ -1364,22 +1393,7 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
     {
       const valid = validateAll();
       if (valid) {
-        const previousForm = JSON.parse(initRef.current);
-        const changedInheritedKeys = FARECODE_INHERITED_FIELDS.filter((key) => !sameValue(previousForm[key], form[key]));
-        const impactRows = buildImpactRows(previousForm, changedInheritedKeys);
-        onActivate(form, {
-          previousForm,
-          changedInheritedKeys,
-          selectionDriven:hasPolicyChanges,
-          linkedFarecodes:linkedFarecodeCodes,
-          fieldActions:impactRows.flatMap((row) => row.fields.map((field) => ({
-            code:row.code,
-            key:field.key,
-            decision:field.decision,
-            currentValue:field.currentValue,
-            wasOverridden:field.wasOverridden,
-          })))
-        });
+        if (mode === 'edit' && hasPolicyChanges && unappliedFarecodeCount > 0) setShowUnappliedWarning(true);else saveFaretype();
       } else
       if (!form.faretypeCode || !form.faretypeGroup || !hasSourceChannels(form.source)) setActive(1);else
       if (!isActivePolicy(policies, 'cancel', form.cancellationPolicy) || !isActivePolicy(policies, 'deposit', form.depositPolicy) || !isActiveEligibilityPolicy(eligibilityPolicies, form.eligibilityPolicy)) setActive(2);
@@ -1394,13 +1408,19 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
   const pct = calcCompletion(form, visited, mode, policies, eligibilityPolicies, sections);
   const isLast = active === sections[sections.length - 1].n;
   const allReq = !!(form.faretypeCode && form.faretypeGroup && hasSourceChannels(form.source) && isActivePolicy(policies, 'cancel', form.cancellationPolicy) && isActivePolicy(policies, 'deposit', form.depositPolicy) && isActiveEligibilityPolicy(eligibilityPolicies, form.eligibilityPolicy));
-  const farecodeUpdateCount = (() => {
-    if (mode !== 'edit') return 0;
+  const farecodeImpactSummary = (() => {
+    if (mode !== 'edit' || !hasPolicyChanges) return { eligibleCount:0, appliedCount:0, unappliedCount:0 };
     const previousForm = JSON.parse(initRef.current);
-    if (previousForm.faretypeCode !== form.faretypeCode) return linkedFarecodes.length;
     const changedKeys = FARECODE_INHERITED_FIELDS.filter((key) => !sameValue(previousForm[key], form[key]));
-    return buildImpactRows(previousForm, changedKeys).filter((row) => row.fields.some((field) => !field.compatibilityError && field.decision === 'use-default' && (!sameValue(field.currentValue, field.nextValue) || field.wasOverridden))).length;
+    const eligibleRows = buildImpactRows(previousForm, changedKeys).filter((row) => row.fields.some((field) => !field.compatibilityError));
+    const appliedCount = eligibleRows.filter((row) => {
+      const applicableFields = row.fields.filter((field) => !field.compatibilityError);
+      return applicableFields.length > 0 && applicableFields.every((field) => field.decision === 'use-default');
+    }).length;
+    return { eligibleCount:eligibleRows.length, appliedCount, unappliedCount:eligibleRows.length - appliedCount };
   })();
+  const farecodeUpdateCount = farecodeImpactSummary.appliedCount;
+  const unappliedFarecodeCount = farecodeImpactSummary.unappliedCount;
 
   const renderSection = () => {
     if (active === 1) return <S1 form={form} set={set} errors={errors} mode={mode} editData={editData} />;
@@ -1506,6 +1526,32 @@ function FaretypePanel({ mode, editData, onClose, onSaveDraft, onActivate, polic
                 <button onClick={() => {setShowDiscard(false);onClose();}}
               style={{ padding: '10px 18px', border: 'none', borderRadius: 9, background: T.red, color: '#fff', fontSize: 13.5, cursor: 'pointer', fontWeight: 600 }}>
                   Discard
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        {/* Confirm saving when eligible Farecodes still have unapplied policy changes. */}
+        {showUnappliedWarning &&
+        <div style={{ position:'absolute', inset:0, background:'rgba(15,23,42,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:12 }}>
+            <div role="dialog" aria-modal="true" aria-labelledby="unapplied-farecodes-title" style={{ background:'#fff', borderRadius:12, border:`1px solid ${T.line}`, padding:'24px 26px', maxWidth:440, width:'90%', boxShadow:'0 24px 64px rgba(15,23,42,.22)' }}>
+              <div style={{ width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:9, border:`1px solid ${T.amberBorder}`, background:T.amberLight, color:T.amberDark, marginBottom:14 }}>
+                <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div id="unapplied-farecodes-title" style={{ fontSize:16, fontWeight:750, color:T.ink, lineHeight:1.3 }}>Farecode changes have not been applied</div>
+              <div style={{ marginTop:8, fontSize:13, color:T.inkSoft, lineHeight:1.55 }}>
+                Saving now will update the Faretype, but {unappliedFarecodeCount} eligible {unappliedFarecodeCount === 1 ? 'Farecode' : 'Farecodes'} will keep {unappliedFarecodeCount === 1 ? 'its' : 'their'} current cancellation and deposit policies.
+                {farecodeUpdateCount > 0 && ` ${farecodeUpdateCount} ${farecodeUpdateCount === 1 ? 'Farecode is' : 'Farecodes are'} already set to update.`}
+              </div>
+              <div style={{ marginTop:20, display:'flex', alignItems:'center', justifyContent:'flex-end', flexWrap:'wrap', gap:9 }}>
+                <button type="button" onClick={() => { setShowUnappliedWarning(false); saveFaretype(); }}
+                  style={{ padding:'8px 13px', border:`1px solid ${T.line}`, borderRadius:7, background:'#fff', color:T.inkSoft, fontSize:12.5, fontWeight:650, cursor:'pointer' }}>
+                  Save anyway
+                </button>
+                <button type="button" autoFocus onClick={() => setShowUnappliedWarning(false)}
+                  style={{ padding:'8px 13px', border:`1px solid ${T.primary}`, borderRadius:7, background:T.primary, color:'#fff', fontSize:12.5, fontWeight:700, cursor:'pointer' }}>
+                  Return to apply changes
                 </button>
               </div>
             </div>
